@@ -2,6 +2,11 @@
 
 import os
 
+from dotenv import load_dotenv
+
+# Load .env EARLY — before any agent module calls get_model() at import time.
+load_dotenv()
+
 _MODEL_DEFAULT = "gpt-4o"
 
 # Cached client instance
