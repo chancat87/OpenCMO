@@ -1,5 +1,7 @@
 from agents import Agent
 
+from opencmo.config import get_model
+
 reddit_expert = Agent(
     name="Reddit Expert",
     handoff_description="Hand off to this expert when the user needs content for Reddit.",
@@ -31,5 +33,5 @@ Based on the product information provided by the CMO Agent, create authentic Red
 - Format with markdown (Reddit supports it)
 - Mention it's open source / free / indie-built if applicable
 """,
-    model="gpt-4o",
+    model=get_model("reddit"),
 )

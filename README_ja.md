@@ -5,7 +5,7 @@
 <h1 align="center">OpenCMO</h1>
 
 <div align="center">
-  <strong>あなたのAI最高マーケティング責任者 — マーケティングより開発に集中したいインディー開発者のために。</strong>
+  <strong>オープンソース AI CMO — 月額 $99 のツールと同等の機能を無料で。</strong>
 </div>
 <br/>
 
@@ -16,137 +16,139 @@
 <div align="center">
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg?style=flat-square" alt="Python 3.10+"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-green.svg?style=flat-square" alt="License"></a>
-  <a href="https://github.com/your-username/OpenCMO/stargazers"><img src="https://img.shields.io/github/stars/your-username/OpenCMO?style=flat-square&color=yellow" alt="Stars"></a>
+  <a href="https://github.com/study8677/OpenCMO/stargazers"><img src="https://img.shields.io/github/stars/study8677/OpenCMO?style=flat-square&color=yellow" alt="Stars"></a>
 </div>
 
 ---
 
-## 🌟 OpenCMOとは？
+> **Okara は月額 $99、OpenCMO は $0。** しかもカバー範囲はさらに広い。
 
-OpenCMOは、**AIマーケティングチーム**として機能するオープンソースのマルチエージェントシステムです。プロダクトのURLを入力するだけで、ウェブサイトをクロールし、主要なセールスポイントを抽出し、各プラットフォームに最適化されたマーケティングコンテンツを生成します — すべてシンプルでエレガントなCLIで完結します。
+## OpenCMO とは？
 
-優れたプロダクトを持っているけれど、すべてのソーシャルチャンネル向けにマーケティング文章を書く時間（や意欲）がない**インディー開発者、個人創業者、小規模チーム**のために特別に設計されています。
+OpenCMO は、マーケティングチーム全体として機能するマルチエージェント AI システムです。URL を入力するだけで、サイトをクロールし、セールスポイントを抽出し、**9 つのチャンネル**向けにすぐ投稿できるコンテンツを生成します。
 
-## ✨ 機能
+**インディー開発者や小規模チーム**のために設計 — マーケティングコピーより、コードを書くことに集中できます。
 
-- **🐦 Twitter/Xエキスパート** — スクロールを止めるフックを備えたツイートのバリエーションやスレッドを生成します。
-- **🤖 Redditエキスパート** — r/SideProjectやニッチなコミュニティ向けに、リアルでストーリー性のある投稿を作成します。
-- **💼 LinkedInエキスパート** — 企業っぽくならない、データに基づいたプロフェッショナルな投稿を作成します。
-- **🚀 Product Huntエキスパート** — キャッチーなタグライン、説明文、そして最も重要なメイカーのファーストコメント（Maker's comment）を作成します。
-- **📰 Hacker Newsエキスパート** — 控えめで技術にフォーカスした "Show HN" 投稿を作成します。
-- **📝 ブログ/SEOエキスパート** — MediumやDev.to向けのSEOに強い記事の構成を作成します。
+## 機能
 
-## 🏗️ アーキテクチャ
+### 9 プラットフォーム対応エキスパート
+- **Twitter/X** — スクロールを止めるフック付きツイートバリエーション & スレッド
+- **Reddit** — r/SideProject やニッチコミュニティ向けの本格的なストーリー投稿
+- **LinkedIn** — データ駆動のプロフェッショナルな投稿
+- **Product Hunt** — タグライン、説明文、メイカーコメント
+- **Hacker News** — 控えめで技術重視の Show HN 投稿
+- **ブログ/SEO** — Medium / Dev.to 向け SEO 最適化記事構成
+
+### マーケティングインテリジェンス
+- **SEO 監査** — Core Web Vitals（LCP/CLS/TBT、Google PageSpeed 経由）、Schema.org/JSON-LD 検出、robots.txt/sitemap.xml チェック — 各問題にコピペ可能な修正コード付き
+- **GEO スコア** — 5 つの AI プラットフォームでの検索可視性: Perplexity、You.com（クロール）、ChatGPT、Claude、Gemini（API、オプトイン）
+- **競合分析** — 機能、価格、ポジショニング、差別化ポイントの構造化情報
+- **コミュニティモニター** — Reddit + HN + Dev.to をスキャン、ディスカッション追跡、エンゲージメントパターン分析、返信ドラフト作成
+- **Web 検索** — リアルタイム競合調査、市場トレンド、キーワード発見
+
+### 継続モニタリング
+- **スケジューラ** — `/monitor` CLI コマンドで Cron ベースの自動スキャン（SEO/GEO/コミュニティ）
+- **トレンド分析** — SQLite 永続化ストレージに基づく SEO & GEO スコアの履歴推移
+- **コミュニティパターン** — エンゲージメント速度、プラットフォーム分布、ディスカッション追跡
+
+### Web ダッシュボード
+- **FastAPI + Chart.js** — プロジェクト概要、SEO/GEO/コミュニティのトレンドチャート
+- **フロントエンドビルド不要** — サーバーサイドレンダリング HTML、CDN 経由の Chart.js
+- **1 コマンドで起動** — `opencmo-web` または CLI で `/web`
+
+### スマートオーケストレーション
+- **単一プラットフォーム** → エキスパートに引き渡して深い対話型コンテンツ作成
+- **マルチチャンネル** → CMO が全エキスパートをツールとして呼び出し、統合マーケティングプランを作成
+- **モデル設定可能** — `OPENCMO_MODEL_DEFAULT=gpt-4o-mini` やエージェント別のオーバーライド
+- **コンテキスト維持** — 会話履歴を保持、トークンオーバーフロー防止の自動切り詰め
+
+## アーキテクチャ
 
 ```mermaid
 graph TD
-    User([User]) --> CMO[CMO Agent <br/> オーケストレーター]
-    CMO -- プロダクトサイトを取得 --> Crawl[Spider ツール <br/> crawl_website]
-    
-    CMO -- 引き継ぎ --> X[Twitter/X エキスパート]
-    CMO -- 引き継ぎ --> Reddit[Reddit エキスパート]
-    CMO -- 引き継ぎ --> LinkedIn[LinkedIn エキスパート]
-    CMO -- 引き継ぎ --> PH[Product Hunt エキスパート]
-    CMO -- 引き継ぎ --> HN[Hacker News エキスパート]
-    CMO -- 引き継ぎ --> Blog[ブログ/SEO エキスパート]
+    User([ユーザー]) --> CMO[CMO エージェント]
+
+    CMO --> Tools[共有ツール]
+    Tools --> Crawl[Web クローラ]
+    Tools --> Search[Web 検索]
+    Tools --> Competitor[競合分析]
+
+    CMO -- 引き継ぎ/ツール --> Twitter[Twitter/X]
+    CMO -- 引き継ぎ/ツール --> Reddit[Reddit]
+    CMO -- 引き継ぎ/ツール --> LinkedIn[LinkedIn]
+    CMO -- 引き継ぎ/ツール --> PH[Product Hunt]
+    CMO -- 引き継ぎ/ツール --> HN[Hacker News]
+    CMO -- 引き継ぎ/ツール --> Blog[ブログ/SEO]
+    CMO -- 引き継ぎ --> SEO[SEO 監査]
+    CMO -- 引き継ぎ --> GEO[GEO / AI 可視性]
+    CMO -- 引き継ぎ --> Community[コミュニティモニター]
+
+    Scheduler[スケジューラ] --> DB[(SQLite)]
+    WebDash[Web ダッシュボード] --> DB
 ```
 
-**CMO Agent**がウェブサイトをクロールし、ワンライナー説明、主要なセールスポイント、ターゲットオーディエンスのプロフィールを抽出します。その後、リクエストに応じて適切なプラットフォームエキスパートにインテリジェントに作業を委任します。
-
-## 🚀 クイックスタート
+## クイックスタート
 
 ### 1. インストール
 
 ```bash
 pip install -e .
 crawl4ai-setup
+
+# オプション: 全拡張機能をインストール
+pip install -e ".[all]"   # スケジューラ + Web ダッシュボード + GEO プレミアム
 ```
 
 ### 2. 設定
 
 ```bash
 cp .env.example .env
-# .envを編集してOpenAI APIキーを追加してください
+# OpenAI API キーを追加（必須）
+# オプション: ANTHROPIC_API_KEY, GOOGLE_AI_API_KEY, PAGESPEED_API_KEY
 ```
 
 ### 3. 実行
 
 ```bash
-opencmo
+opencmo                   # 対話型 CLI
+opencmo-web               # Web ダッシュボード（localhost:8080）
 ```
 
-## 💻 セッション例
+### CLI コマンド
 
-```text
-============================================================
-  🎯 OpenCMO - Your AI Chief Marketing Officer
-  Type a product URL and what you need, or 'quit' to exit.
-============================================================
-
-You: Help me write a tweet for https://crawl4ai.com/
-
-CMO is working... ⚙️
-
-[Twitter/X Expert] 🐦
-Here are 3 tweet variants for Crawl4AI:
-
-1. "Tired of writing web scrapers from scratch?
-   Crawl4AI gives you LLM-ready markdown from any URL in one line of Python.
-   Open source. Blazing fast. #OpenSource #AI"
-
-2. ...
-
-You: Make it more casual and fun
-
-CMO is working... ⚙️
-
-[Twitter/X Expert] 🐦
-Sure! Here's a more casual take:
-...
-
-You: Now write me a Product Hunt launch post
-
-CMO is working... ⚙️
-
-[Product Hunt Expert] 🚀
-...
-
-You: quit
-Goodbye! 👋
+```
+/monitor add <ブランド> <URL> <カテゴリ>  # 継続モニタリングを追加
+/monitor list                              # 全モニターを一覧
+/monitor run <id>                          # 今すぐスキャン実行
+/status                                    # 全プロジェクトのスキャン状態を表示
+/web                                       # Web ダッシュボードを起動
 ```
 
-## 🗺️ ロードマップ
+## ロードマップ
 
-- [ ] 🌐 リアルタイムストリーミング対応のWeb UI
-- [ ] ⚡ フルチャネルモード：1つのコマンドで6つのプラットフォーム全てのコンテンツを生成
-- [ ] 🔗 API連携によるプラットフォームへの自動投稿
-- [ ] 📅 コンテンツカレンダーとスケジューリング
-- [ ] 🧪 A/Bテストの提案
-- [ ] 🎬 その他のプラットフォームエキスパート（YouTube、Instagram、TikTokなど）
-- [ ] 🎭 カスタムブランドボイスのトレーニング
+- [x] 9 プラットフォーム対応 + マルチチャンネルオーケストレーション
+- [x] SEO 監査（CWV + Schema.org + robots/sitemap）
+- [x] GEO スコア（5 つの AI プラットフォーム）
+- [x] コミュニティモニタリング + パターン分析
+- [x] 競合分析
+- [x] SQLite 永続化ストレージ
+- [x] エージェント別モデル設定
+- [x] スケジューラによる継続モニタリング
+- [x] Web ダッシュボード + トレンドチャート
+- [ ] プラットフォーム API 経由の自動投稿
+- [ ] サイトマップベースの全サイト SEO 監査
+- [ ] カスタムブランドボイストレーニング
 
-## 🤝 コントリビューション
+## コントリビューション
 
-コントリビューションはいつでも大歓迎です！以下の方法でご参加いただけます：
+コントリビューション大歓迎！Fork → ブランチ作成 → PR。
 
-1. リポジトリを**フォーク**する
-2. フィーチャーブランチを**作成**する（`git checkout -b feature/amazing-feature`）
-3. 変更を**コミット**する（`git commit -m 'Add amazing feature'`）
-4. ブランチに**プッシュ**する（`git push origin feature/amazing-feature`）
-5. **プルリクエスト**を作成する
+## ライセンス
 
-**コントリビューションのアイデア：**
-- 新しいプラットフォームエキスパートエージェント
-- 既存エージェントのプロンプト改善
-- Web UIフロントエンド
-- テストとドキュメント
-
-## 📄 ライセンス
-
-このプロジェクトはApache License 2.0の下でライセンスされています。詳細は[LICENSE](LICENSE)ファイルをご覧ください。
+Apache License 2.0 — [LICENSE](LICENSE) を参照。
 
 ---
 
 <div align="center">
-  OpenCMOが役に立ったら、<strong>スター ⭐</strong> をいただけると私たちの大きな励みになります！
+  OpenCMO が役に立ったら <strong>Star</strong> をお願いします！
 </div>

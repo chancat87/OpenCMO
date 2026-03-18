@@ -1,5 +1,7 @@
 from agents import Agent
 
+from opencmo.config import get_model
+
 linkedin_expert = Agent(
     name="LinkedIn Expert",
     handoff_description="Hand off to this expert when the user needs content for LinkedIn.",
@@ -29,5 +31,5 @@ Based on the product information provided by the CMO Agent, create professional 
 - OK to use first person ("I've been building..." or "Our team discovered...")
 - Tag relevant topics, not people (unless the user specifies)
 """,
-    model="gpt-4o",
+    model=get_model("linkedin"),
 )

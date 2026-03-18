@@ -229,3 +229,88 @@ async def fetch_discussion_detail(
         c["text"] = _truncate(c.get("text", ""), 500)
 
     return json.dumps({"ok": True, "detail": asdict(detail)}, ensure_ascii=False)
+
+
+# ---------------------------------------------------------------------------
+# analyze_community_patterns
+# ---------------------------------------------------------------------------
+
+
+@function_tool
+async def analyze_community_patterns(brand_name: str, category: str) -> str:
+    """Analyze engagement patterns across tracked discussions over time.
+
+    Returns trending topics, engagement growth leaders, posting patterns,
+    and platform distribution based on historical discussion snapshots.
+
+    Args:
+        brand_name: The brand or product name.
+        category: The product category for context.
+    """
+    try:
+        from opencmo import storage
+
+        projects = await storage.list_projects()
+        project = next((p for p in projects if p["brand_name"] == brand_name), None)
+        if not project:
+            return f"No tracked data for '{brand_name}'. Run a community scan first to start tracking."
+
+        discussions = await storage.get_tracked_discussions(project["id"])
+        if not discussions:
+            return f"No tracked discussions for '{brand_name}'. Run a community scan first."
+
+        # Platform distribution
+        platform_counts: dict[str, int] = {}
+        for d in discussions:
+            platform_counts[d["platform"]] = platform_counts.get(d["platform"], 0) + 1
+
+        lines = [
+            f"# Community Pattern Analysis: {brand_name}",
+            f"**Category**: {category}\n",
+            f"## Overview",
+            f"- Total tracked discussions: {len(discussions)}",
+            f"- Platforms: {', '.join(f'{k} ({v})' for k, v in sorted(platform_counts.items()))}",
+            "",
+            "## Top Discussions by Engagement\n",
+            "| Platform | Title | Score | Comments | Last Checked |",
+            "|----------|-------|-------|----------|--------------|",
+        ]
+
+        # Top 10 by engagement
+        sorted_disc = sorted(
+            discussions,
+            key=lambda d: (d.get("engagement_score") or 0),
+            reverse=True,
+        )[:10]
+
+        for d in sorted_disc:
+            title = d["title"][:60] + ("..." if len(d["title"]) > 60 else "")
+            score = d.get("raw_score") or "—"
+            comments = d.get("comments_count") or "—"
+            lines.append(
+                f"| {d['platform']} | [{title}]({d['url']}) | {score} | {comments} | {d['last_checked_at'][:10]} |"
+            )
+
+        # Engagement velocity — discussions with growing scores
+        lines.append("\n## Engagement Velocity\n")
+        growing = []
+        for d in discussions:
+            snapshots = await storage.get_discussion_snapshots(d["id"])
+            if len(snapshots) >= 2:
+                first = snapshots[0]["engagement_score"]
+                last = snapshots[-1]["engagement_score"]
+                delta = last - first
+                if delta > 0:
+                    growing.append((d, delta, len(snapshots)))
+
+        if growing:
+            growing.sort(key=lambda x: x[1], reverse=True)
+            for d, delta, n_snaps in growing[:5]:
+                lines.append(f"- **{d['title'][:50]}** ({d['platform']}): +{delta} engagement over {n_snaps} snapshots")
+        else:
+            lines.append("*Not enough historical data to detect trends. Run scans over multiple days.*")
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        return f"Failed to analyze patterns: {e}"

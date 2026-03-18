@@ -1,5 +1,7 @@
 from agents import Agent
 
+from opencmo.config import get_model
+
 blog_expert = Agent(
     name="Blog/SEO Expert",
     handoff_description="Hand off to this expert when the user needs blog content for Medium, Dev.to, or SEO articles.",
@@ -38,5 +40,5 @@ Based on the product information provided by the CMO Agent, create blog content 
 - Include a natural, non-pushy CTA near the end
 - Aim for 5-8 minute read time in the full article
 """,
-    model="gpt-4o",
+    model=get_model("blog"),
 )

@@ -1,6 +1,11 @@
 from agents import Agent
 
-from opencmo.tools.community import fetch_discussion_detail, scan_community
+from opencmo.config import get_model
+from opencmo.tools.community import (
+    analyze_community_patterns,
+    fetch_discussion_detail,
+    scan_community,
+)
 from opencmo.tools.search import web_search
 
 community_agent = Agent(
@@ -76,9 +81,17 @@ community_agent = Agent(
   - **LinkedIn**: Professional, data-driven, industry perspective
   - **Product Hunt**: Maker voice, transparent about trade-offs
 
+## Historical Analysis
+
+If the user asks about trends or patterns, use `analyze_community_patterns` to show:
+- Top discussions by engagement across platforms
+- Engagement velocity (which discussions are growing)
+- Platform distribution
+This requires prior scans to have been saved — if no data is available, run a scan first.
+
 ## Important Note
 All suggested replies are drafts for human review. Nothing is auto-posted.
 """,
-    tools=[scan_community, fetch_discussion_detail, web_search],
-    model="gpt-4o",
+    tools=[scan_community, fetch_discussion_detail, analyze_community_patterns, web_search],
+    model=get_model("community"),
 )

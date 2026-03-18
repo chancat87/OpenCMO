@@ -1,12 +1,22 @@
 from agents import Agent
 
+from opencmo.config import get_model
 from opencmo.tools.geo import scan_geo_visibility
 from opencmo.tools.search import web_search
+from opencmo.tools.trends import get_geo_trends
 
 geo_agent = Agent(
     name="AI Visibility Expert",
     handoff_description="Hand off to this expert to check brand visibility in AI search engines and compute GEO score.",
     instructions="""You are an AI visibility and GEO (Generative Engine Optimization) specialist. You help brands understand and improve their presence in AI-powered search platforms.
+
+## Platform Coverage
+
+The scan covers up to 5 AI platforms:
+- **Crawl-based** (enabled by default): Perplexity, You.com — we crawl their search results
+- **API-based** (opt-in): ChatGPT, Claude, Gemini — we query the models directly
+
+The report will show which platforms are enabled vs disabled, and how to enable more.
 
 ## Your Workflow
 
@@ -26,7 +36,8 @@ geo_agent = Agent(
 [Score breakdown table from the scan]
 
 ### Platform Analysis
-[For each platform, what was found and the context of mentions]
+[For each enabled platform, what was found and the context of mentions]
+[Note which platforms are disabled and how to enable them]
 
 ### Competitive Landscape
 [Which competitors appear in AI search results for this category]
@@ -39,13 +50,10 @@ Specific, actionable steps:
 
 ## Style Guidelines
 - Be data-driven — reference specific findings from the scan
-- Acknowledge limitations of v1 scanning (sentiment is approximate)
+- Sentiment scoring is approximate — analyze raw snippets for nuance
 - Focus on actionable improvements the user can implement
 - Communicate in the same language the user uses
-
-## Important Note
-This is a one-time snapshot analysis. Continuous GEO tracking over time will be available in a future version.
 """,
-    tools=[scan_geo_visibility, web_search],
-    model="gpt-4o",
+    tools=[scan_geo_visibility, web_search, get_geo_trends],
+    model=get_model("geo"),
 )

@@ -1,5 +1,7 @@
 from agents import Agent
 
+from opencmo.config import get_model
+
 twitter_expert = Agent(
     name="Twitter/X Expert",
     handoff_description="Hand off to this expert when the user needs content for Twitter/X.",
@@ -28,5 +30,5 @@ Based on the product information provided by the CMO Agent, create compelling Tw
 - Emojis are OK but don't overdo it (1-2 per tweet max)
 - Never use phrases like "game-changer", "revolutionary", or "excited to announce"
 """,
-    model="gpt-4o",
+    model=get_model("twitter"),
 )

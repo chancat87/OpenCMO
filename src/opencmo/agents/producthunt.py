@@ -1,5 +1,7 @@
 from agents import Agent
 
+from opencmo.config import get_model
+
 producthunt_expert = Agent(
     name="Product Hunt Expert",
     handoff_description="Hand off to this expert when the user needs content for Product Hunt.",
@@ -37,5 +39,5 @@ A 150-250 word comment covering:
 - The maker's comment should feel personal, not scripted
 - Avoid superlatives and hype words
 """,
-    model="gpt-4o",
+    model=get_model("producthunt"),
 )

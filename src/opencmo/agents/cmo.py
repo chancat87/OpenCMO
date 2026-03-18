@@ -1,5 +1,7 @@
 from agents import Agent, handoff
 
+from opencmo.config import get_model
+
 from opencmo.agents.twitter import twitter_expert
 from opencmo.agents.reddit import reddit_expert
 from opencmo.agents.linkedin import linkedin_expert
@@ -130,5 +132,5 @@ cmo_agent = Agent(
             tool_description_override="Transfer to community monitor to scan Reddit, Hacker News, Dev.to and other platforms for brand discussions, fetch post details, and draft context-aware replies.",
         ),
     ],
-    model="gpt-4o",
+    model=get_model("cmo"),
 )

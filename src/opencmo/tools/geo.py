@@ -1,116 +1,145 @@
-from agents import function_tool
-from crawl4ai import AsyncWebCrawler
+import json
 
-from opencmo.tools.crawl import _extract_markdown
+from agents import function_tool
+
+from opencmo.tools.geo_providers import GEO_PROVIDER_REGISTRY, GeoProviderResult
 
 
 @function_tool
 async def scan_geo_visibility(brand_name: str, category: str) -> str:
     """Scan AI search platforms for brand visibility and compute a GEO score.
 
-    Checks Perplexity and You.com for brand mentions, position, and sentiment.
+    Checks multiple AI platforms (Perplexity, You.com, ChatGPT, Claude, Gemini)
+    for brand mentions, position, and sentiment. Crawl-based providers run by
+    default; API-based providers require environment variables to enable.
     Returns a GEO Score (0-100) with breakdown and improvement suggestions.
 
     Args:
         brand_name: The brand or product name to search for.
         category: The product category (e.g., "web scraping", "project management").
     """
-    platforms = {
-        "Perplexity": f"https://www.perplexity.ai/search?q=best+{category.replace(' ', '+')}+tools",
-        "You.com": f"https://you.com/search?q=best+{category.replace(' ', '+')}+tools",
-    }
+    enabled_providers = [p for p in GEO_PROVIDER_REGISTRY if p.is_enabled]
+    disabled_providers = [p for p in GEO_PROVIDER_REGISTRY if not p.is_enabled]
 
-    results: dict[str, dict] = {}
+    if not enabled_providers:
+        return "No GEO providers are enabled. Check your environment configuration."
 
-    try:
-        async with AsyncWebCrawler() as crawler:
-            for platform, url in platforms.items():
-                try:
-                    crawl_result = await crawler.arun(url=url)
-                    content = _extract_markdown(crawl_result)
-                    content_lower = content.lower()
-                    brand_lower = brand_name.lower()
+    results: dict[str, GeoProviderResult] = {}
 
-                    mentioned = brand_lower in content_lower
-                    mention_count = content_lower.count(brand_lower)
-
-                    # Rough position detection: first mention location as percentage
-                    position = -1
-                    if mentioned and content_lower:
-                        first_idx = content_lower.index(brand_lower)
-                        position = first_idx / len(content_lower) * 100
-
-                    results[platform] = {
-                        "mentioned": mentioned,
-                        "mention_count": mention_count,
-                        "position_pct": round(position, 1) if position >= 0 else None,
-                        "content_snippet": content[:2000],
-                    }
-                except Exception as e:
-                    results[platform] = {
-                        "mentioned": False,
-                        "mention_count": 0,
-                        "position_pct": None,
-                        "error": str(e),
-                    }
-    except Exception as e:
-        return f"Failed to scan: {e}"
+    for provider in enabled_providers:
+        try:
+            result = await provider.check_visibility(brand_name, category)
+            results[provider.name] = result
+        except Exception as e:
+            results[provider.name] = GeoProviderResult(
+                platform=provider.name,
+                mentioned=False,
+                mention_count=0,
+                position_pct=None,
+                content_snippet="",
+                error=str(e),
+            )
 
     # Compute GEO Score
     # Visibility (0-40): mentioned on how many platforms
-    platforms_mentioned = sum(1 for r in results.values() if r["mentioned"])
-    visibility_score = int(platforms_mentioned / len(platforms) * 40)
+    platforms_mentioned = sum(1 for r in results.values() if r.mentioned)
+    visibility_score = int(platforms_mentioned / len(enabled_providers) * 40)
 
     # Position (0-30): earlier mentions = higher score
     position_scores = []
     for r in results.values():
-        if r.get("position_pct") is not None:
+        if r.position_pct is not None:
             # 0% position = score 30, 100% = score 0
-            position_scores.append(30 * (1 - r["position_pct"] / 100))
-    position_score = int(sum(position_scores) / len(position_scores)) if position_scores else 0
+            position_scores.append(30 * (1 - r.position_pct / 100))
+    position_score = (
+        int(sum(position_scores) / len(position_scores)) if position_scores else 0
+    )
 
-    # Sentiment (0-30): placeholder — needs NLP in future versions
+    # Sentiment (0-30): placeholder -- needs NLP in future versions
     # For now, give 15/30 if mentioned (neutral), 0 if not
     sentiment_score = 15 if platforms_mentioned > 0 else 0
 
     geo_score = visibility_score + position_score + sentiment_score
+
+    # Persist scan (best-effort, do not block on failure)
+    try:
+        from opencmo import storage
+
+        platform_results_json = json.dumps(
+            {
+                name: {
+                    "mentioned": r.mentioned,
+                    "mention_count": r.mention_count,
+                    "position_pct": r.position_pct,
+                    "error": r.error,
+                }
+                for name, r in results.items()
+            }
+        )
+        # save_geo_scan requires a project_id; use project_id=0 as ad-hoc scan
+        await storage.save_geo_scan(
+            project_id=0,
+            geo_score=geo_score,
+            visibility_score=visibility_score,
+            position_score=position_score,
+            sentiment_score=sentiment_score,
+            platform_results_json=platform_results_json,
+        )
+    except Exception:
+        pass  # storage persistence is best-effort
 
     # Build report
     lines = [
         f"# GEO Visibility Report: {brand_name}",
         f"**Category**: {category}\n",
         f"## GEO Score: {geo_score}/100\n",
-        f"| Component | Score | Max |",
-        f"|-----------|-------|-----|",
+        "| Component | Score | Max |",
+        "|-----------|-------|-----|",
         f"| Visibility | {visibility_score} | 40 |",
         f"| Position | {position_score} | 30 |",
         f"| Sentiment | {sentiment_score} | 30 |",
         f"| **Total** | **{geo_score}** | **100** |",
         "",
-        "## Platform Results\n",
+        f"## Platform Results ({len(enabled_providers)} enabled, {len(disabled_providers)} disabled)\n",
     ]
 
-    for platform, data in results.items():
-        if data.get("error"):
-            lines.append(f"### {platform}: ERROR — {data['error']}\n")
+    for name, data in results.items():
+        if data.error:
+            lines.append(f"### {name} [enabled]: ERROR -- {data.error}\n")
             continue
-        status = "FOUND" if data["mentioned"] else "NOT FOUND"
-        lines.append(f"### {platform}: {status}")
-        if data["mentioned"]:
-            lines.append(f"- Mentions: {data['mention_count']}")
-            if data["position_pct"] is not None:
-                lines.append(f"- First mention at: {data['position_pct']}% through the response")
+        status = "FOUND" if data.mentioned else "NOT FOUND"
+        lines.append(f"### {name} [enabled]: {status}")
+        if data.mentioned:
+            lines.append(f"- Mentions: {data.mention_count}")
+            if data.position_pct is not None:
+                lines.append(
+                    f"- First mention at: {data.position_pct}% through the response"
+                )
         lines.append("")
 
-    lines.extend([
-        "## Raw Context (for agent analysis)\n",
-        "Below are content snippets from each platform for the agent to analyze sentiment and context:\n",
-    ])
-    for platform, data in results.items():
-        snippet = data.get("content_snippet", "")
-        if snippet:
-            lines.append(f"### {platform} snippet\n{snippet[:1500]}\n")
+    if disabled_providers:
+        lines.append("## Disabled Platforms\n")
+        for p in disabled_providers:
+            env_hint = ", ".join(p.auth_env_vars) if p.auth_env_vars else "N/A"
+            extra = ""
+            if p.name == "ChatGPT":
+                extra = " (also requires OPENCMO_GEO_CHATGPT=1)"
+            elif p.name == "Claude":
+                extra = " (also requires `anthropic` package)"
+            elif p.name == "Gemini":
+                extra = " (also requires `google-generativeai` package)"
+            lines.append(f"- **{p.name}**: set {env_hint}{extra} to enable")
+        lines.append("")
 
-    lines.append("\n*Note: Sentiment scoring is approximate in v1. GEO tracking over time will be added in a future version.*")
+    lines.extend(
+        [
+            "## Raw Context (for agent analysis)\n",
+            "Below are content snippets from each platform for the agent to analyze sentiment and context:\n",
+        ]
+    )
+    for name, data in results.items():
+        snippet = data.content_snippet
+        if snippet:
+            lines.append(f"### {name} snippet\n{snippet[:1500]}\n")
 
     return "\n".join(lines)

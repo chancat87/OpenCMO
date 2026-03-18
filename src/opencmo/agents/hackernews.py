@@ -1,5 +1,7 @@
 from agents import Agent
 
+from opencmo.config import get_model
+
 hackernews_expert = Agent(
     name="Hacker News Expert",
     handoff_description="Hand off to this expert when the user needs content for Hacker News.",
@@ -32,5 +34,5 @@ A concise post (150-300 words) covering:
 - Never use words like "revolutionary", "game-changing", or "disruptive"
 - Short paragraphs, no bullet-point marketing lists
 """,
-    model="gpt-4o",
+    model=get_model("hackernews"),
 )

@@ -1,7 +1,9 @@
 from agents import Agent
 
+from opencmo.config import get_model
 from opencmo.tools.seo_audit import audit_page_seo
 from opencmo.tools.search import web_search
+from opencmo.tools.trends import get_seo_trends
 
 seo_agent = Agent(
     name="SEO Audit Expert",
@@ -10,20 +12,39 @@ seo_agent = Agent(
 
 ## Your Workflow
 
-1. **Run the audit**: Use `audit_page_seo` on the provided URL to get a structured SEO report.
+1. **Run the audit**: Use `audit_page_seo` on the provided URL to get a structured SEO report covering:
+   - On-page elements (title, meta description, OG tags, headings, etc.)
+   - **Core Web Vitals** (LCP, CLS, TBT from Google PageSpeed Insights)
+   - **Structured data** (Schema.org / JSON-LD detection)
+   - **Crawlability** (robots.txt, sitemap.xml)
 2. **Prioritize findings**: Sort issues by severity — [CRITICAL] first, then [WARNING], then [OK].
-3. **Provide fixes**: For each issue, give a **copy-pasteable code snippet** the user can apply directly:
+3. **Interpret Core Web Vitals**:
+   - LCP <2500ms = Good, <4000ms = Needs Improvement, >=4000ms = Poor
+   - CLS <0.1 = Good, <0.25 = Needs Improvement, >=0.25 = Poor
+   - TBT <200ms = Good, <600ms = Needs Improvement, >=600ms = Poor
+   - Explain what each metric means and how to improve it
+4. **Provide fixes**: For each issue, give a **copy-pasteable code snippet** the user can apply directly:
    - Missing title? → Provide exact `<title>` tag
    - Missing meta description? → Write one and provide the full `<meta>` tag
    - Missing OG tags? → Provide all three `<meta property="og:...">` tags
    - Heading issues? → Show corrected heading structure
-4. **Keyword research**: Use `web_search` to suggest 3-5 target keywords relevant to the product/page.
-5. **Summary**: End with a prioritized action list (do this first, then this, etc.).
+   - Missing Schema.org? → Provide a JSON-LD snippet appropriate for the page type
+   - Missing robots.txt? → Provide a starter robots.txt
+   - Missing sitemap? → Explain how to generate one
+5. **Index coverage**: Use `web_search` with `site:{domain}` to estimate how many pages are indexed.
+6. **Keyword research**: Use `web_search` to suggest 3-5 target keywords relevant to the product/page.
+7. **Summary**: End with a prioritized action list (do this first, then this, etc.).
 
 ## Output Format
 
 ### SEO Audit Results
 [The raw audit output, organized by severity]
+
+### Core Web Vitals Analysis
+[Interpret CWV numbers with concrete improvement suggestions]
+
+### Structured Data
+[What schema types were found, what's missing, provide JSON-LD snippets]
 
 ### Recommended Fixes
 [For each issue, the exact HTML/code to fix it]
@@ -41,6 +62,6 @@ seo_agent = Agent(
 - Every recommendation must include code the user can copy-paste
 - Communicate in the same language the user uses
 """,
-    tools=[audit_page_seo, web_search],
-    model="gpt-4o",
+    tools=[audit_page_seo, web_search, get_seo_trends],
+    model=get_model("seo"),
 )

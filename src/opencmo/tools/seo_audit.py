@@ -1,9 +1,18 @@
-from html.parser import HTMLParser
+from __future__ import annotations
 
+import json
+import logging
+import os
+from html.parser import HTMLParser
+from urllib.parse import urlparse
+
+import httpx
 from agents import function_tool
 from crawl4ai import AsyncWebCrawler
 
 from opencmo.tools.crawl import _extract_markdown
+
+logger = logging.getLogger(__name__)
 
 
 class _SEOParser(HTMLParser):
@@ -19,6 +28,10 @@ class _SEOParser(HTMLParser):
         self.viewport = ""
         self.headings: dict[str, list[str]] = {f"h{i}": [] for i in range(1, 7)}
         self._capture_title = False
+        # JSON-LD / Schema.org tracking
+        self.schema_types: list[str] = []
+        self._capture_jsonld = False
+        self._jsonld_buffer = ""
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]):
         attr_dict = {k: v or "" for k, v in attrs}
@@ -42,12 +55,19 @@ class _SEOParser(HTMLParser):
         if tag == "title":
             self._capture_title = True
 
+        if tag == "script":
+            if attr_dict.get("type", "").lower() == "application/ld+json":
+                self._capture_jsonld = True
+                self._jsonld_buffer = ""
+
         if tag in self.headings:
             self.headings[tag].append("")  # placeholder for text
 
     def handle_data(self, data: str):
         if self._capture_title:
             self.title += data.strip()
+        if self._capture_jsonld:
+            self._jsonld_buffer += data
         if self._tag_stack and self._tag_stack[-1] in self.headings:
             tag = self._tag_stack[-1]
             if self.headings[tag]:
@@ -56,8 +76,32 @@ class _SEOParser(HTMLParser):
     def handle_endtag(self, tag: str):
         if tag == "title":
             self._capture_title = False
+        if tag == "script" and self._capture_jsonld:
+            self._capture_jsonld = False
+            self._parse_jsonld(self._jsonld_buffer)
+            self._jsonld_buffer = ""
         if self._tag_stack and self._tag_stack[-1] == tag:
             self._tag_stack.pop()
+
+    def _parse_jsonld(self, raw: str) -> None:
+        """Extract @type from a JSON-LD blob."""
+        try:
+            data = json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            return
+        if isinstance(data, list):
+            for item in data:
+                if isinstance(item, dict) and "@type" in item:
+                    self.schema_types.append(item["@type"])
+        elif isinstance(data, dict):
+            if "@type" in data:
+                self.schema_types.append(data["@type"])
+            # Also check @graph
+            graph = data.get("@graph", [])
+            if isinstance(graph, list):
+                for item in graph:
+                    if isinstance(item, dict) and "@type" in item:
+                        self.schema_types.append(item["@type"])
 
 
 def _check(label: str, ok: bool, detail: str) -> str:
@@ -69,7 +113,113 @@ def _warn(label: str, detail: str) -> str:
     return f"[WARNING] {label}: {detail}"
 
 
-def _build_report(parser: _SEOParser, result, url: str) -> str:
+def _cwv_status(value: float, good: float, poor: float) -> str:
+    """Return severity tag for a Core Web Vitals metric."""
+    if value < good:
+        return "[OK]"
+    elif value >= poor:
+        return "[CRITICAL]"
+    else:
+        return "[WARNING]"
+
+
+async def _fetch_core_web_vitals(url: str) -> dict | None:
+    """Fetch Core Web Vitals from Google PageSpeed Insights API.
+
+    Returns dict with keys: performance, lcp, cls, tbt; or None on failure.
+    """
+    api_key = os.environ.get("PAGESPEED_API_KEY", "")
+    params: dict[str, str] = {
+        "url": url,
+        "category": "performance",
+        "strategy": "mobile",
+    }
+    if api_key:
+        params["key"] = api_key
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.get(
+                "https://www.googleapis.com/pagespeedonline/v5/runPagespeed",
+                params=params,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+        lighthouse = data.get("lighthouseResult", {})
+        perf_score = lighthouse.get("categories", {}).get("performance", {}).get("score")
+        audits = lighthouse.get("audits", {})
+        lcp = audits.get("largest-contentful-paint", {}).get("numericValue")
+        cls_ = audits.get("cumulative-layout-shift", {}).get("numericValue")
+        tbt = audits.get("total-blocking-time", {}).get("numericValue")
+
+        return {
+            "performance": perf_score,
+            "lcp": lcp,
+            "cls": cls_,
+            "tbt": tbt,
+        }
+    except Exception as exc:
+        logger.debug("PageSpeed API failed for %s: %s", url, exc)
+        return None
+
+
+async def _check_robots_and_sitemap(url: str) -> dict:
+    """Check robots.txt and sitemap.xml for the given URL's origin.
+
+    Returns dict with keys: has_robots, robots_disallow_all, sitemap_in_robots,
+    has_sitemap, sitemap_loc_count.
+    """
+    parsed = urlparse(url)
+    origin = f"{parsed.scheme}://{parsed.netloc}"
+
+    result: dict = {
+        "has_robots": False,
+        "robots_disallow_all": False,
+        "sitemap_in_robots": None,
+        "has_sitemap": False,
+        "sitemap_loc_count": 0,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            # --- robots.txt ---
+            try:
+                robots_resp = await client.get(f"{origin}/robots.txt")
+                if robots_resp.status_code == 200:
+                    result["has_robots"] = True
+                    body = robots_resp.text
+                    for line in body.splitlines():
+                        stripped = line.strip().lower()
+                        if stripped.startswith("disallow") and "/ " not in stripped:
+                            # Check for "Disallow: /" exactly (block everything)
+                            parts = stripped.split(":", 1)
+                            if len(parts) == 2 and parts[1].strip() == "/":
+                                result["robots_disallow_all"] = True
+                        if stripped.startswith("sitemap:"):
+                            parts = line.strip().split(":", 1)
+                            if len(parts) == 2:
+                                result["sitemap_in_robots"] = parts[1].strip()
+            except httpx.HTTPError:
+                pass
+
+            # --- sitemap.xml ---
+            sitemap_url = result["sitemap_in_robots"] or f"{origin}/sitemap.xml"
+            try:
+                sitemap_resp = await client.get(sitemap_url)
+                if sitemap_resp.status_code == 200:
+                    result["has_sitemap"] = True
+                    # Count <loc> entries
+                    result["sitemap_loc_count"] = sitemap_resp.text.count("<loc>")
+            except httpx.HTTPError:
+                pass
+    except Exception as exc:
+        logger.debug("robots/sitemap check failed for %s: %s", origin, exc)
+
+    return result
+
+
+def _build_report(parser: _SEOParser, result, url: str, *, cwv: dict | None = None, robots_sitemap: dict | None = None) -> str:
     lines: list[str] = [f"# SEO Audit Report: {url}\n"]
 
     # Title
@@ -170,6 +320,79 @@ def _build_report(parser: _SEOParser, result, url: str) -> str:
     else:
         lines.append(_check("Content Length", True, f"{word_count} words"))
 
+    # --- Schema.org / JSON-LD ---
+    lines.append("")
+    lines.append("## Structured Data (Schema.org)")
+    if parser.schema_types:
+        types_str = ", ".join(parser.schema_types)
+        lines.append(_check("Schema.org", True, f"Found types: {types_str}"))
+    else:
+        lines.append(_warn("Schema.org", "No JSON-LD structured data found — add schema markup for rich results"))
+
+    # --- Core Web Vitals ---
+    lines.append("")
+    lines.append("## Core Web Vitals (Mobile)")
+    if cwv is not None:
+        perf = cwv.get("performance")
+        if perf is not None:
+            perf_pct = int(perf * 100)
+            tag = "[OK]" if perf_pct >= 90 else ("[CRITICAL]" if perf_pct < 50 else "[WARNING]")
+            lines.append(f"{tag} Performance Score: {perf_pct}/100")
+        else:
+            lines.append(_warn("Performance Score", "Not available"))
+
+        lcp = cwv.get("lcp")
+        if lcp is not None:
+            tag = _cwv_status(lcp, 2500, 4000)
+            lines.append(f"{tag} LCP (Largest Contentful Paint): {lcp:.0f}ms")
+        else:
+            lines.append(_warn("LCP", "Not available"))
+
+        cls_val = cwv.get("cls")
+        if cls_val is not None:
+            tag = _cwv_status(cls_val, 0.1, 0.25)
+            lines.append(f"{tag} CLS (Cumulative Layout Shift): {cls_val:.3f}")
+        else:
+            lines.append(_warn("CLS", "Not available"))
+
+        tbt = cwv.get("tbt")
+        if tbt is not None:
+            tag = _cwv_status(tbt, 200, 600)
+            lines.append(f"{tag} TBT (Total Blocking Time): {tbt:.0f}ms")
+        else:
+            lines.append(_warn("TBT", "Not available"))
+    else:
+        lines.append(_warn("Core Web Vitals", "Could not fetch PageSpeed data — check network or set PAGESPEED_API_KEY"))
+
+    # --- robots.txt & sitemap.xml ---
+    lines.append("")
+    lines.append("## Crawlability")
+    if robots_sitemap is not None:
+        if robots_sitemap["has_robots"]:
+            lines.append(_check("robots.txt", True, "Found"))
+            if robots_sitemap["robots_disallow_all"]:
+                lines.append(_check("robots.txt Disallow", False, "Disallow: / blocks all crawlers"))
+        else:
+            lines.append(_warn("robots.txt", "Not found — search engines may crawl all pages without guidance"))
+
+        if robots_sitemap["has_sitemap"]:
+            count = robots_sitemap["sitemap_loc_count"]
+            lines.append(_check("sitemap.xml", True, f"Found ({count} URLs)"))
+        else:
+            lines.append(_warn("sitemap.xml", "Not found — submit a sitemap to improve crawl efficiency"))
+
+        if robots_sitemap["sitemap_in_robots"]:
+            lines.append(_check("Sitemap in robots.txt", True, robots_sitemap["sitemap_in_robots"]))
+        elif robots_sitemap["has_robots"]:
+            lines.append(_warn("Sitemap in robots.txt", "No Sitemap directive in robots.txt"))
+    else:
+        lines.append(_warn("Crawlability", "Could not check robots.txt / sitemap.xml"))
+
+    # --- Backlinks (placeholder) ---
+    lines.append("")
+    lines.append("## Backlink Profile")
+    lines.append("[INFO] Backlink data: not yet available — a future update will integrate third-party backlink APIs")
+
     return "\n".join(lines)
 
 
@@ -178,8 +401,9 @@ async def audit_page_seo(url: str) -> str:
     """Audit a single web page for SEO issues.
 
     Checks title, meta description, OG tags, canonical URL, viewport, headings,
-    image alt text, links, and content length. Each item is marked as
-    [OK], [WARNING], or [CRITICAL].
+    image alt text, links, content length, Schema.org structured data,
+    Core Web Vitals (via Google PageSpeed Insights), and robots.txt/sitemap.xml.
+    Each item is marked as [OK], [WARNING], or [CRITICAL].
 
     Args:
         url: The URL of the page to audit.
@@ -192,6 +416,34 @@ async def audit_page_seo(url: str) -> str:
         html = getattr(result, "html", "") or ""
         parser.feed(html)
 
-        return _build_report(parser, result, url)
+        # Fetch external data (failures are non-blocking)
+        cwv = await _fetch_core_web_vitals(url)
+        robots_sitemap = await _check_robots_and_sitemap(url)
+
+        report = _build_report(parser, result, url, cwv=cwv, robots_sitemap=robots_sitemap)
+
+        # Persist to storage (best-effort)
+        try:
+            from opencmo import storage
+
+            parsed = urlparse(url)
+            domain = parsed.netloc.removeprefix("www.")
+            project_id = await storage.ensure_project(domain, url, "")
+            await storage.save_seo_scan(
+                project_id,
+                url,
+                report,
+                score_performance=cwv.get("performance") if cwv else None,
+                score_lcp=cwv.get("lcp") if cwv else None,
+                score_cls=cwv.get("cls") if cwv else None,
+                score_tbt=cwv.get("tbt") if cwv else None,
+                has_robots_txt=robots_sitemap.get("has_robots") if robots_sitemap else None,
+                has_sitemap=robots_sitemap.get("has_sitemap") if robots_sitemap else None,
+                has_schema_org=bool(parser.schema_types),
+            )
+        except Exception:
+            pass  # Storage failure should not block the audit
+
+        return report
     except Exception as e:
         return f"Failed to audit {url}: {e}"

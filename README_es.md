@@ -5,7 +5,7 @@
 <h1 align="center">OpenCMO</h1>
 
 <div align="center">
-  <strong>Tu Director de Marketing con IA — creado para desarrolladores independientes que prefieren programar antes que hacer marketing.</strong>
+  <strong>El CMO con IA de codigo abierto — las mismas funciones que herramientas de $99/mes, gratis.</strong>
 </div>
 <br/>
 
@@ -16,137 +16,139 @@
 <div align="center">
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg?style=flat-square" alt="Python 3.10+"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-green.svg?style=flat-square" alt="License"></a>
-  <a href="https://github.com/your-username/OpenCMO/stargazers"><img src="https://img.shields.io/github/stars/your-username/OpenCMO?style=flat-square&color=yellow" alt="Stars"></a>
+  <a href="https://github.com/study8677/OpenCMO/stargazers"><img src="https://img.shields.io/github/stars/study8677/OpenCMO?style=flat-square&color=yellow" alt="Stars"></a>
 </div>
 
 ---
 
-## 🌟 ¿Qué es OpenCMO?
+> **Okara cobra $99/mes. Nosotros cobramos $0.** Y cubrimos mas plataformas.
 
-OpenCMO es un sistema multiagente de código abierto que actúa como tu **equipo de marketing con IA**. Dale la URL de tu producto y rastreará tu sitio, extraerá los puntos de venta clave y generará contenido de marketing específico para cada plataforma — todo a través de una simple y elegante interfaz de línea de comandos.
+## Que es OpenCMO?
 
-Creado específicamente para **desarrolladores independientes, fundadores en solitario y equipos pequeños** que tienen un gran producto pero no tienen tiempo (ni ganas) de escribir textos de marketing para cada plataforma.
+OpenCMO es un sistema multi-agente de IA que actua como tu equipo de marketing completo. Dale una URL — rastrea tu sitio, extrae puntos de venta y genera contenido listo para publicar en **9 canales** a traves de un simple CLI.
 
-## ✨ Características
+Creado para **desarrolladores independientes y equipos pequenos** que prefieren programar antes que escribir copy de marketing.
 
-- **🐦 Experto en Twitter/X** — Genera variantes de tweets e hilos con ganchos que detienen el scroll.
-- **🤖 Experto en Reddit** — Crea publicaciones auténticas e impulsadas por historias adaptadas para r/SideProject y comunidades de nicho.
-- **💼 Experto en LinkedIn** — Escribe publicaciones profesionales basadas en datos que no suenan a jerga corporativa.
-- **🚀 Experto en Product Hunt** — Crea eslóganes llamativos, descripciones y el importantísimo primer comentario del creador (Maker's comment).
-- **📰 Experto en Hacker News** — Produce publicaciones discretas y técnicamente enfocadas de tipo "Show HN".
-- **📝 Experto en Blog/SEO** — Elabora esquemas de artículos optimizados para SEO para Medium y Dev.to.
+## Funcionalidades
 
-## 🏗️ Arquitectura
+### 9 Expertos de Plataforma
+- **Twitter/X** — Variantes de tweets e hilos con ganchos que detienen el scroll
+- **Reddit** — Publicaciones autenticas con historia para r/SideProject y comunidades nicho
+- **LinkedIn** — Publicaciones profesionales basadas en datos
+- **Product Hunt** — Eslogan, descripcion y comentario de creador
+- **Hacker News** — Posts Show HN discretos y tecnicos
+- **Blog/SEO** — Esquemas de articulos SEO para Medium y Dev.to
+
+### Inteligencia de Marketing
+- **Auditoria SEO** — Core Web Vitals (LCP/CLS/TBT via Google PageSpeed), deteccion de Schema.org/JSON-LD, verificacion de robots.txt/sitemap.xml — cada problema con codigo de correccion copiable
+- **Puntuacion GEO** — Visibilidad en 5 plataformas de IA: Perplexity, You.com (rastreo), ChatGPT, Claude, Gemini (API, opcional)
+- **Analisis de Competencia** — Inteligencia estructurada: funciones, precios, posicionamiento, diferenciacion
+- **Monitor de Comunidad** — Escaneo de Reddit + HN + Dev.to, seguimiento de discusiones, analisis de patrones de interaccion, borradores de respuestas autenticas
+- **Busqueda Web** — Investigacion competitiva en tiempo real, tendencias, descubrimiento de palabras clave
+
+### Monitoreo Continuo
+- **Programador** — Escaneos automaticos basados en Cron (SEO/GEO/Comunidad) via comandos `/monitor`
+- **Analisis de Tendencias** — Historial de puntuaciones SEO y GEO desde almacenamiento persistente SQLite
+- **Patrones de Comunidad** — Velocidad de interaccion, distribucion por plataforma, seguimiento de discusiones
+
+### Panel Web
+- **FastAPI + Chart.js** — Vision general de proyectos, graficos de tendencias SEO/GEO/Comunidad
+- **Sin build frontend** — HTML renderizado en servidor, Chart.js via CDN
+- **Un solo comando** — `opencmo-web` o `/web` en CLI
+
+### Orquestacion Inteligente
+- **Plataforma unica** → transferencia al experto para creacion de contenido profunda e interactiva
+- **Multi-canal** → CMO llama a todos los expertos como herramientas, sintetiza un plan de marketing unificado
+- **Modelos configurables** — `OPENCMO_MODEL_DEFAULT=gpt-4o-mini` o configuracion por agente
+- **Contexto mantenido** — Historial de conversacion con truncamiento automatico
+
+## Arquitectura
 
 ```mermaid
 graph TD
-    User([Usuario]) --> CMO[Agente CMO <br/> Orquestador]
-    CMO -- rastrea sitio del producto --> Crawl[Herramienta Crawl <br/> crawl_website]
-    
-    CMO -- transferencia --> X[Experto en Twitter/X]
-    CMO -- transferencia --> Reddit[Experto en Reddit]
-    CMO -- transferencia --> LinkedIn[Experto en LinkedIn]
-    CMO -- transferencia --> PH[Experto en Product Hunt]
-    CMO -- transferencia --> HN[Experto en Hacker News]
-    CMO -- transferencia --> Blog[Experto en Blog/SEO]
+    User([Usuario]) --> CMO[Agente CMO]
+
+    CMO --> Tools[Herramientas Compartidas]
+    Tools --> Crawl[Rastreador Web]
+    Tools --> Search[Busqueda Web]
+    Tools --> Competitor[Analisis de Competencia]
+
+    CMO -- transferencia/herramienta --> Twitter[Twitter/X]
+    CMO -- transferencia/herramienta --> Reddit[Reddit]
+    CMO -- transferencia/herramienta --> LinkedIn[LinkedIn]
+    CMO -- transferencia/herramienta --> PH[Product Hunt]
+    CMO -- transferencia/herramienta --> HN[Hacker News]
+    CMO -- transferencia/herramienta --> Blog[Blog/SEO]
+    CMO -- transferencia --> SEO[Auditoria SEO]
+    CMO -- transferencia --> GEO[GEO / Visibilidad IA]
+    CMO -- transferencia --> Community[Monitor de Comunidad]
+
+    Scheduler[Programador] --> DB[(SQLite)]
+    WebDash[Panel Web] --> DB
 ```
 
-El **Agente CMO** rastrea tu sitio web, extrae una descripción breve, los puntos de venta principales y un perfil de audiencia objetivo. Luego delega de manera inteligente al experto de la plataforma adecuada según tu solicitud.
-
-## 🚀 Inicio Rápido
+## Inicio Rapido
 
 ### 1. Instalar
 
 ```bash
 pip install -e .
 crawl4ai-setup
+
+# Opcional: instalar todas las extensiones
+pip install -e ".[all]"   # programador + panel web + GEO premium
 ```
 
 ### 2. Configurar
 
 ```bash
 cp .env.example .env
-# Edita .env y agrega tu clave de API de OpenAI
+# Agregar tu clave API de OpenAI (requerida)
+# Opcional: ANTHROPIC_API_KEY, GOOGLE_AI_API_KEY, PAGESPEED_API_KEY
 ```
 
 ### 3. Ejecutar
 
 ```bash
-opencmo
+opencmo                   # CLI interactivo
+opencmo-web               # Panel web (localhost:8080)
 ```
 
-## 💻 Ejemplo de Sesión
+### Comandos CLI
 
-```text
-============================================================
-  🎯 OpenCMO - Tu Director de Marketing con IA
-  Escribe la URL de un producto y lo que necesitas, o 'quit' para salir.
-============================================================
-
-Tú: Help me write a tweet for https://crawl4ai.com/
-
-El CMO está trabajando... ⚙️
-
-[Experto en Twitter/X] 🐦
-Aquí tienes 3 variantes de tweet para Crawl4AI:
-
-1. "Tired of writing web scrapers from scratch?
-   Crawl4AI gives you LLM-ready markdown from any URL in one line of Python.
-   Open source. Blazing fast. #OpenSource #AI"
-
-2. ...
-
-Tú: Make it more casual and fun
-
-El CMO está trabajando... ⚙️
-
-[Experto en Twitter/X] 🐦
-¡Claro! Aquí tienes una versión más informal:
-...
-
-Tú: Now write me a Product Hunt launch post
-
-El CMO está trabajando... ⚙️
-
-[Experto en Product Hunt] 🚀
-...
-
-Tú: quit
-¡Hasta luego! 👋
+```
+/monitor add <marca> <URL> <categoria>   # Agregar monitoreo continuo
+/monitor list                             # Listar todos los monitores
+/monitor run <id>                         # Ejecutar escaneo inmediatamente
+/status                                   # Ver estado de todos los proyectos
+/web                                      # Iniciar panel web
 ```
 
-## 🗺️ Hoja de Ruta
+## Hoja de Ruta
 
-- [ ] 🌐 Interfaz web con transmisión en tiempo real
-- [ ] ⚡ Modo multicanal: generar contenido para las 6 plataformas con un solo comando
-- [ ] 🔗 Publicación automática en plataformas mediante integraciones de API
-- [ ] 📅 Calendario de contenido y programación
-- [ ] 🧪 Sugerencias de pruebas A/B
-- [ ] 🎬 Más expertos de plataforma (YouTube, Instagram, TikTok, etc.)
-- [ ] 🎭 Entrenamiento personalizado de voz de marca
+- [x] 9 expertos de plataforma + orquestacion multi-canal
+- [x] Auditoria SEO (CWV + Schema.org + robots/sitemap)
+- [x] Puntuacion GEO (5 plataformas de IA)
+- [x] Monitoreo de comunidad + analisis de patrones
+- [x] Analisis de competencia
+- [x] Almacenamiento persistente SQLite
+- [x] Modelos configurables por agente
+- [x] Programador de monitoreo continuo
+- [x] Panel web + graficos de tendencias
+- [ ] Auto-publicacion via APIs de plataformas
+- [ ] Auditoria SEO de sitio completo (basada en sitemap)
+- [ ] Entrenamiento personalizado de voz de marca
 
-## 🤝 Contribuir
+## Contribuir
 
-¡Las contribuciones siempre son bienvenidas! Así es como puedes ayudar:
+Las contribuciones son bienvenidas! Fork → branch → PR.
 
-1. **Haz un fork** del repositorio
-2. **Crea** una rama de funcionalidad (`git checkout -b feature/funcionalidad-increible`)
-3. **Haz commit** de tus cambios (`git commit -m 'Agregar funcionalidad increíble'`)
-4. **Sube** la rama (`git push origin feature/funcionalidad-increible`)
-5. **Abre** un Pull Request
+## Licencia
 
-**Ideas para contribuir:**
-- Nuevos agentes expertos de plataforma
-- Mejoras en los prompts de los agentes existentes
-- Interfaz web frontend
-- Pruebas y documentación
-
-## 📄 Licencia
-
-Este proyecto está licenciado bajo la Licencia Apache 2.0 — consulta el archivo [LICENSE](LICENSE) para más detalles.
+Apache License 2.0 — ver [LICENSE](LICENSE).
 
 ---
 
 <div align="center">
-  Si OpenCMO te resulta útil, ¡darle una <strong>Estrella ⭐</strong> significaría mucho para nosotros!
+  Si OpenCMO te resulta util, una <strong>Star</strong> significaria mucho!
 </div>

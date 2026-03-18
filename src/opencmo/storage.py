@@ -1,0 +1,482 @@
+"""SQLite storage layer for persistent scan data."""
+
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+
+import aiosqlite
+
+_DB_PATH = Path(os.environ.get("OPENCMO_DB_PATH", Path.home() / ".opencmo" / "data.db"))
+
+_SCHEMA = """
+CREATE TABLE IF NOT EXISTS projects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    brand_name TEXT NOT NULL,
+    url TEXT NOT NULL,
+    category TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(brand_name, url)
+);
+
+CREATE TABLE IF NOT EXISTS seo_scans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id),
+    url TEXT NOT NULL,
+    scanned_at TEXT NOT NULL DEFAULT (datetime('now')),
+    report_json TEXT NOT NULL,
+    score_performance REAL,
+    score_lcp REAL,
+    score_cls REAL,
+    score_tbt REAL,
+    has_robots_txt INTEGER,
+    has_sitemap INTEGER,
+    has_schema_org INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS geo_scans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id),
+    scanned_at TEXT NOT NULL DEFAULT (datetime('now')),
+    geo_score INTEGER NOT NULL,
+    visibility_score INTEGER,
+    position_score INTEGER,
+    sentiment_score INTEGER,
+    platform_results_json TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS community_scans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id),
+    scanned_at TEXT NOT NULL DEFAULT (datetime('now')),
+    total_hits INTEGER,
+    results_json TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS tracked_discussions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id),
+    platform TEXT NOT NULL,
+    detail_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    url TEXT NOT NULL,
+    first_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_checked_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(project_id, platform, detail_id)
+);
+
+CREATE TABLE IF NOT EXISTS discussion_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    discussion_id INTEGER NOT NULL REFERENCES tracked_discussions(id),
+    checked_at TEXT NOT NULL DEFAULT (datetime('now')),
+    raw_score INTEGER NOT NULL,
+    comments_count INTEGER NOT NULL,
+    engagement_score INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS scheduled_jobs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id),
+    job_type TEXT NOT NULL,
+    cron_expr TEXT NOT NULL DEFAULT '0 9 * * *',
+    enabled INTEGER NOT NULL DEFAULT 1,
+    last_run_at TEXT,
+    next_run_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+"""
+
+
+async def get_db() -> aiosqlite.Connection:
+    """Open (or create) the database, ensure schema, enable WAL mode."""
+    _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    db = await aiosqlite.connect(str(_DB_PATH))
+    await db.execute("PRAGMA journal_mode=WAL")
+    await db.executescript(_SCHEMA)
+    await db.commit()
+    return db
+
+
+async def ensure_project(brand_name: str, url: str, category: str) -> int:
+    """Upsert a project row and return its id."""
+    db = await get_db()
+    try:
+        await db.execute(
+            "INSERT OR IGNORE INTO projects (brand_name, url, category) VALUES (?, ?, ?)",
+            (brand_name, url, category),
+        )
+        await db.commit()
+        cursor = await db.execute(
+            "SELECT id FROM projects WHERE brand_name = ? AND url = ?",
+            (brand_name, url),
+        )
+        row = await cursor.fetchone()
+        return row[0]
+    finally:
+        await db.close()
+
+
+async def get_project(project_id: int) -> dict | None:
+    """Return project dict by id, or None."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT id, brand_name, url, category FROM projects WHERE id = ?",
+            (project_id,),
+        )
+        row = await cursor.fetchone()
+        if not row:
+            return None
+        return {"id": row[0], "brand_name": row[1], "url": row[2], "category": row[3]}
+    finally:
+        await db.close()
+
+
+async def list_projects() -> list[dict]:
+    """Return all projects."""
+    db = await get_db()
+    try:
+        cursor = await db.execute("SELECT id, brand_name, url, category FROM projects")
+        rows = await cursor.fetchall()
+        return [{"id": r[0], "brand_name": r[1], "url": r[2], "category": r[3]} for r in rows]
+    finally:
+        await db.close()
+
+
+async def save_seo_scan(
+    project_id: int,
+    url: str,
+    report_json: str,
+    *,
+    score_performance: float | None = None,
+    score_lcp: float | None = None,
+    score_cls: float | None = None,
+    score_tbt: float | None = None,
+    has_robots_txt: bool | None = None,
+    has_sitemap: bool | None = None,
+    has_schema_org: bool | None = None,
+) -> int:
+    """Save an SEO scan snapshot. Returns scan id."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            """INSERT INTO seo_scans
+               (project_id, url, report_json,
+                score_performance, score_lcp, score_cls, score_tbt,
+                has_robots_txt, has_sitemap, has_schema_org)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                project_id, url, report_json,
+                score_performance, score_lcp, score_cls, score_tbt,
+                int(has_robots_txt) if has_robots_txt is not None else None,
+                int(has_sitemap) if has_sitemap is not None else None,
+                int(has_schema_org) if has_schema_org is not None else None,
+            ),
+        )
+        await db.commit()
+        return cursor.lastrowid
+    finally:
+        await db.close()
+
+
+async def save_geo_scan(
+    project_id: int,
+    geo_score: int,
+    *,
+    visibility_score: int | None = None,
+    position_score: int | None = None,
+    sentiment_score: int | None = None,
+    platform_results_json: str = "{}",
+) -> int:
+    """Save a GEO scan snapshot. Returns scan id."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            """INSERT INTO geo_scans
+               (project_id, geo_score, visibility_score, position_score,
+                sentiment_score, platform_results_json)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (project_id, geo_score, visibility_score, position_score,
+             sentiment_score, platform_results_json),
+        )
+        await db.commit()
+        return cursor.lastrowid
+    finally:
+        await db.close()
+
+
+async def save_community_scan(
+    project_id: int,
+    total_hits: int,
+    results_json: str,
+) -> int:
+    """Save a community scan snapshot. Returns scan id."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "INSERT INTO community_scans (project_id, total_hits, results_json) VALUES (?, ?, ?)",
+            (project_id, total_hits, results_json),
+        )
+        await db.commit()
+        return cursor.lastrowid
+    finally:
+        await db.close()
+
+
+async def upsert_tracked_discussion(project_id: int, hit: dict) -> int:
+    """Upsert a tracked discussion from a DiscussionHit dict. Returns discussion id."""
+    db = await get_db()
+    try:
+        await db.execute(
+            """INSERT INTO tracked_discussions (project_id, platform, detail_id, title, url)
+               VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT(project_id, platform, detail_id)
+               DO UPDATE SET last_checked_at = datetime('now'), title = excluded.title""",
+            (project_id, hit["platform"], hit["detail_id"], hit["title"], hit["url"]),
+        )
+        await db.commit()
+        cursor = await db.execute(
+            "SELECT id FROM tracked_discussions WHERE project_id = ? AND platform = ? AND detail_id = ?",
+            (project_id, hit["platform"], hit["detail_id"]),
+        )
+        row = await cursor.fetchone()
+        return row[0]
+    finally:
+        await db.close()
+
+
+async def save_discussion_snapshot(
+    discussion_id: int,
+    raw_score: int,
+    comments_count: int,
+    engagement_score: int,
+) -> int:
+    """Save a discussion engagement snapshot. Returns snapshot id."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            """INSERT INTO discussion_snapshots
+               (discussion_id, raw_score, comments_count, engagement_score)
+               VALUES (?, ?, ?, ?)""",
+            (discussion_id, raw_score, comments_count, engagement_score),
+        )
+        await db.commit()
+        return cursor.lastrowid
+    finally:
+        await db.close()
+
+
+# --- Scheduled jobs ---
+
+async def add_scheduled_job(
+    project_id: int,
+    job_type: str,
+    cron_expr: str = "0 9 * * *",
+) -> int:
+    """Add a scheduled job. Returns job id."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "INSERT INTO scheduled_jobs (project_id, job_type, cron_expr) VALUES (?, ?, ?)",
+            (project_id, job_type, cron_expr),
+        )
+        await db.commit()
+        return cursor.lastrowid
+    finally:
+        await db.close()
+
+
+async def list_scheduled_jobs() -> list[dict]:
+    """Return all scheduled jobs with project info."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            """SELECT j.id, j.project_id, p.brand_name, p.url, p.category,
+                      j.job_type, j.cron_expr, j.enabled, j.last_run_at, j.next_run_at
+               FROM scheduled_jobs j JOIN projects p ON j.project_id = p.id
+               ORDER BY j.id"""
+        )
+        rows = await cursor.fetchall()
+        return [
+            {
+                "id": r[0], "project_id": r[1], "brand_name": r[2], "url": r[3],
+                "category": r[4], "job_type": r[5], "cron_expr": r[6],
+                "enabled": bool(r[7]), "last_run_at": r[8], "next_run_at": r[9],
+            }
+            for r in rows
+        ]
+    finally:
+        await db.close()
+
+
+async def remove_scheduled_job(job_id: int) -> bool:
+    """Remove a scheduled job. Returns True if deleted."""
+    db = await get_db()
+    try:
+        cursor = await db.execute("DELETE FROM scheduled_jobs WHERE id = ?", (job_id,))
+        await db.commit()
+        return cursor.rowcount > 0
+    finally:
+        await db.close()
+
+
+async def update_job_last_run(job_id: int) -> None:
+    """Update last_run_at for a job."""
+    db = await get_db()
+    try:
+        await db.execute(
+            "UPDATE scheduled_jobs SET last_run_at = datetime('now') WHERE id = ?",
+            (job_id,),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+
+
+# --- Query helpers for trends ---
+
+async def get_seo_history(project_id: int, limit: int = 20) -> list[dict]:
+    """Return recent SEO scans for a project."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            """SELECT id, url, scanned_at, score_performance, score_lcp, score_cls,
+                      score_tbt, has_robots_txt, has_sitemap, has_schema_org
+               FROM seo_scans WHERE project_id = ? ORDER BY scanned_at DESC LIMIT ?""",
+            (project_id, limit),
+        )
+        rows = await cursor.fetchall()
+        return [
+            {
+                "id": r[0], "url": r[1], "scanned_at": r[2],
+                "score_performance": r[3], "score_lcp": r[4], "score_cls": r[5],
+                "score_tbt": r[6], "has_robots_txt": bool(r[7]) if r[7] is not None else None,
+                "has_sitemap": bool(r[8]) if r[8] is not None else None,
+                "has_schema_org": bool(r[9]) if r[9] is not None else None,
+            }
+            for r in rows
+        ]
+    finally:
+        await db.close()
+
+
+async def get_geo_history(project_id: int, limit: int = 20) -> list[dict]:
+    """Return recent GEO scans for a project."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            """SELECT id, scanned_at, geo_score, visibility_score, position_score,
+                      sentiment_score, platform_results_json
+               FROM geo_scans WHERE project_id = ? ORDER BY scanned_at DESC LIMIT ?""",
+            (project_id, limit),
+        )
+        rows = await cursor.fetchall()
+        return [
+            {
+                "id": r[0], "scanned_at": r[1], "geo_score": r[2],
+                "visibility_score": r[3], "position_score": r[4],
+                "sentiment_score": r[5], "platform_results_json": r[6],
+            }
+            for r in rows
+        ]
+    finally:
+        await db.close()
+
+
+async def get_community_history(project_id: int, limit: int = 20) -> list[dict]:
+    """Return recent community scans for a project."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            """SELECT id, scanned_at, total_hits, results_json
+               FROM community_scans WHERE project_id = ? ORDER BY scanned_at DESC LIMIT ?""",
+            (project_id, limit),
+        )
+        rows = await cursor.fetchall()
+        return [
+            {"id": r[0], "scanned_at": r[1], "total_hits": r[2], "results_json": r[3]}
+            for r in rows
+        ]
+    finally:
+        await db.close()
+
+
+async def get_tracked_discussions(project_id: int) -> list[dict]:
+    """Return tracked discussions with latest snapshot for a project."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            """SELECT td.id, td.platform, td.detail_id, td.title, td.url,
+                      td.first_seen_at, td.last_checked_at,
+                      ds.raw_score, ds.comments_count, ds.engagement_score
+               FROM tracked_discussions td
+               LEFT JOIN discussion_snapshots ds ON ds.discussion_id = td.id
+                 AND ds.id = (SELECT MAX(id) FROM discussion_snapshots WHERE discussion_id = td.id)
+               WHERE td.project_id = ?
+               ORDER BY ds.engagement_score DESC NULLS LAST""",
+            (project_id,),
+        )
+        rows = await cursor.fetchall()
+        return [
+            {
+                "id": r[0], "platform": r[1], "detail_id": r[2], "title": r[3],
+                "url": r[4], "first_seen_at": r[5], "last_checked_at": r[6],
+                "raw_score": r[7], "comments_count": r[8], "engagement_score": r[9],
+            }
+            for r in rows
+        ]
+    finally:
+        await db.close()
+
+
+async def get_discussion_snapshots(discussion_id: int) -> list[dict]:
+    """Return all snapshots for a discussion (time series)."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            """SELECT id, checked_at, raw_score, comments_count, engagement_score
+               FROM discussion_snapshots WHERE discussion_id = ? ORDER BY checked_at""",
+            (discussion_id,),
+        )
+        rows = await cursor.fetchall()
+        return [
+            {
+                "id": r[0], "checked_at": r[1], "raw_score": r[2],
+                "comments_count": r[3], "engagement_score": r[4],
+            }
+            for r in rows
+        ]
+    finally:
+        await db.close()
+
+
+async def get_latest_scans(project_id: int) -> dict:
+    """Get the latest scan of each type for a project."""
+    db = await get_db()
+    try:
+        seo = await db.execute(
+            "SELECT scanned_at, score_performance FROM seo_scans WHERE project_id = ? ORDER BY scanned_at DESC LIMIT 1",
+            (project_id,),
+        )
+        seo_row = await seo.fetchone()
+
+        geo = await db.execute(
+            "SELECT scanned_at, geo_score FROM geo_scans WHERE project_id = ? ORDER BY scanned_at DESC LIMIT 1",
+            (project_id,),
+        )
+        geo_row = await geo.fetchone()
+
+        comm = await db.execute(
+            "SELECT scanned_at, total_hits FROM community_scans WHERE project_id = ? ORDER BY scanned_at DESC LIMIT 1",
+            (project_id,),
+        )
+        comm_row = await comm.fetchone()
+
+        return {
+            "seo": {"scanned_at": seo_row[0], "score": seo_row[1]} if seo_row else None,
+            "geo": {"scanned_at": geo_row[0], "score": geo_row[1]} if geo_row else None,
+            "community": {"scanned_at": comm_row[0], "total_hits": comm_row[1]} if comm_row else None,
+        }
+    finally:
+        await db.close()
