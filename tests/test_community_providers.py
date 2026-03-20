@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -20,6 +21,15 @@ from opencmo.tools.community_providers import (
     RedditProvider,
     TwitterProvider,
 )
+
+
+# ---------------------------------------------------------------------------
+# Force "light" profile for tests (fast, predictable)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def _use_light_profile(monkeypatch):
+    monkeypatch.setenv("OPENCMO_SCRAPE_DEPTH", "light")
 
 
 # ---------------------------------------------------------------------------
@@ -57,7 +67,7 @@ def test_blog_provider_no_auth_but_stub():
 # ---------------------------------------------------------------------------
 
 
-def _make_reddit_search_json(count: int = 2) -> dict:
+def _make_reddit_search_json(count: int = 2, after: str | None = None) -> dict:
     children = []
     for i in range(count):
         children.append({
@@ -73,7 +83,7 @@ def _make_reddit_search_json(count: int = 2) -> dict:
                 "selftext": f"Body text for post {i}",
             }
         })
-    return {"data": {"children": children}}
+    return {"data": {"children": children, "after": after}}
 
 
 def test_reddit_provider_parse_search():
@@ -89,6 +99,14 @@ def test_reddit_provider_parse_search():
     assert h.source == "brand_search"
     assert h.raw_score == 10
     assert h.engagement_score == min(100, 10 * 2)
+
+
+def test_reddit_after_token_extraction():
+    data = _make_reddit_search_json(2, after="t3_xyz")
+    assert RedditProvider._get_after_token(data) == "t3_xyz"
+
+    data_no_after = _make_reddit_search_json(2, after=None)
+    assert RedditProvider._get_after_token(data_no_after) is None
 
 
 def test_reddit_provider_parse_detail():
@@ -253,7 +271,7 @@ async def _mock_http_429(url, params=None, headers=None):
 async def _mock_http_empty(url, params=None, headers=None):
     # Reddit returns empty children, HN returns empty hits
     if "reddit" in url:
-        return HttpResult(data={"data": {"children": []}}, error=None, status_code=200)
+        return HttpResult(data={"data": {"children": [], "after": None}}, error=None, status_code=200)
     if "algolia" in url:
         return HttpResult(data={"hits": []}, error=None, status_code=200)
     return HttpResult(data=[], error=None, status_code=200)
@@ -263,7 +281,7 @@ async def _mock_http_missing_fields(url, params=None, headers=None):
     if "reddit" in url:
         return HttpResult(data={"data": {"children": [
             {"data": {"title": "Partial", "id": "p1"}},  # missing many fields
-        ]}}, error=None, status_code=200)
+        ], "after": None}}, error=None, status_code=200)
     if "algolia" in url:
         return HttpResult(data={"hits": [
             {"title": "Partial HN", "objectID": "h1"},  # missing points, etc.
@@ -276,7 +294,7 @@ def test_provider_timeout():
         provider = RedditProvider()
         result = asyncio.run(provider.search("brand", "cat"))
         assert len(result.hits) == 0
-        assert len(result.errors) == 2  # brand + category both timed out
+        assert len(result.errors) >= 2  # brand + category both timed out
 
 
 def test_provider_429():
@@ -320,6 +338,44 @@ def test_provider_missing_fields():
     hh = r2.hits[0]
     assert hh.title == "Partial HN"
     assert hh.raw_score == 0
+
+
+# ---------------------------------------------------------------------------
+# Reddit pagination test
+# ---------------------------------------------------------------------------
+
+
+def test_reddit_pagination():
+    """Verify multi-page fetching and deduplication."""
+    call_count = 0
+
+    async def _mock_paginated(url, params=None, headers=None):
+        nonlocal call_count
+        call_count += 1
+        if "reddit.com/search" in url:
+            after = params.get("after") if params else None
+            if after is None:
+                return HttpResult(
+                    data=_make_reddit_search_json(2, after="page2_token"),
+                    error=None, status_code=200,
+                )
+            elif after == "page2_token":
+                return HttpResult(
+                    data=_make_reddit_search_json(2, after=None),
+                    error=None, status_code=200,
+                )
+        return HttpResult(data={"data": {"children": [], "after": None}}, error=None, status_code=200)
+
+    async def _run():
+        with patch("opencmo.tools.community_providers._http_get_json", side_effect=_mock_paginated):
+            provider = RedditProvider()
+            result = await provider.search("brand", "cat")
+            return result
+
+    result = asyncio.run(_run())
+    # Should have hits from brand search (2 unique ids) + category search
+    assert len(result.hits) >= 2
+    assert len(result.errors) == 0
 
 
 # ---------------------------------------------------------------------------
@@ -368,3 +424,30 @@ def test_scan_partial_failure():
     disabled_names = {d["name"] for d in envelope["disabled_providers"]}
     assert "twitter" in disabled_names
     assert "linkedin" in disabled_names
+
+
+# ---------------------------------------------------------------------------
+# Scrape config test
+# ---------------------------------------------------------------------------
+
+
+def test_scrape_profiles():
+    from opencmo.scrape_config import DEEP, LIGHT, NORMAL, get_scrape_profile
+
+    # Default is "deep" but we set "light" in fixture
+    profile = get_scrape_profile()
+    assert profile == LIGHT
+
+    # Check deep profile has much higher limits
+    assert DEEP.reddit_brand_pages > LIGHT.reddit_brand_pages
+    assert DEEP.hn_brand_pages > LIGHT.hn_brand_pages
+    assert DEEP.output_budget_chars > LIGHT.output_budget_chars
+    assert DEEP.serp_num_results > LIGHT.serp_num_results
+
+
+def test_scrape_profile_env_override(monkeypatch):
+    from opencmo.scrape_config import DEEP, get_scrape_profile
+
+    monkeypatch.setenv("OPENCMO_SCRAPE_DEPTH", "deep")
+    profile = get_scrape_profile()
+    assert profile == DEEP

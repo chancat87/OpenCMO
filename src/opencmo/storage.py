@@ -117,6 +117,24 @@ CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS competitors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id),
+    name TEXT NOT NULL,
+    url TEXT,
+    category TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(project_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS competitor_keywords (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    competitor_id INTEGER NOT NULL REFERENCES competitors(id),
+    keyword TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(competitor_id, keyword)
+);
 """
 
 
@@ -196,6 +214,42 @@ async def list_projects() -> list[dict]:
         cursor = await db.execute("SELECT id, brand_name, url, category FROM projects")
         rows = await cursor.fetchall()
         return [{"id": r[0], "brand_name": r[1], "url": r[2], "category": r[3]} for r in rows]
+    finally:
+        await db.close()
+
+
+async def delete_project(project_id: int) -> bool:
+    """Delete a project and all its related data. Returns True if deleted."""
+    db = await get_db()
+    try:
+        # Delete discussion snapshots (via tracked_discussions)
+        await db.execute(
+            """DELETE FROM discussion_snapshots WHERE discussion_id IN
+               (SELECT id FROM tracked_discussions WHERE project_id = ?)""",
+            (project_id,),
+        )
+        # Delete tracked discussions
+        await db.execute("DELETE FROM tracked_discussions WHERE project_id = ?", (project_id,))
+        # Delete scans
+        await db.execute("DELETE FROM seo_scans WHERE project_id = ?", (project_id,))
+        await db.execute("DELETE FROM geo_scans WHERE project_id = ?", (project_id,))
+        await db.execute("DELETE FROM community_scans WHERE project_id = ?", (project_id,))
+        # Delete SERP data
+        await db.execute("DELETE FROM serp_snapshots WHERE project_id = ?", (project_id,))
+        await db.execute("DELETE FROM tracked_keywords WHERE project_id = ?", (project_id,))
+        # Delete competitors and their keywords
+        await db.execute(
+            """DELETE FROM competitor_keywords WHERE competitor_id IN
+               (SELECT id FROM competitors WHERE project_id = ?)""",
+            (project_id,),
+        )
+        await db.execute("DELETE FROM competitors WHERE project_id = ?", (project_id,))
+        # Delete scheduled jobs
+        await db.execute("DELETE FROM scheduled_jobs WHERE project_id = ?", (project_id,))
+        # Delete the project itself
+        cursor = await db.execute("DELETE FROM projects WHERE id = ?", (project_id,))
+        await db.commit()
+        return cursor.rowcount > 0
     finally:
         await db.close()
 
@@ -371,6 +425,35 @@ async def remove_scheduled_job(job_id: int) -> bool:
     db = await get_db()
     try:
         cursor = await db.execute("DELETE FROM scheduled_jobs WHERE id = ?", (job_id,))
+        await db.commit()
+        return cursor.rowcount > 0
+    finally:
+        await db.close()
+
+
+async def update_scheduled_job(
+    job_id: int,
+    cron_expr: str | None = None,
+    enabled: bool | None = None,
+) -> bool:
+    """Update a scheduled job's cron expression and/or enabled flag. Returns True if found."""
+    db = await get_db()
+    try:
+        parts: list[str] = []
+        params: list = []
+        if cron_expr is not None:
+            parts.append("cron_expr = ?")
+            params.append(cron_expr)
+        if enabled is not None:
+            parts.append("enabled = ?")
+            params.append(int(enabled))
+        if not parts:
+            return True
+        params.append(job_id)
+        cursor = await db.execute(
+            f"UPDATE scheduled_jobs SET {', '.join(parts)} WHERE id = ?",
+            params,
+        )
         await db.commit()
         return cursor.rowcount > 0
     finally:
@@ -828,3 +911,185 @@ async def delete_setting(key: str) -> bool:
         return cursor.rowcount > 0
     finally:
         await db.close()
+
+
+# --- Competitors ---
+
+
+async def add_competitor(
+    project_id: int, name: str, url: str | None = None, category: str | None = None
+) -> int:
+    """Add a competitor. Returns competitor id."""
+    db = await get_db()
+    try:
+        await db.execute(
+            "INSERT OR IGNORE INTO competitors (project_id, name, url, category) VALUES (?, ?, ?, ?)",
+            (project_id, name, url, category),
+        )
+        await db.commit()
+        cursor = await db.execute(
+            "SELECT id FROM competitors WHERE project_id = ? AND name = ?",
+            (project_id, name),
+        )
+        row = await cursor.fetchone()
+        return row[0]
+    finally:
+        await db.close()
+
+
+async def list_competitors(project_id: int) -> list[dict]:
+    """Return all competitors for a project."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT id, name, url, category, created_at FROM competitors WHERE project_id = ? ORDER BY id",
+            (project_id,),
+        )
+        rows = await cursor.fetchall()
+        return [
+            {"id": r[0], "name": r[1], "url": r[2], "category": r[3], "created_at": r[4]}
+            for r in rows
+        ]
+    finally:
+        await db.close()
+
+
+async def remove_competitor(competitor_id: int) -> bool:
+    """Remove a competitor and its keywords."""
+    db = await get_db()
+    try:
+        await db.execute("DELETE FROM competitor_keywords WHERE competitor_id = ?", (competitor_id,))
+        cursor = await db.execute("DELETE FROM competitors WHERE id = ?", (competitor_id,))
+        await db.commit()
+        return cursor.rowcount > 0
+    finally:
+        await db.close()
+
+
+async def add_competitor_keyword(competitor_id: int, keyword: str) -> int:
+    """Add a keyword to a competitor. Returns keyword id."""
+    db = await get_db()
+    try:
+        await db.execute(
+            "INSERT OR IGNORE INTO competitor_keywords (competitor_id, keyword) VALUES (?, ?)",
+            (competitor_id, keyword),
+        )
+        await db.commit()
+        cursor = await db.execute(
+            "SELECT id FROM competitor_keywords WHERE competitor_id = ? AND keyword = ?",
+            (competitor_id, keyword),
+        )
+        row = await cursor.fetchone()
+        return row[0]
+    finally:
+        await db.close()
+
+
+async def list_competitor_keywords(competitor_id: int) -> list[dict]:
+    """Return all keywords for a competitor."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT id, keyword, created_at FROM competitor_keywords WHERE competitor_id = ? ORDER BY id",
+            (competitor_id,),
+        )
+        rows = await cursor.fetchall()
+        return [{"id": r[0], "keyword": r[1], "created_at": r[2]} for r in rows]
+    finally:
+        await db.close()
+
+
+# --- Knowledge graph data ---
+
+
+async def get_graph_data(project_id: int) -> dict:
+    """Build a force-graph-compatible JSON structure with nodes and links.
+
+    Node types: brand, keyword, discussion, serp, competitor, competitor_keyword
+    Link types: has_keyword, has_discussion, serp_rank, competitor_of, comp_keyword, keyword_overlap
+    """
+    nodes: list[dict] = []
+    links: list[dict] = []
+
+    # 1. Brand node (center)
+    project = await get_project(project_id)
+    if not project:
+        return {"nodes": [], "links": []}
+
+    brand_id = f"brand_{project_id}"
+    nodes.append({
+        "id": brand_id,
+        "label": project["brand_name"],
+        "type": "brand",
+        "url": project["url"],
+        "category": project["category"],
+    })
+
+    # 2. Keyword nodes
+    keywords = await list_tracked_keywords(project_id)
+    kw_name_to_id: dict[str, str] = {}
+    for kw in keywords:
+        kid = f"kw_{kw['id']}"
+        kw_name_to_id[kw["keyword"].lower()] = kid
+        nodes.append({"id": kid, "label": kw["keyword"], "type": "keyword"})
+        links.append({"source": brand_id, "target": kid, "type": "has_keyword"})
+
+    # 3. SERP ranking nodes (attach to keywords)
+    serp_latest = await get_all_serp_latest(project_id)
+    for s in serp_latest:
+        sid = f"serp_{s['keyword']}"
+        position = s.get("position")
+        if position is None:
+            continue
+        provider = s.get("provider", "google")
+        nodes.append({
+            "id": sid,
+            "label": f"#{position} {provider}",
+            "type": "serp",
+            "position": position,
+            "provider": provider,
+        })
+        # Link to keyword if exists, else to brand
+        kw_node = kw_name_to_id.get(s["keyword"].lower())
+        links.append({"source": kw_node or brand_id, "target": sid, "type": "serp_rank"})
+
+    # 4. Discussion nodes
+    discussions = await get_tracked_discussions(project_id)
+    for d in discussions:
+        did = f"disc_{d['id']}"
+        nodes.append({
+            "id": did,
+            "label": d["title"][:40] + ("..." if len(d["title"]) > 40 else ""),
+            "type": "discussion",
+            "platform": d["platform"],
+            "url": d["url"],
+            "engagement": d.get("engagement_score", 0) or 0,
+            "comments": d.get("comments_count", 0) or 0,
+        })
+        links.append({"source": brand_id, "target": did, "type": "has_discussion"})
+
+    # 5. Competitor nodes + their keywords
+    competitors = await list_competitors(project_id)
+    for comp in competitors:
+        cid = f"comp_{comp['id']}"
+        nodes.append({
+            "id": cid,
+            "label": comp["name"],
+            "type": "competitor",
+            "url": comp.get("url"),
+        })
+        links.append({"source": brand_id, "target": cid, "type": "competitor_of"})
+
+        # Competitor keywords
+        comp_kws = await list_competitor_keywords(comp["id"])
+        for ckw in comp_kws:
+            ckid = f"ckw_{ckw['id']}"
+            nodes.append({"id": ckid, "label": ckw["keyword"], "type": "competitor_keyword"})
+            links.append({"source": cid, "target": ckid, "type": "comp_keyword"})
+
+            # Check overlap with brand keywords
+            brand_kw_node = kw_name_to_id.get(ckw["keyword"].lower())
+            if brand_kw_node:
+                links.append({"source": brand_kw_node, "target": ckid, "type": "keyword_overlap"})
+
+    return {"nodes": nodes, "links": links}

@@ -12,6 +12,7 @@ export const zh: Record<TranslationKey, string> = {
 
   // Nav / Sidebar
   "nav.dashboard": "仪表盘",
+  "nav.approvals": "审批流",
   "nav.monitors": "监控",
   "nav.aiChat": "AI 对话",
   "nav.projects": "项目",
@@ -36,6 +37,7 @@ export const zh: Record<TranslationKey, string> = {
   "project.geo": "GEO",
   "project.serp": "SERP",
   "project.community": "社区",
+  "project.graph": "知识图谱",
 
   // Score Panel
   "score.seoScore": "SEO 评分",
@@ -140,4 +142,42 @@ export const zh: Record<TranslationKey, string> = {
   "settings.saved": "已保存！",
   "settings.apiKeySet": "API 密钥已配置",
   "settings.apiKeyNotSet": "未配置 API 密钥",
+
+  // Settings — Reddit
+  "settings.redditSection": "Reddit 连接",
+  "settings.redditClientId": "Client ID",
+  "settings.redditClientIdPlaceholder": "你的 Reddit 应用 Client ID",
+  "settings.redditClientSecret": "Client Secret",
+  "settings.redditClientSecretPlaceholder": "你的 Reddit 应用 Secret",
+  "settings.redditUsername": "Reddit 用户名",
+  "settings.redditUsernamePlaceholder": "你的 Reddit 用户名",
+  "settings.redditPassword": "Reddit 密码",
+  "settings.redditPasswordPlaceholder": "你的 Reddit 密码",
+  "settings.redditHint": "在 reddit.com/prefs/apps 创建应用（类型选 script）。",
+  "settings.redditConfigured": "Reddit 已连接",
+  "settings.redditNotConfigured": "Reddit 未连接",
+  "settings.autoPublish": "自动发布",
+  "settings.autoPublishHint": "允许 AI 向 Reddit 发布帖子和回复。",
+
+  // Schedule presets
+  "schedule.label": "监控频率",
+  "schedule.hourly": "每小时",
+  "schedule.every6h": "每6小时",
+  "schedule.daily": "每天",
+  "schedule.weekly": "每周",
+  "schedule.monthly": "每月",
+  "schedule.custom": "自定义",
+  "schedule.enable": "启用定时",
+  "schedule.disable": "暂停定时",
+
+  // Knowledge Graph
+  "graph.title": "知识图谱",
+  "graph.noData": "暂无图谱数据",
+  "graph.noDataDesc": "运行扫描后，图谱将展示品牌、关键词、社区讨论和竞品之间的关系。",
+  "graph.competitors": "竞品",
+  "graph.addCompetitor": "添加竞品",
+  "graph.competitorName": "竞品名称",
+  "graph.competitorUrl": "网址（可选）",
+  "graph.competitorKw": "关键词，逗号分隔（可选）",
+  "graph.noCompetitors": "暂无竞品。添加竞品后图谱将显示竞品节点。",
 };

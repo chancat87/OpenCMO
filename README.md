@@ -70,6 +70,7 @@ OpenCMO is a **multi-agent AI marketing system** for indie developers and small 
 
 - **10 AI Expert Agents** — Twitter/X, Reddit, LinkedIn, Product Hunt, Hacker News, Blog/SEO, SEO Audit, GEO (AI Visibility), Community Monitor, and the CMO orchestrator
 - **Smart URL Analysis** — Paste any URL; 3 AI roles (Product Analyst, SEO Specialist, Community Strategist) debate 3 rounds to extract brand name, category, and monitoring keywords
+- **Knowledge Graph** — Interactive force-directed graph visualizing relationships between your brand, keywords, competitors, community discussions, and SERP rankings
 - **Real-time Web Dashboard** — React SPA with dark sidebar, project cards, trend charts, i18n (EN/中文)
 - **Chat with Experts** — ChatGPT-style interface with conversation history; pick a specific agent or let CMO auto-route
 - **Continuous Monitoring** — Cron-based scheduled scans for SEO, GEO, and community metrics
@@ -163,7 +164,7 @@ opencmo
 |-------|-------------|
 | **CMO Agent** | Orchestrates everything, auto-routes to the right expert |
 | **Twitter/X** | Tweets, threads & engagement hooks |
-| **Reddit** | Authentic story-driven posts for niche subreddits |
+| **Reddit** | Authentic story-driven posts + smart reply to existing discussions |
 | **LinkedIn** | Professional thought-leadership posts |
 | **Product Hunt** | Launch taglines, descriptions & maker comments |
 | **Hacker News** | Technical Show HN posts |
@@ -172,22 +173,64 @@ opencmo
 | **GEO (AI Visibility)** | Brand mentions across Perplexity, You.com, ChatGPT, Claude, Gemini |
 | **Community Monitor** | Scans Reddit, HN, Dev.to for discussions |
 
+### 🔗 Reddit Integration (New)
+
+- **Smart Discovery** — Scans Reddit for high-relevance posts matching your product category
+- **AI-Powered Replies** — Generates authentic, non-promotional replies tailored to each discussion
+- **Human-in-the-Loop** — Preview AI-drafted replies before publishing; edit and confirm via the UI
+- **Credential Management** — Configure Reddit API keys directly from the Settings dialog
+- **Auto-Publish Toggle** — Enable/disable automatic posting with a single switch
+
 ### 📊 Monitoring & Analytics
 
 - **SEO** — Performance score, LCP/CLS/TBT, Schema.org detection, robots.txt & sitemap checks
 - **GEO** — AI search visibility score (0-100) across 5 platforms
 - **SERP** — Keyword ranking tracking on Google
 - **Community** — Discussion counts, engagement scores, platform distribution
+- **Knowledge Graph** — Force-directed graph connecting all data dimensions
+
+### 🕸️ Knowledge Graph (New)
+
+- **Interactive Force Graph** — Drag, zoom, and explore the relationships between your brand, keywords, discussions, SERP rankings, and competitors in a dynamic force-directed visualization
+- **Real-time Updates** — Graph auto-refreshes every 30 seconds as new scan data arrives
+- **6 Node Types** — Brand (purple), Keywords (cyan), Discussions (amber), SERP Rankings (green), Competitors (red), Competitor Keywords (orange)
+- **Keyword Overlap Detection** — Automatically highlights keywords shared between your brand and competitors with red dashed lines
+- **Competitor Management** — Add competitors with their URLs and keywords; the graph instantly updates to show competitive relationships
+- **Hover Details** — Hover over any node to see detailed info (engagement scores, rankings, platform, etc.)
 
 ### 🎯 Smart URL Analysis (Multi-Agent Discussion)
 
-When you add a URL, 3 AI roles hold a 3-round discussion:
+When you add a URL, **3 AI roles hold a real 3-round collaborative discussion** — they don't just analyze independently, they actually read and build on each other's insights:
+
+```mermaid
+sequenceDiagram
+    participant PA as 🔍 Product Analyst
+    participant SEO as 📈 SEO Specialist
+    participant CS as 💬 Community Strategist
+    participant SD as 🎯 Strategy Director
+
+    Note over PA,CS: Round 1 — Independent Analysis
+    PA->>PA: Identify product, features, audience
+    SEO->>SEO: Suggest search keywords & competitor terms
+    CS->>CS: Propose community topics & platforms
+
+    Note over PA,CS: Round 2 — Collaborative Refinement
+    PA->>SEO: Shares product insights
+    SEO->>CS: Shares keyword strategy
+    CS->>PA: Shares community pain points
+    Note right of CS: Each role reads ALL Round 1<br/>outputs and refines their analysis
+
+    Note over SD: Round 3 — Consensus
+    SD->>SD: Synthesizes all 6 responses into<br/>final brand name + category + keywords
+```
 
 | Round | What happens |
 |-------|-------------|
-| **Round 1** | Each role gives initial analysis (product positioning, SEO keywords, community topics) |
-| **Round 2** | Roles build on each other's insights, refine keyword suggestions |
-| **Round 3** | Strategy Director synthesizes final brand name + category + 5-8 monitoring keywords |
+| **Round 1** | Each role gives **independent** initial analysis — product positioning, SEO keywords, community topics |
+| **Round 2** | Each role **reads all Round 1 outputs**, then refines their suggestions based on colleagues' insights. The Product Analyst's feature discovery inspires the SEO Specialist to find more precise keywords, which in turn helps the Community Strategist identify better discussion topics |
+| **Round 3** | A **Strategy Director** reads the full 6-message discussion and synthesizes the final consensus: brand name + category + 5-8 monitoring keywords |
+
+> **Why this matters**: A single-pass LLM call would miss cross-domain connections. The multi-round discussion produces significantly better keywords because each specialist's domain knowledge enriches the others — just like a real marketing team brainstorming session.
 
 ### 🌐 Web Dashboard
 
@@ -243,7 +286,11 @@ opencmo-web                                # Web dashboard
 - [x] i18n (English / 中文)
 - [x] Settings UI for API key management
 - [x] Multi-provider support (OpenAI, NVIDIA, DeepSeek, Ollama)
-- [ ] Auto-publish to platforms
+- [x] Reddit smart reply & community engagement
+- [x] Reddit credential management in Settings UI
+- [x] Knowledge Graph — interactive force-directed visualization of brand marketing ecosystem
+- [x] Competitor tracking & keyword overlap analysis
+- [ ] Auto-publish to more platforms (Twitter, LinkedIn)
 - [ ] Full-site SEO crawl
 - [ ] Custom brand voice training
 

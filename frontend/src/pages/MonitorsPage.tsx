@@ -36,7 +36,7 @@ export function MonitorsPage() {
       <h1 className="text-2xl font-bold text-slate-900">{t("monitors.title")}</h1>
       <MonitorForm
         onSubmit={async (data) => {
-          const result = await createMonitor.mutateAsync(data);
+          const result = await createMonitor.mutateAsync({ ...data, locale });
           if (result.task_id) {
             setAnalysisTask({ taskId: result.task_id, url: data.url });
             setDialogOpen(true);

@@ -40,7 +40,7 @@ class SerpProvider(ABC):
 
     @abstractmethod
     async def check_ranking(
-        self, keyword: str, target_domain: str, num_results: int = 20
+        self, keyword: str, target_domain: str, num_results: int = 0
     ) -> SerpResult: ...
 
 
@@ -53,8 +53,11 @@ class CrawlSerpProvider(SerpProvider):
     name = "crawl"
 
     async def check_ranking(
-        self, keyword: str, target_domain: str, num_results: int = 20
+        self, keyword: str, target_domain: str, num_results: int = 0
     ) -> SerpResult:
+        if num_results <= 0:
+            from opencmo.scrape_config import get_scrape_profile
+            num_results = get_scrape_profile().serp_num_results
         try:
             from urllib.parse import quote_plus
 
@@ -167,8 +170,10 @@ def _get_active_provider() -> SerpProvider:
 
 async def _check_ranking(keyword: str, target_domain: str) -> SerpResult:
     """Run a single SERP check with the active provider."""
+    from opencmo.scrape_config import get_scrape_profile
+    profile = get_scrape_profile()
     provider = _get_active_provider()
-    return await provider.check_ranking(keyword, target_domain)
+    return await provider.check_ranking(keyword, target_domain, num_results=profile.serp_num_results)
 
 
 async def track_project_keywords(project_id: int) -> str:

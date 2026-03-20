@@ -11,24 +11,24 @@ export function ScanHistoryTable({ latest }: { latest: LatestScans }) {
   ];
 
   return (
-    <div className="rounded-xl border bg-white">
-      <div className="border-b px-4 py-3">
-        <h3 className="font-semibold">{t("scan.latestScans")}</h3>
+    <div className="overflow-hidden rounded-2xl border border-zinc-200/60 bg-white ring-1 ring-zinc-950/5 shadow-sm">
+      <div className="border-b border-zinc-100 bg-zinc-50/50 px-5 py-4">
+        <h3 className="font-semibold text-zinc-900">{t("scan.latestScans")}</h3>
       </div>
-      <table className="w-full text-sm">
+      <table className="min-w-full text-sm">
         <thead>
-          <tr className="border-b text-left text-gray-500">
-            <th className="px-4 py-2 font-medium">{t("scan.type")}</th>
-            <th className="px-4 py-2 font-medium">{t("scan.lastScanned")}</th>
-            <th className="px-4 py-2 font-medium">{t("scan.result")}</th>
+          <tr className="border-b border-zinc-100 bg-zinc-50/30 text-left text-zinc-500 text-xs uppercase tracking-wider">
+            <th className="px-5 py-3 font-medium">{t("scan.type")}</th>
+            <th className="px-5 py-3 font-medium">{t("scan.lastScanned")}</th>
+            <th className="px-5 py-3 font-medium">{t("scan.result")}</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-zinc-100">
           {rows.map((r) => (
-            <tr key={r.type} className="border-b last:border-0">
-              <td className="px-4 py-2 font-medium">{r.type}</td>
-              <td className="px-4 py-2 text-gray-500">{r.date?.slice(0, 10) ?? t("common.never")}</td>
-              <td className="px-4 py-2">{r.detail}</td>
+            <tr key={r.type} className="transition-colors hover:bg-zinc-50/50 group">
+              <td className="px-5 py-3 font-medium text-zinc-900">{r.type}</td>
+              <td className="px-5 py-3 text-zinc-500 tabular-nums">{r.date?.slice(0, 10) ?? t("common.never")}</td>
+              <td className="px-5 py-3 text-zinc-700 font-semibold">{r.detail}</td>
             </tr>
           ))}
         </tbody>

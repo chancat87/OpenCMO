@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { listMonitors, createMonitor, deleteMonitor, runMonitor } from "../api/monitors";
+import { listMonitors, createMonitor, deleteMonitor, runMonitor, updateMonitor } from "../api/monitors";
 
 export function useMonitors() {
   return useQuery({
@@ -16,6 +16,15 @@ export function useCreateMonitor() {
       qc.invalidateQueries({ queryKey: ["monitors"] });
       qc.invalidateQueries({ queryKey: ["projects"] });
     },
+  });
+}
+
+export function useUpdateMonitor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: number; cron_expr?: string; enabled?: boolean }) =>
+      updateMonitor(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["monitors"] }),
   });
 }
 

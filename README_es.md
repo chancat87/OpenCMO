@@ -123,7 +123,7 @@ opencmo
 |--------|---------|
 | **CMO Agent** | Orquesta todo, enruta automáticamente |
 | **Twitter/X** | Tweets, hilos |
-| **Reddit** | Posts de comunidad |
+| **Reddit** | Posts auténticos + respuestas inteligentes a discusiones existentes |
 | **LinkedIn** | Contenido profesional |
 | **Product Hunt** | Copy de lanzamiento |
 | **Hacker News** | Posts Show HN |
@@ -131,6 +131,23 @@ opencmo
 | **Auditoría SEO** | Core Web Vitals, Schema.org |
 | **GEO** | Menciones en buscadores IA |
 | **Comunidad** | Escaneo Reddit/HN/Dev.to |
+
+### 🔗 Integración con Reddit (Nuevo)
+
+- **Descubrimiento inteligente** — Escanea Reddit en busca de publicaciones relevantes para tu categoría de producto
+- **Respuestas impulsadas por IA** — Genera respuestas auténticas y no promocionales adaptadas a cada discusión
+- **Supervisión humana** — Previsualiza las respuestas redactadas por la IA antes de publicar; edita y confirma desde la interfaz
+- **Gestión de credenciales** — Configura las claves de la API de Reddit directamente desde el diálogo de configuración
+- **Auto-publicación** — Activa/desactiva la publicación automática con un solo interruptor
+
+### 🕸️ Grafo de Conocimiento (Nuevo)
+
+- **Grafo de Fuerza Interactivo** — Arrastra, haz zoom y explora las relaciones entre tu marca, palabras clave, discusiones, rankings SERP y competidores en una visualización dinámica dirigida por fuerzas
+- **Actualizaciones en Tiempo Real** — El grafo se actualiza automáticamente cada 30 segundos a medida que llegan nuevos datos de escaneo
+- **6 Tipos de Nodos** — Marca (púrpura), Palabras clave (cian), Discusiones (ámbar), Rankings SERP (verde), Competidores (rojo), Palabras clave de competidores (naranja)
+- **Detección de Superposición de Palabras Clave** — Destaca automáticamente con líneas rojas discontinuas las palabras clave compartidas entre tu marca y los competidores
+- **Gestión de Competidores** — Añade competidores con sus URLs y palabras clave; el grafo se actualiza al instante
+- **Detalles al Pasar** — Pasa el cursor sobre cualquier nodo para ver información detallada (puntuaciones de engagement, rankings, plataforma, etc.)
 
 ## Licencia
 

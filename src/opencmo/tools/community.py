@@ -61,25 +61,28 @@ def _render_stub_queries(
 # Output trimming
 # ---------------------------------------------------------------------------
 
-_MAX_JSON_CHARS = 8000
+def _get_output_budget() -> int:
+    from opencmo.scrape_config import get_scrape_profile
+    return get_scrape_profile().output_budget_chars
 
 
 def _trim_scan_result(sr: ScanResult) -> ScanResult:
     """Trim ScanResult to fit within output budget. Mutates and returns sr."""
+    budget = _get_output_budget()
     serialized = json.dumps(asdict(sr), ensure_ascii=False)
-    if len(serialized) <= _MAX_JSON_CHARS:
+    if len(serialized) <= budget:
         return sr
 
     # Step 1: shorten all previews to 100 chars
     for h in sr.hits:
         h.preview = _truncate(h.preview, 100)
     serialized = json.dumps(asdict(sr), ensure_ascii=False)
-    if len(serialized) <= _MAX_JSON_CHARS:
+    if len(serialized) <= budget:
         return sr
 
     # Step 2: remove lowest-engagement hits one at a time
     sr.hits.sort(key=lambda h: (h.engagement_score, h.raw_score))
-    while len(serialized) > _MAX_JSON_CHARS and sr.hits:
+    while len(serialized) > budget and sr.hits:
         sr.hits.pop(0)
         serialized = json.dumps(asdict(sr), ensure_ascii=False)
 
@@ -117,9 +120,8 @@ async def _scan_community_impl(brand_name: str, category: str) -> str:
             ))
             continue
 
-        # Merge hits (per-provider top-10 by engagement_score)
-        sorted_hits = sorted(pr.hits, key=lambda h: h.engagement_score, reverse=True)[:10]
-        result.hits.extend(sorted_hits)
+        # Merge all hits (no truncation — trimming happens later at output)
+        result.hits.extend(pr.hits)
 
         # Collect errors
         if pr.errors:

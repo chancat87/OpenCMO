@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import math
 import os
 from abc import ABC, abstractmethod
@@ -87,10 +88,16 @@ class ScanResult:
 
 
 # ---------------------------------------------------------------------------
-# Unified HTTP helper
+# Unified HTTP helper with retry
 # ---------------------------------------------------------------------------
 
 _USER_AGENT = "OpenCMO/0.1 (community-monitor)"
+
+
+def _get_profile():
+    """Lazy import to avoid circular deps."""
+    from opencmo.scrape_config import get_scrape_profile
+    return get_scrape_profile()
 
 
 async def _http_get_json(
@@ -98,26 +105,46 @@ async def _http_get_json(
     params: dict | None = None,
     headers: dict | None = None,
 ) -> HttpResult:
-    """Unified HTTP GET -> JSON with 10s timeout."""
+    """Unified HTTP GET -> JSON with configurable timeout and retry on 429."""
+    profile = _get_profile()
     merged_headers = {"User-Agent": _USER_AGENT}
     if headers:
         merged_headers.update(headers)
-    try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(url, params=params, headers=merged_headers)
-        if resp.status_code == 429:
-            return HttpResult(data=None, error="rate_limited", status_code=429)
-        if resp.status_code >= 400:
-            return HttpResult(data=None, error=f"http_{resp.status_code}", status_code=resp.status_code)
+
+    last_result = HttpResult(data=None, error="timeout", status_code=None)
+    for attempt in range(1, profile.max_retries_on_429 + 1):
         try:
-            data = resp.json()
+            async with httpx.AsyncClient(timeout=profile.http_timeout_seconds) as client:
+                resp = await client.get(url, params=params, headers=merged_headers)
+            if resp.status_code == 429:
+                last_result = HttpResult(data=None, error="rate_limited", status_code=429)
+                if attempt < profile.max_retries_on_429:
+                    await asyncio.sleep(2.0 * attempt)  # exponential backoff
+                    continue
+                return last_result
+            if resp.status_code >= 400:
+                return HttpResult(data=None, error=f"http_{resp.status_code}", status_code=resp.status_code)
+            try:
+                data = resp.json()
+            except Exception:
+                return HttpResult(data=None, error="parse_error", status_code=resp.status_code)
+            return HttpResult(data=data, error=None, status_code=resp.status_code)
+        except httpx.TimeoutException:
+            last_result = HttpResult(data=None, error="timeout", status_code=None)
+            if attempt < profile.max_retries_on_429:
+                await asyncio.sleep(1.0)
+                continue
         except Exception:
-            return HttpResult(data=None, error="parse_error", status_code=resp.status_code)
-        return HttpResult(data=data, error=None, status_code=resp.status_code)
-    except httpx.TimeoutException:
-        return HttpResult(data=None, error="timeout", status_code=None)
-    except Exception:
-        return HttpResult(data=None, error="timeout", status_code=None)
+            last_result = HttpResult(data=None, error="timeout", status_code=None)
+            break
+    return last_result
+
+
+async def _delay():
+    """Insert configurable delay between requests."""
+    profile = _get_profile()
+    if profile.request_delay_seconds > 0:
+        await asyncio.sleep(profile.request_delay_seconds)
 
 
 # ---------------------------------------------------------------------------
@@ -145,6 +172,45 @@ def _truncate(text: str, limit: int) -> str:
     if len(text) <= limit:
         return text
     return text[:limit]
+
+
+# ---------------------------------------------------------------------------
+# Category -> subreddit mapping for targeted search
+# ---------------------------------------------------------------------------
+
+_CATEGORY_SUBREDDITS: dict[str, list[str]] = {
+    "devtools": ["programming", "webdev", "devops", "coding", "learnprogramming", "softwareengineering"],
+    "ai": ["MachineLearning", "artificial", "ChatGPT", "LocalLLaMA", "OpenAI", "deeplearning"],
+    "saas": ["SaaS", "startups", "Entrepreneur", "smallbusiness", "indiehackers"],
+    "marketing": ["marketing", "digital_marketing", "SEO", "socialmedia", "content_marketing", "PPC"],
+    "analytics": ["analytics", "datascience", "BusinessIntelligence", "bigdata"],
+    "ecommerce": ["ecommerce", "shopify", "dropship", "FulfillmentByAmazon"],
+    "web scraping": ["webscraping", "DataHoarder", "datasets"],
+    "security": ["netsec", "cybersecurity", "hacking", "AskNetsec"],
+    "design": ["web_design", "UI_Design", "userexperience", "graphic_design"],
+    "database": ["Database", "PostgreSQL", "mongodb", "redis"],
+    "cloud": ["aws", "googlecloud", "azure", "selfhosted", "homelab"],
+    "mobile": ["androiddev", "iOSProgramming", "reactnative", "FlutterDev"],
+    "gaming": ["gamedev", "IndieGaming", "unity3d", "godot"],
+    "fintech": ["fintech", "CryptoCurrency", "algotrading", "personalfinance"],
+    "education": ["edtech", "learnprogramming", "OnlineEducation"],
+    "healthcare": ["healthIT", "digitalhealth", "medical"],
+    "productivity": ["productivity", "selfhosted", "Notion", "ObsidianMD"],
+}
+
+
+def _get_subreddits_for_category(category: str) -> list[str]:
+    """Return relevant subreddits for a category."""
+    cat_lower = category.lower()
+    for key, subs in _CATEGORY_SUBREDDITS.items():
+        if key in cat_lower or cat_lower in key:
+            return subs
+    # Fallback: try each word
+    for word in cat_lower.split():
+        for key, subs in _CATEGORY_SUBREDDITS.items():
+            if word in key or key in word:
+                return subs
+    return []
 
 
 # ---------------------------------------------------------------------------
@@ -177,7 +243,7 @@ class CommunityProvider(ABC):
 
 
 # ---------------------------------------------------------------------------
-# Reddit
+# Reddit — deep scraping with pagination + multi-query
 # ---------------------------------------------------------------------------
 
 
@@ -187,8 +253,8 @@ class RedditProvider(CommunityProvider):
     requires_auth = False
     auth_env_vars: list[str] = []
     capabilities = {"search", "detail"}
-    max_search_calls = 2
-    recommended_max_details = 3
+    max_search_calls = 8
+    recommended_max_details = 5
 
     # ---- internal parsers (tested separately) ----
 
@@ -224,6 +290,13 @@ class RedditProvider(CommunityProvider):
         return hits
 
     @staticmethod
+    def _get_after_token(data: dict) -> str | None:
+        """Extract the 'after' pagination token from Reddit response."""
+        if isinstance(data, dict):
+            return data.get("data", {}).get("after")
+        return None
+
+    @staticmethod
     def parse_detail_response(data: list, hit: DiscussionHit) -> DiscussionDetail | None:
         if not data or not isinstance(data, list) or len(data) < 2:
             return None
@@ -239,6 +312,7 @@ class RedditProvider(CommunityProvider):
             url = f"https://www.reddit.com{pd.get('permalink', '')}" if pd.get("permalink") else hit.url
         # Second element: comment listing
         comment_children = data[1].get("data", {}).get("children", [])
+        profile = _get_profile()
         comments = []
         for c in comment_children:
             if c.get("kind") != "t1":
@@ -249,7 +323,7 @@ class RedditProvider(CommunityProvider):
                 "text": _truncate(cd.get("body", ""), 500),
                 "score": int(cd.get("score", 0)),
             })
-            if len(comments) >= 10:
+            if len(comments) >= profile.reddit_comments_per_post:
                 break
         return DiscussionDetail(
             platform="reddit",
@@ -260,31 +334,126 @@ class RedditProvider(CommunityProvider):
             comments=comments,
         )
 
+    # ---- paginated search helper ----
+
+    async def _paginated_search(
+        self, query: str, source: str, pages: int, per_page: int, time_filter: str,
+    ) -> tuple[list[DiscussionHit], list[str]]:
+        """Fetch multiple pages of Reddit search results."""
+        all_hits: list[DiscussionHit] = []
+        errors: list[str] = []
+        after: str | None = None
+
+        for page in range(pages):
+            params: dict[str, str] = {
+                "q": query, "sort": "relevance", "t": time_filter,
+                "limit": str(min(per_page, 100)),  # Reddit max is 100
+            }
+            if after:
+                params["after"] = after
+
+            r = await _http_get_json(
+                "https://www.reddit.com/search.json",
+                params=params,
+            )
+            if r.error:
+                errors.append(f"{source} page {page}: {r.error}")
+                break
+            if r.data:
+                page_hits = self.parse_search_response(r.data, source)
+                all_hits.extend(page_hits)
+                after = self._get_after_token(r.data)
+                if not after or not page_hits:
+                    break  # no more pages
+            else:
+                break
+
+            if page < pages - 1:
+                await _delay()
+
+        return all_hits, errors
+
+    async def _subreddit_search(
+        self, subreddit: str, query: str, source: str, per_page: int, time_filter: str,
+    ) -> tuple[list[DiscussionHit], list[str]]:
+        """Search within a specific subreddit."""
+        errors: list[str] = []
+        r = await _http_get_json(
+            f"https://www.reddit.com/r/{subreddit}/search.json",
+            params={
+                "q": query, "sort": "relevance", "t": time_filter,
+                "restrict_sr": "1", "limit": str(min(per_page, 100)),
+            },
+        )
+        if r.error:
+            return [], [f"r/{subreddit} {source}: {r.error}"]
+        if r.data:
+            return self.parse_search_response(r.data, source), errors
+        return [], errors
+
     # ---- public API ----
 
     async def search(self, brand_name: str, category: str) -> ProviderSearchResult:
+        profile = _get_profile()
         errors: list[str] = []
         all_hits: list[DiscussionHit] = []
 
-        # Brand search
-        r1 = await _http_get_json(
-            "https://www.reddit.com/search.json",
-            params={"q": brand_name, "sort": "relevance", "t": "year", "limit": "15"},
+        # 1. Brand search (paginated)
+        hits, errs = await self._paginated_search(
+            brand_name, "brand_search",
+            pages=profile.reddit_brand_pages,
+            per_page=profile.reddit_brand_per_page,
+            time_filter=profile.reddit_time_filter,
         )
-        if r1.error:
-            errors.append(f"brand search: {r1.error}")
-        elif r1.data:
-            all_hits.extend(self.parse_search_response(r1.data, "brand_search"))
+        all_hits.extend(hits)
+        errors.extend(errs)
+        await _delay()
 
-        # Category search
-        r2 = await _http_get_json(
-            "https://www.reddit.com/search.json",
-            params={"q": category, "sort": "relevance", "t": "year", "limit": "5"},
+        # 2. Category search (paginated)
+        hits, errs = await self._paginated_search(
+            category, "category_search",
+            pages=profile.reddit_category_pages,
+            per_page=profile.reddit_category_per_page,
+            time_filter=profile.reddit_time_filter,
         )
-        if r2.error:
-            errors.append(f"category search: {r2.error}")
-        elif r2.data:
-            all_hits.extend(self.parse_search_response(r2.data, "category_search"))
+        all_hits.extend(hits)
+        errors.extend(errs)
+        await _delay()
+
+        # 3. Extra combo queries
+        extra_queries = []
+        if profile.reddit_extra_queries >= 1:
+            extra_queries.append(f"{brand_name} {category}")
+        if profile.reddit_extra_queries >= 2:
+            extra_queries.append(f"{brand_name} review")
+        if profile.reddit_extra_queries >= 3:
+            extra_queries.append(f"{brand_name} alternative")
+        if profile.reddit_extra_queries >= 4:
+            extra_queries.append(f"best {category} tools")
+
+        for eq in extra_queries:
+            hits, errs = await self._paginated_search(
+                eq, f"extra_search:{eq}",
+                pages=1,
+                per_page=profile.reddit_extra_per_page,
+                time_filter=profile.reddit_time_filter,
+            )
+            all_hits.extend(hits)
+            errors.extend(errs)
+            await _delay()
+
+        # 4. Subreddit-targeted search
+        if profile.reddit_subreddit_search:
+            subreddits = _get_subreddits_for_category(category)
+            for sub in subreddits[:4]:  # limit to 4 subreddits
+                hits, errs = await self._subreddit_search(
+                    sub, brand_name, f"subreddit:{sub}",
+                    per_page=min(profile.reddit_brand_per_page, 50),
+                    time_filter=profile.reddit_time_filter,
+                )
+                all_hits.extend(hits)
+                errors.extend(errs)
+                await _delay()
 
         # Deduplicate by detail_id, keep higher raw_score
         seen: dict[str, DiscussionHit] = {}
@@ -296,10 +465,11 @@ class RedditProvider(CommunityProvider):
         return ProviderSearchResult(hits=list(seen.values()), errors=errors)
 
     async def fetch_detail(self, hit: DiscussionHit) -> DiscussionDetail | None:
+        profile = _get_profile()
         subreddit = hit.extra_param_1 or "all"
         r = await _http_get_json(
             f"https://www.reddit.com/r/{subreddit}/comments/{hit.detail_id}.json",
-            params={"limit": "10", "depth": "1", "sort": "best"},
+            params={"limit": str(profile.reddit_comments_per_post), "depth": "1", "sort": "best"},
         )
         if r.error or not r.data:
             return None
@@ -307,7 +477,7 @@ class RedditProvider(CommunityProvider):
 
 
 # ---------------------------------------------------------------------------
-# Hacker News
+# Hacker News — deep scraping with pagination + date sort
 # ---------------------------------------------------------------------------
 
 
@@ -317,8 +487,8 @@ class HackerNewsProvider(CommunityProvider):
     requires_auth = False
     auth_env_vars: list[str] = []
     capabilities = {"search", "detail"}
-    max_search_calls = 2
-    recommended_max_details = 3
+    max_search_calls = 6
+    recommended_max_details = 5
 
     @staticmethod
     def parse_search_response(data: dict, source: str) -> list[DiscussionHit]:
@@ -348,6 +518,7 @@ class HackerNewsProvider(CommunityProvider):
 
     @staticmethod
     def parse_comments_response(data: dict) -> list[dict]:
+        profile = _get_profile()
         comments: list[dict] = []
         for item in (data.get("hits") or []):
             text = item.get("comment_text", "")
@@ -358,32 +529,90 @@ class HackerNewsProvider(CommunityProvider):
                 "text": _truncate(text, 500),
                 "score": int(item.get("points") or 0),
             })
-            if len(comments) >= 10:
+            if len(comments) >= profile.hn_comments_per_post:
                 break
         return comments
 
+    async def _paginated_search(
+        self, query: str, source: str, pages: int, per_page: int,
+        endpoint: str = "search",
+    ) -> tuple[list[DiscussionHit], list[str]]:
+        """Fetch multiple pages of HN search results."""
+        all_hits: list[DiscussionHit] = []
+        errors: list[str] = []
+
+        for page in range(pages):
+            r = await _http_get_json(
+                f"https://hn.algolia.com/api/v1/{endpoint}",
+                params={
+                    "query": query, "tags": "story",
+                    "hitsPerPage": str(per_page), "page": str(page),
+                },
+            )
+            if r.error:
+                errors.append(f"{source} page {page}: {r.error}")
+                break
+            if r.data:
+                page_hits = self.parse_search_response(r.data, source)
+                all_hits.extend(page_hits)
+                if not page_hits:
+                    break
+            else:
+                break
+
+            if page < pages - 1:
+                await _delay()
+
+        return all_hits, errors
+
     async def search(self, brand_name: str, category: str) -> ProviderSearchResult:
+        profile = _get_profile()
         errors: list[str] = []
         all_hits: list[DiscussionHit] = []
 
-        r1 = await _http_get_json(
-            "https://hn.algolia.com/api/v1/search",
-            params={"query": brand_name, "tags": "story", "hitsPerPage": "10"},
+        # 1. Brand search by relevance (paginated)
+        hits, errs = await self._paginated_search(
+            brand_name, "brand_search",
+            pages=profile.hn_brand_pages,
+            per_page=profile.hn_brand_per_page,
         )
-        if r1.error:
-            errors.append(f"brand search: {r1.error}")
-        elif r1.data:
-            all_hits.extend(self.parse_search_response(r1.data, "brand_search"))
+        all_hits.extend(hits)
+        errors.extend(errs)
+        await _delay()
 
-        r2 = await _http_get_json(
-            "https://hn.algolia.com/api/v1/search",
-            params={"query": category, "tags": "story", "hitsPerPage": "5"},
+        # 2. Category search by relevance (paginated)
+        hits, errs = await self._paginated_search(
+            category, "category_search",
+            pages=profile.hn_category_pages,
+            per_page=profile.hn_category_per_page,
         )
-        if r2.error:
-            errors.append(f"category search: {r2.error}")
-        elif r2.data:
-            all_hits.extend(self.parse_search_response(r2.data, "category_search"))
+        all_hits.extend(hits)
+        errors.extend(errs)
+        await _delay()
 
+        # 3. Brand search by date (newest first) — extra signal
+        if profile.hn_include_date_sort:
+            hits, errs = await self._paginated_search(
+                brand_name, "brand_date_search",
+                pages=1,
+                per_page=profile.hn_brand_per_page,
+                endpoint="search_by_date",
+            )
+            all_hits.extend(hits)
+            errors.extend(errs)
+            await _delay()
+
+            # Category by date too
+            hits, errs = await self._paginated_search(
+                category, "category_date_search",
+                pages=1,
+                per_page=profile.hn_category_per_page,
+                endpoint="search_by_date",
+            )
+            all_hits.extend(hits)
+            errors.extend(errs)
+
+        # Deduplicate
         seen: dict[str, DiscussionHit] = {}
         for h in all_hits:
             key = (h.platform, h.detail_id)
@@ -393,6 +622,7 @@ class HackerNewsProvider(CommunityProvider):
         return ProviderSearchResult(hits=list(seen.values()), errors=errors)
 
     async def fetch_detail(self, hit: DiscussionHit) -> DiscussionDetail | None:
+        profile = _get_profile()
         # Fetch story
         r1 = await _http_get_json(
             f"https://hn.algolia.com/api/v1/items/{hit.detail_id}",
@@ -400,7 +630,6 @@ class HackerNewsProvider(CommunityProvider):
         title = hit.title
         full_content = ""
         if r1.error or not r1.data:
-            # Even if story fetch fails, try comments
             pass
         else:
             title = r1.data.get("title", hit.title)
@@ -409,7 +638,10 @@ class HackerNewsProvider(CommunityProvider):
         # Fetch comments
         r2 = await _http_get_json(
             "https://hn.algolia.com/api/v1/search",
-            params={"tags": f"comment,story_{hit.detail_id}", "hitsPerPage": "15"},
+            params={
+                "tags": f"comment,story_{hit.detail_id}",
+                "hitsPerPage": str(profile.hn_comments_per_post),
+            },
         )
         comments: list[dict] = []
         if not r2.error and r2.data:
@@ -429,7 +661,7 @@ class HackerNewsProvider(CommunityProvider):
 
 
 # ---------------------------------------------------------------------------
-# Dev.to
+# Dev.to — deep scraping with pagination + multi-tag
 # ---------------------------------------------------------------------------
 
 
@@ -439,8 +671,8 @@ class DevtoProvider(CommunityProvider):
     requires_auth = False
     auth_env_vars: list[str] = []
     capabilities = {"search", "detail"}
-    max_search_calls = 2
-    recommended_max_details = 3
+    max_search_calls = 6
+    recommended_max_details = 5
 
     @staticmethod
     def parse_search_response(data: list, source: str) -> list[DiscussionHit]:
@@ -469,52 +701,73 @@ class DevtoProvider(CommunityProvider):
             ))
         return hits
 
+    async def _paginated_tag_search(
+        self, tag: str, source: str, pages: int, per_page: int,
+    ) -> tuple[list[DiscussionHit], list[str]]:
+        """Fetch multiple pages of Dev.to tag search results."""
+        all_hits: list[DiscussionHit] = []
+        errors: list[str] = []
+
+        for page in range(1, pages + 1):
+            r = await _http_get_json(
+                "https://dev.to/api/articles",
+                params={"tag": tag, "per_page": str(per_page), "page": str(page)},
+            )
+            if r.error:
+                errors.append(f"{source} page {page}: {r.error}")
+                break
+            if r.data and isinstance(r.data, list) and len(r.data) > 0:
+                page_hits = self.parse_search_response(r.data, source)
+                all_hits.extend(page_hits)
+                if len(r.data) < per_page:
+                    break  # last page
+            else:
+                break
+
+            if page < pages:
+                await _delay()
+
+        return all_hits, errors
+
     async def search(self, brand_name: str, category: str) -> ProviderSearchResult:
+        profile = _get_profile()
         errors: list[str] = []
         all_hits: list[DiscussionHit] = []
         suggested: list[SuggestedQuery] = []
 
-        # Brand search
-        r1 = await _http_get_json(
-            "https://dev.to/api/articles",
-            params={"per_page": "10", "page": "1"},
-            headers={"Accept": "application/json"},
+        # 1. Brand tag search (paginated)
+        brand_tag = brand_name.lower().replace(" ", "")
+        hits, errs = await self._paginated_tag_search(
+            brand_tag, "brand_search",
+            pages=profile.devto_brand_pages,
+            per_page=profile.devto_brand_per_page,
         )
-        # Dev.to search via tag endpoint is more reliable
-        # First try brand as tag
-        r_brand = await _http_get_json(
-            "https://dev.to/api/articles",
-            params={"tag": brand_name.lower().replace(" ", ""), "per_page": "10", "page": "1"},
-        )
-        if r_brand.error:
-            errors.append(f"brand tag search: {r_brand.error}")
-        elif r_brand.data and isinstance(r_brand.data, list) and len(r_brand.data) > 0:
-            all_hits.extend(self.parse_search_response(r_brand.data, "brand_search"))
+        all_hits.extend(hits)
+        errors.extend(errs)
+        await _delay()
 
-        # Category tag search — split category into words, try each as tag
+        # 2. Category tag search — try each word in category (paginated)
         words = category.lower().replace("-", " ").split()
-        tag_hits_found = False
-        calls_made = 1  # brand tag already used 1 call
+        tags_tried = 0
+        max_category_tags = len(words) if profile.devto_multi_tag else 1
+
         for word in words:
-            if calls_made >= self.max_search_calls:
+            if tags_tried >= max_category_tags:
                 break
             if len(word) < 2:
                 continue
-            r_tag = await _http_get_json(
-                "https://dev.to/api/articles",
-                params={"tag": word, "per_page": "10", "page": "1"},
+            hits, errs = await self._paginated_tag_search(
+                word, f"category_search:{word}",
+                pages=profile.devto_category_pages,
+                per_page=profile.devto_category_per_page,
             )
-            calls_made += 1
-            if r_tag.error:
-                errors.append(f"tag '{word}' search: {r_tag.error}")
-                continue
-            if r_tag.data and isinstance(r_tag.data, list) and len(r_tag.data) > 0:
-                all_hits.extend(self.parse_search_response(r_tag.data, "tag_monitor"))
-                tag_hits_found = True
-                break  # found results, stop trying tags
+            all_hits.extend(hits)
+            errors.extend(errs)
+            tags_tried += 1
+            await _delay()
 
         # If all tag searches returned empty → suggest web fallback
-        if not tag_hits_found and not all_hits:
+        if not all_hits:
             suggested.append(SuggestedQuery(
                 platform="devto",
                 provider="devto",
@@ -537,6 +790,7 @@ class DevtoProvider(CommunityProvider):
         )
 
     async def fetch_detail(self, hit: DiscussionHit) -> DiscussionDetail | None:
+        profile = _get_profile()
         # Fetch article
         r1 = await _http_get_json(f"https://dev.to/api/articles/{hit.detail_id}")
         if r1.error or not r1.data:
@@ -551,7 +805,7 @@ class DevtoProvider(CommunityProvider):
         )
         comments: list[dict] = []
         if not r2.error and r2.data and isinstance(r2.data, list):
-            for c in r2.data[:10]:
+            for c in r2.data[:profile.devto_comments_per_post]:
                 comments.append({
                     "author": c.get("user", {}).get("username", ""),
                     "text": _truncate(c.get("body_html", ""), 500),

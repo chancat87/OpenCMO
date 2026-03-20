@@ -274,6 +274,14 @@ async def api_v1_project(project_id: int):
     return JSONResponse(project)
 
 
+@app.delete("/api/v1/projects/{project_id}")
+async def api_v1_delete_project(project_id: int):
+    ok = await storage.delete_project(project_id)
+    if not ok:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    return JSONResponse({"ok": True})
+
+
 @app.get("/api/v1/projects/{project_id}/summary")
 async def api_v1_project_summary(project_id: int):
     project = await storage.get_project(project_id)
@@ -379,6 +387,71 @@ async def api_v1_serp_chart(project_id: int):
 
 
 # ---------------------------------------------------------------------------
+# REST API v1 — Knowledge Graph
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/v1/projects/{project_id}/graph")
+async def api_v1_graph(project_id: int):
+    project = await storage.get_project(project_id)
+    if not project:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    data = await storage.get_graph_data(project_id)
+    return JSONResponse(data)
+
+
+# ---------------------------------------------------------------------------
+# REST API v1 — Competitors
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/v1/projects/{project_id}/competitors")
+async def api_v1_competitors(project_id: int):
+    return JSONResponse(await storage.list_competitors(project_id))
+
+
+@app.post("/api/v1/projects/{project_id}/competitors")
+async def api_v1_add_competitor(project_id: int, request: Request):
+    body = await request.json()
+    name = body.get("name", "").strip()
+    if not name:
+        return JSONResponse({"error": "name is required"}, status_code=400)
+    comp_id = await storage.add_competitor(
+        project_id, name, url=body.get("url"), category=body.get("category"),
+    )
+    # If keywords provided, add them too
+    keywords = body.get("keywords", [])
+    for kw in keywords:
+        kw = kw.strip() if isinstance(kw, str) else ""
+        if kw:
+            await storage.add_competitor_keyword(comp_id, kw)
+    return JSONResponse({"id": comp_id, "name": name}, status_code=201)
+
+
+@app.delete("/api/v1/competitors/{competitor_id}")
+async def api_v1_delete_competitor(competitor_id: int):
+    ok = await storage.remove_competitor(competitor_id)
+    if not ok:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    return JSONResponse({"ok": True})
+
+
+@app.get("/api/v1/competitors/{competitor_id}/keywords")
+async def api_v1_competitor_keywords(competitor_id: int):
+    return JSONResponse(await storage.list_competitor_keywords(competitor_id))
+
+
+@app.post("/api/v1/competitors/{competitor_id}/keywords")
+async def api_v1_add_competitor_keyword(competitor_id: int, request: Request):
+    body = await request.json()
+    keyword = body.get("keyword", "").strip()
+    if not keyword:
+        return JSONResponse({"error": "keyword is required"}, status_code=400)
+    kw_id = await storage.add_competitor_keyword(competitor_id, keyword)
+    return JSONResponse({"id": kw_id, "keyword": keyword}, status_code=201)
+
+
+# ---------------------------------------------------------------------------
 # REST API v1 — Keywords
 # ---------------------------------------------------------------------------
 
@@ -434,6 +507,7 @@ async def api_v1_create_monitor(request: Request):
         brand = domain.removeprefix("www.").split(".")[0].capitalize() or domain
     category = body.get("category", "").strip() or "auto"
     job_type = body.get("job_type", "full")
+    locale = body.get("locale", "en").strip() or "en"
     result = await service.create_monitor(
         brand, url, category,
         job_type=job_type,
@@ -447,6 +521,7 @@ async def api_v1_create_monitor(request: Request):
         job_type=job_type,
         job_id=result["monitor_id"],
         analyze_url=url,
+        locale=locale,
     )
     if task:
         result["task_id"] = task.task_id
@@ -457,6 +532,21 @@ async def api_v1_create_monitor(request: Request):
 async def api_v1_delete_monitor(monitor_id: int):
     from opencmo import service
     ok = await service.remove_monitor(monitor_id)
+    if not ok:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    return JSONResponse({"ok": True})
+
+
+@app.patch("/api/v1/monitors/{monitor_id}")
+async def api_v1_update_monitor(monitor_id: int, request: Request):
+    body = await request.json()
+    cron_expr = body.get("cron_expr")
+    enabled = body.get("enabled")
+    if cron_expr is None and enabled is None:
+        return JSONResponse({"error": "Nothing to update"}, status_code=400)
+    ok = await storage.update_scheduled_job(
+        monitor_id, cron_expr=cron_expr, enabled=enabled,
+    )
     if not ok:
         return JSONResponse({"error": "Not found"}, status_code=404)
     return JSONResponse({"ok": True})
@@ -634,11 +724,20 @@ async def api_v1_settings_get():
     api_key = await storage.get_setting("OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY", "")
     base_url = await storage.get_setting("OPENAI_BASE_URL") or os.environ.get("OPENAI_BASE_URL", "")
     model = await storage.get_setting("OPENCMO_MODEL_DEFAULT") or os.environ.get("OPENCMO_MODEL_DEFAULT", "")
+    # Reddit credentials
+    reddit_cid = await storage.get_setting("REDDIT_CLIENT_ID") or os.environ.get("REDDIT_CLIENT_ID", "")
+    reddit_secret = await storage.get_setting("REDDIT_CLIENT_SECRET") or os.environ.get("REDDIT_CLIENT_SECRET", "")
+    reddit_user = await storage.get_setting("REDDIT_USERNAME") or os.environ.get("REDDIT_USERNAME", "")
+    reddit_pass = await storage.get_setting("REDDIT_PASSWORD") or os.environ.get("REDDIT_PASSWORD", "")
+    auto_publish = await storage.get_setting("OPENCMO_AUTO_PUBLISH") or os.environ.get("OPENCMO_AUTO_PUBLISH", "0")
     return JSONResponse({
         "api_key_set": bool(api_key),
         "api_key_masked": f"{api_key[:3]}...{api_key[-4:]}" if len(api_key) > 8 else ("***" if api_key else ""),
         "base_url": base_url,
         "model": model,
+        "reddit_configured": bool(reddit_cid and reddit_secret and reddit_user and reddit_pass),
+        "reddit_username": reddit_user,
+        "auto_publish": auto_publish == "1",
     })
 
 
@@ -646,10 +745,12 @@ async def api_v1_settings_get():
 async def api_v1_settings_save(request: Request):
     from opencmo import storage, config
     body = await request.json()
-    for key in ("OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENCMO_MODEL_DEFAULT"):
+    for key in ("OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENCMO_MODEL_DEFAULT",
+                "REDDIT_CLIENT_ID", "REDDIT_CLIENT_SECRET", "REDDIT_USERNAME", "REDDIT_PASSWORD",
+                "OPENCMO_AUTO_PUBLISH"):
         val = body.get(key)
         if val is not None:
-            val = val.strip()
+            val = val.strip() if isinstance(val, str) else str(val)
             if val:
                 await storage.set_setting(key, val)
                 os.environ[key] = val

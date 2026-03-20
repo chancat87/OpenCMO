@@ -10,8 +10,9 @@ async def scan_geo_visibility(brand_name: str, category: str) -> str:
     """Scan AI search platforms for brand visibility and compute a GEO score.
 
     Checks multiple AI platforms (Perplexity, You.com, ChatGPT, Claude, Gemini)
-    for brand mentions, position, and sentiment. Crawl-based providers run by
-    default; API-based providers require environment variables to enable.
+    for brand mentions, position, and sentiment using multiple query templates.
+    Crawl-based providers run by default; API-based providers require environment
+    variables to enable.
     Returns a GEO Score (0-100) with breakdown and improvement suggestions.
 
     Args:
@@ -24,14 +25,25 @@ async def scan_geo_visibility(brand_name: str, category: str) -> str:
     if not enabled_providers:
         return "No GEO providers are enabled. Check your environment configuration."
 
-    results: dict[str, GeoProviderResult] = {}
+    # Use multi-query aggregation for deeper analysis
+    aggregated_results = {}
+    flat_results: dict[str, GeoProviderResult] = {}
 
     for provider in enabled_providers:
         try:
-            result = await provider.check_visibility(brand_name, category)
-            results[provider.name] = result
+            agg = await provider.check_visibility_multi(brand_name, category)
+            aggregated_results[provider.name] = agg
+            # Create a backward-compatible flat result for scoring
+            flat_results[provider.name] = GeoProviderResult(
+                platform=provider.name,
+                mentioned=agg.mentioned,
+                mention_count=agg.total_mention_count,
+                position_pct=agg.best_position_pct,
+                content_snippet="",  # snippets are in per_query_results
+                error=agg.error,
+            )
         except Exception as e:
-            results[provider.name] = GeoProviderResult(
+            flat_results[provider.name] = GeoProviderResult(
                 platform=provider.name,
                 mentioned=False,
                 mention_count=0,
@@ -42,12 +54,12 @@ async def scan_geo_visibility(brand_name: str, category: str) -> str:
 
     # Compute GEO Score
     # Visibility (0-40): mentioned on how many platforms
-    platforms_mentioned = sum(1 for r in results.values() if r.mentioned)
+    platforms_mentioned = sum(1 for r in flat_results.values() if r.mentioned)
     visibility_score = int(platforms_mentioned / len(enabled_providers) * 40)
 
     # Position (0-30): earlier mentions = higher score
     position_scores = []
-    for r in results.values():
+    for r in flat_results.values():
         if r.position_pct is not None:
             # 0% position = score 30, 100% = score 0
             position_scores.append(30 * (1 - r.position_pct / 100))
@@ -73,7 +85,7 @@ async def scan_geo_visibility(brand_name: str, category: str) -> str:
                     "position_pct": r.position_pct,
                     "error": r.error,
                 }
-                for name, r in results.items()
+                for name, r in flat_results.items()
             }
         )
         # save_geo_scan requires a project_id; use project_id=0 as ad-hoc scan
@@ -103,18 +115,27 @@ async def scan_geo_visibility(brand_name: str, category: str) -> str:
         f"## Platform Results ({len(enabled_providers)} enabled, {len(disabled_providers)} disabled)\n",
     ]
 
-    for name, data in results.items():
-        if data.error:
+    for name, data in flat_results.items():
+        if data.error and not data.mentioned:
             lines.append(f"### {name} [enabled]: ERROR -- {data.error}\n")
             continue
         status = "FOUND" if data.mentioned else "NOT FOUND"
         lines.append(f"### {name} [enabled]: {status}")
         if data.mentioned:
-            lines.append(f"- Mentions: {data.mention_count}")
+            lines.append(f"- Total mentions: {data.mention_count}")
             if data.position_pct is not None:
                 lines.append(
-                    f"- First mention at: {data.position_pct}% through the response"
+                    f"- Best mention position: {data.position_pct}% through response"
                 )
+
+        # Show per-query breakdown if available
+        agg = aggregated_results.get(name)
+        if agg and len(agg.per_query_results) > 1:
+            lines.append(f"- Queries checked: {len(agg.per_query_results)}")
+            for qr in agg.per_query_results:
+                q_status = "✅" if qr.mentioned else "❌"
+                q_mentions = f" ({qr.mention_count} mentions)" if qr.mentioned else ""
+                lines.append(f"  - {q_status} `{qr.query}`{q_mentions}")
         lines.append("")
 
     if disabled_providers:
@@ -137,9 +158,11 @@ async def scan_geo_visibility(brand_name: str, category: str) -> str:
             "Below are content snippets from each platform for the agent to analyze sentiment and context:\n",
         ]
     )
-    for name, data in results.items():
-        snippet = data.content_snippet
-        if snippet:
-            lines.append(f"### {name} snippet\n{snippet[:1500]}\n")
+    for name in aggregated_results:
+        agg = aggregated_results[name]
+        for qr in agg.per_query_results:
+            snippet = qr.content_snippet
+            if snippet:
+                lines.append(f"### {name} — `{qr.query}`\n{snippet[:3000]}\n")
 
     return "\n".join(lines)

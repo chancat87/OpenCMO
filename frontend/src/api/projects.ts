@@ -12,3 +12,7 @@ export function getProject(id: number): Promise<Project> {
 export function getProjectSummary(id: number): Promise<ProjectSummary> {
   return apiJson<ProjectSummary>(`/projects/${id}/summary`);
 }
+
+export function deleteProject(id: number): Promise<{ ok: boolean }> {
+  return apiJson(`/projects/${id}`, { method: "DELETE" });
+}

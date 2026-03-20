@@ -10,6 +10,7 @@ export const en = {
 
   // Nav / Sidebar
   "nav.dashboard": "Dashboard",
+  "nav.approvals": "Approvals",
   "nav.monitors": "Monitors",
   "nav.aiChat": "AI Chat",
   "nav.projects": "Projects",
@@ -34,6 +35,7 @@ export const en = {
   "project.geo": "GEO",
   "project.serp": "SERP",
   "project.community": "Community",
+  "project.graph": "Knowledge Graph",
 
   // Score Panel
   "score.seoScore": "SEO Score",
@@ -138,6 +140,44 @@ export const en = {
   "settings.saved": "Saved!",
   "settings.apiKeySet": "API key is configured",
   "settings.apiKeyNotSet": "No API key configured",
+
+  // Settings — Reddit
+  "settings.redditSection": "Reddit Connection",
+  "settings.redditClientId": "Client ID",
+  "settings.redditClientIdPlaceholder": "Your Reddit app Client ID",
+  "settings.redditClientSecret": "Client Secret",
+  "settings.redditClientSecretPlaceholder": "Your Reddit app Secret",
+  "settings.redditUsername": "Reddit Username",
+  "settings.redditUsernamePlaceholder": "Your Reddit username",
+  "settings.redditPassword": "Reddit Password",
+  "settings.redditPasswordPlaceholder": "Your Reddit password",
+  "settings.redditHint": "Create an app at reddit.com/prefs/apps (type: script).",
+  "settings.redditConfigured": "Reddit connected",
+  "settings.redditNotConfigured": "Reddit not connected",
+  "settings.autoPublish": "Auto Publish",
+  "settings.autoPublishHint": "Allow AI to publish posts and replies to Reddit.",
+
+  // Schedule presets
+  "schedule.label": "Monitoring Frequency",
+  "schedule.hourly": "Hourly",
+  "schedule.every6h": "Every 6h",
+  "schedule.daily": "Daily",
+  "schedule.weekly": "Weekly",
+  "schedule.monthly": "Monthly",
+  "schedule.custom": "Custom",
+  "schedule.enable": "Enable schedule",
+  "schedule.disable": "Disable schedule",
+
+  // Knowledge Graph
+  "graph.title": "Knowledge Graph",
+  "graph.noData": "No graph data yet",
+  "graph.noDataDesc": "Run a scan to see relationships between your brand, keywords, discussions, and competitors.",
+  "graph.competitors": "Competitors",
+  "graph.addCompetitor": "Add Competitor",
+  "graph.competitorName": "Competitor name",
+  "graph.competitorUrl": "URL (optional)",
+  "graph.competitorKw": "Keywords, comma separated (optional)",
+  "graph.noCompetitors": "No competitors yet. Add competitors to see them in the graph.",
 } as const;
 
 export type TranslationKey = keyof typeof en;

@@ -16,6 +16,11 @@ from opencmo.tools.geo_providers import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _use_light_profile(monkeypatch):
+    monkeypatch.setenv("OPENCMO_SCRAPE_DEPTH", "light")
+
+
 # ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------

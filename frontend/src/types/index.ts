@@ -176,4 +176,7 @@ export interface AISettings {
   api_key_masked: string;
   base_url: string;
   model: string;
+  reddit_configured: boolean;
+  reddit_username: string;
+  auto_publish: boolean;
 }

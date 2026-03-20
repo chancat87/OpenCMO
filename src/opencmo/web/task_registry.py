@@ -46,7 +46,7 @@ _active_monitors: dict[int, str] = {}  # monitor_id → task_id
 
 async def _run_and_update(
     record: TaskRecord, project_id: int, job_type: str, monitor_id: int, job_id: int,
-    *, analyze_url: str | None = None,
+    *, analyze_url: str | None = None, locale: str = "en",
 ) -> None:
     record.status = "running"
     try:
@@ -61,7 +61,7 @@ async def _run_and_update(
                     "round": round_num,
                 })
 
-            await analyze_and_enrich_project(project_id, analyze_url, on_progress=on_progress)
+            await analyze_and_enrich_project(project_id, analyze_url, on_progress=on_progress, locale=locale)
 
         from opencmo.scheduler import run_scheduled_scan
 
@@ -77,7 +77,7 @@ async def _run_and_update(
 
 def submit_scan(
     monitor_id: int, project_id: int, job_type: str, job_id: int,
-    *, analyze_url: str | None = None,
+    *, analyze_url: str | None = None, locale: str = "en",
 ) -> TaskRecord | None:
     """Submit an async scan task. Returns None if monitor already running (409).
 
@@ -104,7 +104,7 @@ def submit_scan(
     asyncio.get_event_loop().create_task(
         _run_and_update(
             record, project_id, job_type, monitor_id, job_id,
-            analyze_url=analyze_url,
+            analyze_url=analyze_url, locale=locale,
         )
     )
     return record

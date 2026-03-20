@@ -112,20 +112,20 @@ async def run_scheduled_scan(
             results = {}
             for provider in enabled:
                 try:
-                    r = await provider.check_visibility(brand, category)
-                    results[provider.name] = r
+                    agg = await provider.check_visibility_multi(brand, category)
+                    results[provider.name] = agg
                 except Exception:
                     pass
 
             platforms_mentioned = sum(1 for r in results.values() if r.mentioned)
             visibility_score = int(platforms_mentioned / len(enabled) * 40) if enabled else 0
-            position_scores = [30 * (1 - r.position_pct / 100) for r in results.values() if r.position_pct is not None]
+            position_scores = [30 * (1 - r.best_position_pct / 100) for r in results.values() if r.best_position_pct is not None]
             position_score = int(sum(position_scores) / len(position_scores)) if position_scores else 0
             sentiment_score = 15 if platforms_mentioned > 0 else 0
             geo_score = visibility_score + position_score + sentiment_score
 
             platform_json = json.dumps({
-                name: {"mentioned": r.mentioned, "mention_count": r.mention_count, "position_pct": r.position_pct}
+                name: {"mentioned": r.mentioned, "mention_count": r.total_mention_count, "position_pct": r.best_position_pct}
                 for name, r in results.items()
             })
             await storage.save_geo_scan(

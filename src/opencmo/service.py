@@ -139,18 +139,26 @@ async def _llm_call(client, model: str, messages: list[dict]) -> str:
     return resp.choices[0].message.content.strip()
 
 
-async def analyze_url_with_ai(url: str, on_progress=None) -> dict:
+async def analyze_url_with_ai(url: str, on_progress=None, locale: str = "en") -> dict:
     """Crawl a URL and use multi-agent discussion (3 roles × 3 rounds) to
     extract brand name, category, and monitoring keywords.
 
     Args:
         url: The URL to analyze.
         on_progress: Optional callback(role, content, round_num) called after each agent speaks.
+        locale: Language for the discussion ("zh" for Chinese, "en" for English).
 
     Returns {"brand_name": str, "category": str, "keywords": list[str]}.
     """
     fallback = {"brand_name": "", "category": "", "keywords": []}
     emit = on_progress or (lambda *a: None)
+
+    # Language instruction based on locale
+    lang_instruction = (
+        "You MUST respond in Chinese (中文). All your analysis and output should be in Chinese."
+        if locale == "zh"
+        else "You MUST respond in English."
+    )
 
     # 1. Crawl the URL
     try:
@@ -209,19 +217,19 @@ async def analyze_url_with_ai(url: str, on_progress=None) -> dict:
                 "You are a Product Analyst. Focus on: what the product/project actually does, "
                 "its core features, target audience, and competitive positioning. "
                 "Identify the real brand/product name (NOT the hosting platform like GitHub/GitLab/npm). "
-                "Be concise (3-5 sentences per round)."
+                f"Be concise (3-5 sentences per round). {lang_instruction}"
             ),
             "seo_specialist": (
                 "You are an SEO Specialist. Focus on: what search keywords users would type to "
                 "find this kind of product, competitor product names, high-intent long-tail keywords. "
                 "Think about what people search on Google/Bing when looking for solutions in this space. "
-                "Be concise (3-5 sentences per round)."
+                f"Be concise (3-5 sentences per round). {lang_instruction}"
             ),
             "community_strategist": (
                 "You are a Community Strategist. Focus on: what discussion topics to monitor on "
                 "Reddit/HN/Dev.to, community-specific jargon, pain points users discuss, "
                 "hashtags and category tags. "
-                "Be concise (3-5 sentences per round)."
+                f"Be concise (3-5 sentences per round). {lang_instruction}"
             ),
         }
 
@@ -292,9 +300,9 @@ async def analyze_url_with_ai(url: str, on_progress=None) -> dict:
         return fallback
 
 
-async def analyze_and_enrich_project(project_id: int, url: str, on_progress=None) -> None:
+async def analyze_and_enrich_project(project_id: int, url: str, on_progress=None, locale: str = "en") -> None:
     """Run AI analysis on a URL and update the project with extracted metadata + keywords."""
-    analysis = await analyze_url_with_ai(url, on_progress=on_progress)
+    analysis = await analyze_url_with_ai(url, on_progress=on_progress, locale=locale)
 
     if analysis["brand_name"] or analysis["category"]:
         await storage.update_project(

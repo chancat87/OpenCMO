@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -9,6 +10,7 @@ from dataclasses import dataclass
 from crawl4ai import AsyncWebCrawler
 
 from opencmo.tools.crawl import _extract_markdown
+
 
 # ---------------------------------------------------------------------------
 # Conditional imports for API-based providers
@@ -43,8 +45,55 @@ class GeoProviderResult:
     mentioned: bool
     mention_count: int
     position_pct: float | None  # first mention position %, None if not mentioned
-    content_snippet: str  # <=2000 chars
+    content_snippet: str  # <=snippet_chars
     error: str | None
+    query: str = ""  # which query produced this result
+
+
+@dataclass
+class GeoAggregatedResult:
+    """Aggregated result from multiple queries on one provider."""
+    platform: str
+    mentioned: bool             # True if mentioned in ANY query
+    total_mention_count: int    # sum of all mentions across queries
+    best_position_pct: float | None  # best (lowest) position %
+    per_query_results: list[GeoProviderResult]
+    error: str | None
+
+
+# ---------------------------------------------------------------------------
+# Query templates
+# ---------------------------------------------------------------------------
+
+_QUERY_TEMPLATES = [
+    "best {category} tools",
+    "best {category} tools 2026",
+    "{brand_name} review",
+    "{brand_name} vs alternatives",
+    "{category} comparison",
+]
+
+
+def _get_query_templates(brand_name: str, category: str) -> list[str]:
+    """Generate query list based on scrape depth."""
+    from opencmo.scrape_config import get_scrape_profile
+    profile = get_scrape_profile()
+    n = min(profile.geo_query_templates, len(_QUERY_TEMPLATES))
+    templates = _QUERY_TEMPLATES[:n]
+    return [
+        t.format(brand_name=brand_name, category=category)
+        for t in templates
+    ]
+
+
+def _get_snippet_chars() -> int:
+    from opencmo.scrape_config import get_scrape_profile
+    return get_scrape_profile().geo_content_snippet_chars
+
+
+def _get_request_delay() -> float:
+    from opencmo.scrape_config import get_scrape_profile
+    return get_scrape_profile().request_delay_seconds
 
 
 # ---------------------------------------------------------------------------
@@ -97,6 +146,56 @@ class GeoProvider(ABC):
         self, brand_name: str, category: str
     ) -> GeoProviderResult: ...
 
+    async def check_visibility_multi(
+        self, brand_name: str, category: str
+    ) -> GeoAggregatedResult:
+        """Run check_visibility across multiple query templates and aggregate."""
+        queries = _get_query_templates(brand_name, category)
+        results: list[GeoProviderResult] = []
+
+        for i, query in enumerate(queries):
+            try:
+                result = await self._check_single_query(brand_name, query)
+                results.append(result)
+            except Exception as e:
+                results.append(GeoProviderResult(
+                    platform=self.name,
+                    mentioned=False,
+                    mention_count=0,
+                    position_pct=None,
+                    content_snippet="",
+                    error=str(e),
+                    query=query,
+                ))
+
+            if i < len(queries) - 1:
+                delay = _get_request_delay()
+                if delay > 0:
+                    await asyncio.sleep(delay)
+
+        # Aggregate
+        any_mentioned = any(r.mentioned for r in results)
+        total_mentions = sum(r.mention_count for r in results)
+        positions = [r.position_pct for r in results if r.position_pct is not None]
+        best_pos = min(positions) if positions else None
+        errors = [r.error for r in results if r.error]
+
+        return GeoAggregatedResult(
+            platform=self.name,
+            mentioned=any_mentioned,
+            total_mention_count=total_mentions,
+            best_position_pct=best_pos,
+            per_query_results=results,
+            error="; ".join(errors) if errors else None,
+        )
+
+    async def _check_single_query(
+        self, brand_name: str, query: str
+    ) -> GeoProviderResult:
+        """Override in subclasses to check a single query."""
+        # Default: call check_visibility (backward compat for API providers)
+        return await self.check_visibility(brand_name, query)
+
 
 # ---------------------------------------------------------------------------
 # Crawl-based providers
@@ -112,7 +211,15 @@ class PerplexityProvider(GeoProvider):
     async def check_visibility(
         self, brand_name: str, category: str
     ) -> GeoProviderResult:
-        url = f"https://www.perplexity.ai/search?q=best+{category.replace(' ', '+')}+tools"
+        # For backward compat, use default query
+        query = f"best {category} tools"
+        return await self._check_single_query(brand_name, query)
+
+    async def _check_single_query(
+        self, brand_name: str, query: str
+    ) -> GeoProviderResult:
+        snippet_chars = _get_snippet_chars()
+        url = f"https://www.perplexity.ai/search?q={query.replace(' ', '+')}"
         try:
             async with AsyncWebCrawler() as crawler:
                 crawl_result = await crawler.arun(url=url)
@@ -125,8 +232,9 @@ class PerplexityProvider(GeoProvider):
                     mentioned=mentioned,
                     mention_count=mention_count,
                     position_pct=position_pct,
-                    content_snippet=content[:2000],
+                    content_snippet=content[:snippet_chars],
                     error=None,
+                    query=query,
                 )
         except Exception as e:
             return GeoProviderResult(
@@ -136,6 +244,7 @@ class PerplexityProvider(GeoProvider):
                 position_pct=None,
                 content_snippet="",
                 error=str(e),
+                query=query,
             )
 
 
@@ -148,7 +257,14 @@ class YouDotComProvider(GeoProvider):
     async def check_visibility(
         self, brand_name: str, category: str
     ) -> GeoProviderResult:
-        url = f"https://you.com/search?q=best+{category.replace(' ', '+')}+tools"
+        query = f"best {category} tools"
+        return await self._check_single_query(brand_name, query)
+
+    async def _check_single_query(
+        self, brand_name: str, query: str
+    ) -> GeoProviderResult:
+        snippet_chars = _get_snippet_chars()
+        url = f"https://you.com/search?q={query.replace(' ', '+')}"
         try:
             async with AsyncWebCrawler() as crawler:
                 crawl_result = await crawler.arun(url=url)
@@ -161,8 +277,9 @@ class YouDotComProvider(GeoProvider):
                     mentioned=mentioned,
                     mention_count=mention_count,
                     position_pct=position_pct,
-                    content_snippet=content[:2000],
+                    content_snippet=content[:snippet_chars],
                     error=None,
+                    query=query,
                 )
         except Exception as e:
             return GeoProviderResult(
@@ -172,6 +289,7 @@ class YouDotComProvider(GeoProvider):
                 position_pct=None,
                 content_snippet="",
                 error=str(e),
+                query=query,
             )
 
 
@@ -200,6 +318,13 @@ class ChatGPTProvider(GeoProvider):
     async def check_visibility(
         self, brand_name: str, category: str
     ) -> GeoProviderResult:
+        query = _API_QUERY_TEMPLATE.format(category=category)
+        return await self._check_single_query(brand_name, query)
+
+    async def _check_single_query(
+        self, brand_name: str, query: str
+    ) -> GeoProviderResult:
+        snippet_chars = _get_snippet_chars()
         try:
             from openai import AsyncOpenAI
 
@@ -209,7 +334,7 @@ class ChatGPTProvider(GeoProvider):
                 messages=[
                     {
                         "role": "user",
-                        "content": _API_QUERY_TEMPLATE.format(category=category),
+                        "content": query,
                     }
                 ],
                 max_tokens=1024,
@@ -223,8 +348,9 @@ class ChatGPTProvider(GeoProvider):
                 mentioned=mentioned,
                 mention_count=mention_count,
                 position_pct=position_pct,
-                content_snippet=content[:2000],
+                content_snippet=content[:snippet_chars],
                 error=None,
+                query=query,
             )
         except Exception as e:
             return GeoProviderResult(
@@ -234,6 +360,7 @@ class ChatGPTProvider(GeoProvider):
                 position_pct=None,
                 content_snippet="",
                 error=str(e),
+                query=query,
             )
 
 
@@ -252,6 +379,13 @@ class ClaudeProvider(GeoProvider):
     async def check_visibility(
         self, brand_name: str, category: str
     ) -> GeoProviderResult:
+        query = _API_QUERY_TEMPLATE.format(category=category)
+        return await self._check_single_query(brand_name, query)
+
+    async def _check_single_query(
+        self, brand_name: str, query: str
+    ) -> GeoProviderResult:
+        snippet_chars = _get_snippet_chars()
         try:
             client = anthropic.AsyncAnthropic()
             response = await client.messages.create(
@@ -260,7 +394,7 @@ class ClaudeProvider(GeoProvider):
                 messages=[
                     {
                         "role": "user",
-                        "content": _API_QUERY_TEMPLATE.format(category=category),
+                        "content": query,
                     }
                 ],
             )
@@ -273,8 +407,9 @@ class ClaudeProvider(GeoProvider):
                 mentioned=mentioned,
                 mention_count=mention_count,
                 position_pct=position_pct,
-                content_snippet=content[:2000],
+                content_snippet=content[:snippet_chars],
                 error=None,
+                query=query,
             )
         except Exception as e:
             return GeoProviderResult(
@@ -284,6 +419,7 @@ class ClaudeProvider(GeoProvider):
                 position_pct=None,
                 content_snippet="",
                 error=str(e),
+                query=query,
             )
 
 
@@ -302,12 +438,17 @@ class GeminiProvider(GeoProvider):
     async def check_visibility(
         self, brand_name: str, category: str
     ) -> GeoProviderResult:
+        query = _API_QUERY_TEMPLATE.format(category=category)
+        return await self._check_single_query(brand_name, query)
+
+    async def _check_single_query(
+        self, brand_name: str, query: str
+    ) -> GeoProviderResult:
+        snippet_chars = _get_snippet_chars()
         try:
             genai.configure(api_key=os.environ["GOOGLE_AI_API_KEY"])
             model = genai.GenerativeModel("gemini-1.5-flash")
-            response = await model.generate_content_async(
-                _API_QUERY_TEMPLATE.format(category=category)
-            )
+            response = await model.generate_content_async(query)
             content = response.text or ""
             mentioned, mention_count, position_pct = _analyze_text(
                 content, brand_name
@@ -317,8 +458,9 @@ class GeminiProvider(GeoProvider):
                 mentioned=mentioned,
                 mention_count=mention_count,
                 position_pct=position_pct,
-                content_snippet=content[:2000],
+                content_snippet=content[:snippet_chars],
                 error=None,
+                query=query,
             )
         except Exception as e:
             return GeoProviderResult(
@@ -328,6 +470,7 @@ class GeminiProvider(GeoProvider):
                 position_pct=None,
                 content_snippet="",
                 error=str(e),
+                query=query,
             )
 
 
