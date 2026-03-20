@@ -11,6 +11,18 @@ from opencmo.agents.blog import blog_expert
 from opencmo.agents.seo import seo_agent
 from opencmo.agents.geo import geo_agent
 from opencmo.agents.community import community_agent
+from opencmo.agents.ruanyifeng import ruanyifeng_expert
+from opencmo.agents.zhihu import zhihu_expert
+from opencmo.agents.xiaohongshu import xiaohongshu_expert
+from opencmo.agents.v2ex import v2ex_expert
+from opencmo.agents.juejin import juejin_expert
+from opencmo.agents.jike import jike_expert
+from opencmo.agents.wechat import wechat_expert
+from opencmo.agents.oschina import oschina_expert
+from opencmo.agents.gitcode import gitcode_expert
+from opencmo.agents.sspai import sspai_expert
+from opencmo.agents.infoq import infoq_expert
+from opencmo.agents.devto import devto_expert
 from opencmo.tools.crawl import crawl_website
 from opencmo.tools.search import web_search
 from opencmo.tools.competitor import analyze_competitor
@@ -40,6 +52,54 @@ blog_tool = blog_expert.as_tool(
     tool_name="generate_blog_content",
     tool_description="Generate blog/SEO article outlines, SEO recommendations, or full 2000+ word articles with research.",
 )
+ruanyifeng_tool = ruanyifeng_expert.as_tool(
+    tool_name="generate_ruanyifeng_content",
+    tool_description="Generate 阮一峰科技爱好者周刊 submission (GitHub Issue format).",
+)
+zhihu_tool = zhihu_expert.as_tool(
+    tool_name="generate_zhihu_content",
+    tool_description="Generate 知乎 articles and Q&A answers.",
+)
+xiaohongshu_tool = xiaohongshu_expert.as_tool(
+    tool_name="generate_xiaohongshu_content",
+    tool_description="Generate 小红书 image-text notes (种草笔记).",
+)
+v2ex_tool = v2ex_expert.as_tool(
+    tool_name="generate_v2ex_content",
+    tool_description="Generate V2EX community posts for /go/share or /go/create.",
+)
+juejin_tool = juejin_expert.as_tool(
+    tool_name="generate_juejin_content",
+    tool_description="Generate 掘金 technical articles and tutorials.",
+)
+jike_tool = jike_expert.as_tool(
+    tool_name="generate_jike_content",
+    tool_description="Generate 即刻 posts for indie dev / startup circles.",
+)
+wechat_tool = wechat_expert.as_tool(
+    tool_name="generate_wechat_content",
+    tool_description="Generate 微信公众号 long-form articles.",
+)
+oschina_tool = oschina_expert.as_tool(
+    tool_name="generate_oschina_content",
+    tool_description="Generate OSChina (开源中国) project listings and articles.",
+)
+gitcode_tool = gitcode_expert.as_tool(
+    tool_name="generate_gitcode_content",
+    tool_description="Generate GitCode repository setup and CSDN companion articles.",
+)
+sspai_tool = sspai_expert.as_tool(
+    tool_name="generate_sspai_content",
+    tool_description="Generate 少数派 tool review and productivity articles.",
+)
+infoq_tool = infoq_expert.as_tool(
+    tool_name="generate_infoq_content",
+    tool_description="Generate InfoQ deep-dive architecture and technical articles.",
+)
+devto_tool = devto_expert.as_tool(
+    tool_name="generate_devto_content",
+    tool_description="Generate Dev.to developer blog articles and tutorials.",
+)
 
 cmo_agent = Agent(
     name="CMO Agent",
@@ -62,6 +122,18 @@ cmo_agent = Agent(
    - SEO site audit → SEO Audit Expert
    - AI visibility / GEO score → AI Visibility Expert
    - Community monitoring (Reddit/HN discussions) → Community Monitor
+   - 阮一峰周刊投稿 → 阮一峰周刊专家
+   - 知乎文章/回答 → 知乎专家
+   - 小红书笔记 → 小红书专家
+   - V2EX 帖子 → V2EX 专家
+   - 掘金技术文 → 掘金专家
+   - 即刻动态 → 即刻专家
+   - 微信公众号文章 → 微信公众号专家
+   - OSChina/开源中国 → OSChina 专家
+   - GitCode/CSDN → GitCode 专家
+   - 少数派文章 → 少数派专家
+   - InfoQ 投稿 → InfoQ 专家
+   - Dev.to article → Dev.to Expert
 
 3. **Routing rules**:
    - **Single platform request** → use handoff to transfer to that expert for deep interaction
@@ -73,6 +145,13 @@ cmo_agent = Agent(
 5. **Competitor Analysis**: Use `analyze_competitor` to get structured data about a competitor's product, then use insights to differentiate content.
 
 6. **For follow-up requests**: Maintain context from previous interactions. If the user asks for modifications (e.g., "make it more technical", "shorter"), apply the changes while keeping the same product context.
+
+## Platform Priority Guide
+When the user asks for "全平台" or "comprehensive" distribution, prioritize in this order:
+- ⭐⭐⭐⭐⭐: 阮一峰周刊, 知乎, 小红书, Product Hunt
+- ⭐⭐⭐⭐: Hacker News, V2EX, 掘金
+- ⭐⭐⭐: Twitter/X, 即刻, 微信公众号, OSChina, 少数派, Dev.to, Reddit
+- ⭐⭐: GitCode, InfoQ
 
 ## Important Rules
 - Crawl the website first if a URL is provided (unless already crawled in the conversation). If the user gives enough product context without a URL, proceed directly.
@@ -93,6 +172,18 @@ cmo_agent = Agent(
         producthunt_tool,
         hackernews_tool,
         blog_tool,
+        ruanyifeng_tool,
+        zhihu_tool,
+        xiaohongshu_tool,
+        v2ex_tool,
+        juejin_tool,
+        jike_tool,
+        wechat_tool,
+        oschina_tool,
+        gitcode_tool,
+        sspai_tool,
+        infoq_tool,
+        devto_tool,
     ],
     handoffs=[
         handoff(
@@ -130,6 +221,54 @@ cmo_agent = Agent(
         handoff(
             community_agent,
             tool_description_override="Transfer to community monitor to scan Reddit, Hacker News, Dev.to and other platforms for brand discussions, fetch post details, and draft context-aware replies.",
+        ),
+        handoff(
+            ruanyifeng_expert,
+            tool_description_override="Transfer to 阮一峰周刊 expert for GitHub Issue submission drafts.",
+        ),
+        handoff(
+            zhihu_expert,
+            tool_description_override="Transfer to 知乎 expert for articles and Q&A answers.",
+        ),
+        handoff(
+            xiaohongshu_expert,
+            tool_description_override="Transfer to 小红书 expert for image-text notes.",
+        ),
+        handoff(
+            v2ex_expert,
+            tool_description_override="Transfer to V2EX expert for developer community posts.",
+        ),
+        handoff(
+            juejin_expert,
+            tool_description_override="Transfer to 掘金 expert for technical blog articles.",
+        ),
+        handoff(
+            jike_expert,
+            tool_description_override="Transfer to 即刻 expert for indie dev community posts.",
+        ),
+        handoff(
+            wechat_expert,
+            tool_description_override="Transfer to 微信公众号 expert for WeChat long-form articles.",
+        ),
+        handoff(
+            oschina_expert,
+            tool_description_override="Transfer to OSChina expert for open-source project listings.",
+        ),
+        handoff(
+            gitcode_expert,
+            tool_description_override="Transfer to GitCode expert for CSDN/GitCode repository setup.",
+        ),
+        handoff(
+            sspai_expert,
+            tool_description_override="Transfer to 少数派 expert for tool review and productivity articles.",
+        ),
+        handoff(
+            infoq_expert,
+            tool_description_override="Transfer to InfoQ expert for enterprise-grade technical articles.",
+        ),
+        handoff(
+            devto_expert,
+            tool_description_override="Transfer to Dev.to expert for developer blog articles and tutorials.",
         ),
     ],
     model=get_model("cmo"),

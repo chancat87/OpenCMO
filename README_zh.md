@@ -2,181 +2,174 @@
   <img src="assets/logo.png" alt="OpenCMO Logo" width="120" />
 </div>
 
-<h1 align="center">OpenCMO</h1>
+<h1 align="center">🚀 OpenCMO</h1>
 
 <p align="center">
-  <strong>开源 AI CMO —— 一个工具就是你的整个营销团队。</strong><br/>
-  <sub>10 个 AI 专家智能体、实时监控、现代化 Web 仪表盘。</sub>
+  <strong>开源 AI 首席营销官 (CMO) —— 一个工具，你的整个营销团队。</strong><br/>
+  <sub>强大的多智能体系统，内置 10 位精英 AI 专家，提供实时策略监控和现代化的数据仪表盘。</sub>
 </p>
 
 <div align="center">
   <a href="README.md">🇺🇸 English</a> | <a href="README_zh.md">🇨🇳 中文</a> | <a href="README_ja.md">🇯🇵 日本語</a> | <a href="README_ko.md">🇰🇷 한국어</a> | <a href="README_es.md">🇪🇸 Español</a>
 </div>
 
+<p align="center">
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg?style=for-the-badge&logo=python" alt="Python 3.10+"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-green.svg?style=for-the-badge" alt="License"></a>
+  <a href="https://github.com/study8677/OpenCMO/stargazers"><img src="https://img.shields.io/github/stars/study8677/OpenCMO?style=for-the-badge&color=yellow&logo=github" alt="Stars"></a>
+  <img src="https://img.shields.io/badge/react-SPA-61DAFB.svg?style=for-the-badge&logo=react" alt="React SPA Component">
+</p>
+
+---
+
+## 🌟 OpenCMO 是什么？
+
+OpenCMO 是一个专为独立开发者、初创公司和小团队设计的 **多智能体 AI 营销生态系统**。只需输入您的产品链接，OpenCMO 将会：
+1. **深度解析您的网站**，理解您的产品定位和目标受众。
+2. **策动多智能体策略辩论**，精准提炼最佳关键词、定位以及目标社区。
+3. **自动化持续监控** 覆盖 SEO、AI 搜索可见度 (GEO)、以及发烧友社区 (Reddit, Hacker News, Dev.to) 的全网动态。
+
+---
+
+## ✨ 界面与交互体验
+
+我们为您精心打造了一个以暗黑风、毛玻璃质感为主的 React 单页面应用 (SPA)，让您以最直观的方式掌控全局。
+
 <div align="center">
-  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg?style=flat-square" alt="Python 3.10+"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-green.svg?style=flat-square" alt="License"></a>
-  <a href="https://github.com/study8677/OpenCMO/stargazers"><img src="https://img.shields.io/github/stars/study8677/OpenCMO?style=flat-square&color=yellow" alt="Stars"></a>
+  <img src="assets/screenshots/dashboard-full.png" alt="OpenCMO Dashboard Overview" width="850" style="border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.3);" />
+  <p><i>实时项目仪表盘 — 一目了然地追踪您的 SEO、 GEO (AI 可见度) 以及社区互动情况。</i></p>
 </div>
 
 ---
 
-## 🖼️ 界面图集
+## 🕸️ 交互式知识图谱
 
-探索为现代化多智能体营销工作流设计的暗黑风格 React SPA 仪表盘。
-
-<details open>
-<summary><b>查看运行截图</b></summary>
-<br>
+**知识图谱**是您市场情报的核心。我们将抽象的数据转化为令人惊艳的交互式力导向关系网络。
 
 <div align="center">
-  <img src="assets/screenshots/dashboard-full.png" alt="OpenCMO 仪表盘" width="800" />
-  <br/><sub><b>主仪表盘</b>：实时掌控项目状态，跨越 SEO、GEO AI 可见度与社区互动指标。</sub>
-</div>
-<br/>
-
-<div align="center">
-  <img src="assets/screenshots/chat-interface.png" alt="智能体对话界面" width="800" />
-  <br/><sub><b>专家对话界面</b>：与 10 位 AI 营销专家畅聊。可选定一位专家，或让 CMO 自动为您路由。</sub>
-</div>
-<br/>
-
-<div align="center">
-  <img src="assets/screenshots/monitors-panel.png" alt="监控列表" width="800" />
-  <br/><sub><b>监控与多智能体分析</b>：实时观看 3 位 AI 角色深入探讨策略，为您提取最佳关键词。</sub>
-</div>
-<br/>
-
-<div align="center">
-  <img src="assets/screenshots/multi-agent-discussion.png" alt="多智能体讨论" width="800" />
-  <br/><sub><b>多智能体交互讨论</b>：实时查看不同 AI 角色在互动弹窗中针对产品策略进行辩论的过程。</sub>
-</div>
-<br/>
-
-<div align="center">
-  <img src="assets/screenshots/settings-panel.png" alt="设置与 API 界面" width="800" />
-  <br/><sub><b>配置与设置</b>：提供简洁安全的界面以配置您的 API 供应商（OpenAI，DeepSeek，Ollama 等）。</sub>
+  <img src="assets/knowledge_graph_demo.png" alt="Marketing Knowledge Graph" width="850" style="border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.5);" />
+  <p><i>品牌营销战略生态的 3D 力导向可视化动态地图</i></p>
 </div>
 
-</details>
+### 为什么它具有颠覆性：
+- 🔵 **交互式探索**：自由缩放、拖拽和漫游您的数字品牌宇宙。
+- 🟢 **6 大维度节点**：直观区分 品牌 (紫色)、关键词 (青色)、社区讨论 (琥珀色)、搜索引擎排名 (绿色)、竞品 (红色) 以及重叠冲突关键词 (橙色)。
+- 🔴 **竞品情报网络**：添加竞品 URL，立刻在图谱中高亮显示竞争交锋地带（以红色虚线动态连接）。
+- ⚡ **毫秒级实时同步**：随着新数据的抓取，图谱每 30 秒自动重力平衡和刷新。
 
 ---
 
-## OpenCMO 是什么？
+## 👥 你的专属 AI 营销团队
 
-OpenCMO 是一个**多智能体 AI 营销系统**，专为独立开发者和小团队设计。输入一个 URL，系统会爬取网站、运行多智能体策略讨论，自动设置 SEO、AI 可见度和社区讨论的监控。
+OpenCMO 内部搭载了 **10 位各司其职的 AI 专家**，紧密协作：
 
-### 核心能力
+| 专家角色 | 专长领域 | 核心职责 |
+| :--- | :--- | :--- |
+| **👔 CMO 首席营销官** | 统筹规划 | 整个团队的大脑。接收请求并自动路由分配给最合适的专家。 |
+| **🐦 Twitter/X 专家** | 微博客流转 | 撰写引人入胜的推文、鉤子 (Hook) 及可能疯传的帖子串。 |
+| **👽 Reddit 战略家**| 社区运营 | 撰写极具原生态、反刻板推销的帖子，智能回复活跃板块。 |
+| **💼 LinkedIn 职场专家** | B2B 社交 | 塑造高度专业的行业领导力深度文章。 |
+| **🚀 Product Hunt 专家** | 产品发布 | 准备极具冲击力的 Slogan、描述文案以及 Maker 评论。 |
+| **💻 Hacker News 极客** | 技术极客圈 | 编排极硬核的 "Show HN" 技术贴，妥善处理犀利反馈。 |
+| **📝 Blog/SEO 写手**| 长文创作 | 产出结构完整、符合 SEO 最佳实践的长篇博文 (2000词+)。 |
+| **🔍 SEO 审计师** | 技术 SEO | 审查核心网页指标、Schema.org 结构、robots 及网站地图。 |
+| **🤖 GEO 能见度专家**| AI 引擎优化 | 监控品牌在 Perplexity, ChatGPT, Claude, Gemini 等 AI 中的被提及率。 |
+| **👀 社区雷达** | 社交聆听 | 实时扫掠 Reddit, HN, Dev.to 取回高价值的潜在讨论并报警。 |
 
-- **10 个 AI 专家智能体** — Twitter/X、Reddit、LinkedIn、Product Hunt、Hacker News、博客/SEO、SEO 审计、GEO（AI 可见度）、社区监控、CMO 总管
-- **智能 URL 分析** — 粘贴任意 URL，3 个 AI 角色（产品分析师、SEO 专家、社区运营）进行 3 轮讨论，提取品牌名、分类和监控关键词
-- **知识图谱** — 交互式力导向图，可视化品牌、关键词、竞品、社区讨论和搜索排名之间的关系网络
-- **实时 Web 仪表盘** — React SPA，暗色侧边栏、项目卡片、趋势图表、中英双语
-- **与专家对话** — ChatGPT 风格界面，支持历史记录；选择特定智能体或让 CMO 自动路由
-- **持续监控** — 基于 Cron 的定时扫描 SEO、GEO 和社区指标
-- **任意 LLM 供应商** — OpenAI、NVIDIA NIM、DeepSeek、Ollama 或任何 OpenAI 兼容 API
+---
 
-## 🚀 快速开始
+## 🧩 核心机制：多智能体联合辩论
 
-### 1. 安装
+当您提交一个 URL，OpenCMO 绝不是简单地调用一次大模型 API。它会让不同的角色专家进行一场真正的 **3 轮交叉协作讨论**：
+
+```mermaid
+sequenceDiagram
+    participant PA as 🔍 产品分析师
+    participant SEO as 📈 SEO 优化师
+    participant CS as 💬 社区运营官
+    participant SD as 🎯 战略总监
+
+    Note over PA,CS: 第一轮 — 独立勘探
+    PA->>PA: 拆解产品特性、痛点与受众画像
+    SEO->>SEO: 发掘搜索热词及竞品蓝海
+    CS->>CS: 锁定精准社区与潜力话题
+
+    Note over PA,CS: 第二轮 — 交叉共创
+    PA->>SEO: 分享产品洞察帮助找词
+    SEO->>CS: 分享长尾词帮助定话题
+    CS->>PA: 携带用户痛点反馈给产品
+
+    Note over SD: 第三轮 — 制定共识
+    SD->>SD: 汇聚 6 条深思熟虑的讨论流<br/>浓缩为最终的品牌行销词库与监控雷达。
+```
+
+通过让 AI 互相读取、启发和纠偏，OpenCMO 能产出比单次对话丰富、立体得多的战略方案。
+
+---
+
+## ⚙️ 极速启动指南
+
+OpenCMO 兼容所有的 OpenAI 协议 API，您享有绝对的底层控制权（支持 **OpenAI, DeepSeek, 阿里云, Kimi, Ollama** 等）。
+
+### 1. 本地安装
 
 ```bash
 git clone https://github.com/study8677/OpenCMO.git
 cd OpenCMO
 
-# 通过 pip 安装依赖
+# 安装全部依赖包
 pip install -e ".[all]"
 
-# 初始化爬虫组件
+# 初始化爬虫引擎配置
 crawl4ai-setup
 ```
 
-### 2. 配置
+### 2. 参数配置
 
 ```bash
 cp .env.example .env
-
-# 编辑 .env 文件并填入您的 API Key：
-# OPENAI_API_KEY=sk-... 
 ```
-*(支持 OpenAI, DeepSeek, NIM, Ollama 等，详情见 `.env.example`)*
+编辑 `.env` 填入您的模型密钥。*以 DeepSeek 为例：*
+```env
+OPENAI_API_KEY=sk-您的APIKey
+OPENAI_BASE_URL=https://api.deepseek.com/v1
+OPENCMO_MODEL_DEFAULT=deepseek-chat
+```
 
-### 3. 运行应用程序
-
-启动现代化 Web 仪表盘以访问 UI 界面：
+### 3. 点火起飞 🚀
 
 ```bash
 opencmo-web
 ```
-🚀 **在您的浏览器中打开 [http://localhost:8080/app](http://localhost:8080/app)。**
+🚀 **您的数字 CMO 团队已就位！** 浏览器打开 [http://localhost:8080/app](http://localhost:8080/app)。
 
-<details>
-<summary><b>命令行模式 (可选)</b></summary>
-
-或者，运行命令行交互界面：
-```bash
-opencmo
-```
-</details>
-
-### 4. 如何使用
-
-1. 进入 **监控 (Monitors)** → 粘贴您的 URL → 点击 **开始监控 (Start Monitoring)**
-2. 实时观看 AI 多智能体讨论分析您的产品
-3. 系统自动提取品牌名、分类和关键词
-4. 自动运行全面扫描（SEO + GEO + 社区）
-5. 在 **仪表盘 (Dashboard)** 点击对应项目查看结果
-
-## 🤖 10 个 AI 专家智能体
-
-| 智能体 | 功能 |
-|--------|------|
-| **CMO 总管** | 总体协调，自动路由到合适的专家 |
-| **Twitter/X** | 推文、话题串和互动策略 |
-| **Reddit** | 真实风格的帖子 + 智能回复现有讨论 |
-| **LinkedIn** | 专业的行业领导力内容 |
-| **Product Hunt** | 上线文案、标语和制作者评论 |
-| **Hacker News** | 技术向的 Show HN 帖子 |
-| **博客/SEO** | SEO 优化长文（2000+ 字） |
-| **SEO 审计** | 核心 Web 指标、Schema.org、robots/sitemap |
-| **GEO** | Perplexity、You.com、ChatGPT、Claude、Gemini 品牌提及 |
-| **社区监控** | Reddit、HN、Dev.to 讨论扫描 |
-
-### 🔗 Reddit 集成 (新功能)
-
-- **智能发现** — 扫描 Reddit 上与你的产品品类高度相关的帖子
-- **AI 驱动回复** — 为每条讨论生成真实、非推销性的回复
-- **人工审核** — 发布前预览 AI 起草的回复；在界面上编辑确认
-- **凭证管理** — 直接在设置对话框中配置 Reddit API 密钥
-- **自动发布开关** — 一键开启/关闭自动发布
-
-## 🎯 智能 URL 分析
-
-| 轮次 | 内容 |
-|------|------|
-| **第一轮** | 各角色初步分析（产品定位、SEO 关键词、社区话题） |
-| **第二轮** | 基于其他角色的分析完善建议 |
-| **第三轮** | 策略总监汇总 → 品牌名 + 分类 + 5-8 个关键词 |
-
-### 🕸️ 知识图谱 (新功能)
-
-- **交互式力导向图** — 在动态力导向可视化中拖拽、缩放、探索品牌、关键词、讨论、搜索排名和竞品之间的关系
-- **实时更新** — 图谱每 30 秒自动刷新，随着新扫描数据的到来即时更新
-- **6 种节点类型** — 品牌（紫色）、关键词（青色）、社区讨论（琥珀色）、搜索排名（绿色）、竞品（红色）、竞品关键词（橙色）
-- **关键词重叠检测** — 自动用红色虚线高亮你和竞品共享的关键词
-- **竞品管理** — 添加竞品及其网址和关键词，图谱即时更新以展示竞争关系
-- **悬浮详情** — 悬停任意节点查看详细信息（互动分、排名、平台等）
-
-## 🔧 灵活配置
-
-支持 OpenAI、NVIDIA NIM、DeepSeek、Ollama 等任意 OpenAI 兼容 API。详见 `.env.example`。
-
-## 许可证
-
-Apache License 2.0
+> *如果您热爱纯命令行，运行直接运行 `opencmo` 即可开启终端沉浸式交互模式。*
 
 ---
 
-<div align="center">
-  <sub>如果 OpenCMO 对你有帮助，给个 ⭐ 吧！</sub>
-</div>
+## 📸 极美界面漫游
+
+<details>
+<summary><b>点击展开查看我们的 UI 画廊</b></summary>
+<br>
+
+**1. 多智能体辩论现场**  
+<img src="assets/screenshots/multi-agent-discussion.png" alt="Multi-Agent Discussion" width="800" />
+
+**2. 专家级对话终端**  
+<img src="assets/screenshots/chat-interface.png" alt="Agent Chat Interface" width="800" />
+
+**3. 监控矩阵与分析大盘**  
+<img src="assets/screenshots/monitors-panel.png" alt="Monitors List" width="800" />
+
+**4. 秘钥安全存储库**  
+<img src="assets/screenshots/settings-panel.png" alt="Settings & API Key UI" width="800" />
+
+</details>
+
+---
+
+<p align="center">
+  由开源社区倾情打造 ❤️ <br/>
+  <b>如果 OpenCMO 帮您节省了时间，请在 GitHub 给我们一颗宝贵的 ⭐！</b>
+</p>

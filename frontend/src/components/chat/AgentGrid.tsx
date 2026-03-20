@@ -9,6 +9,17 @@ import {
   Globe,
   Radio,
   Sparkles,
+  BookOpen,
+  Camera,
+  Hash,
+  Code2,
+  Coffee,
+  MessageSquare,
+  FileText,
+  GitBranch,
+  Zap,
+  Briefcase,
+  Rss,
 } from "lucide-react";
 import { useI18n } from "../../i18n";
 
@@ -21,6 +32,7 @@ interface AgentCard {
   descEn: string;
   descZh: string;
   prompt: string;
+  priority?: number; // 1-5 stars
 }
 
 const AGENTS: AgentCard[] = [
@@ -34,6 +46,86 @@ const AGENTS: AgentCard[] = [
     descZh: "全渠道营销策略制定与规划",
     prompt: "",
   },
+  // ⭐⭐⭐⭐⭐ platforms
+  {
+    id: "ruanyifeng",
+    icon: BookOpen,
+    color: "from-amber-500 to-orange-600",
+    labelEn: "阮一峰周刊",
+    labelZh: "阮一峰周刊",
+    descEn: "Tech weekly submission via GitHub Issue",
+    descZh: "科技爱好者周刊 GitHub Issue 投稿",
+    prompt: "我要给阮一峰科技爱好者周刊投稿。请交给阮一峰周刊专家。",
+    priority: 5,
+  },
+  {
+    id: "zhihu",
+    icon: Hash,
+    color: "from-blue-500 to-indigo-600",
+    labelEn: "知乎",
+    labelZh: "知乎",
+    descEn: "Articles & Q&A for tech community",
+    descZh: "知乎文章和问答内容创作",
+    prompt: "我要创建知乎内容。请交给知乎专家。",
+    priority: 5,
+  },
+  {
+    id: "xiaohongshu",
+    icon: Camera,
+    color: "from-rose-400 to-pink-600",
+    labelEn: "小红书",
+    labelZh: "小红书",
+    descEn: "Image-text notes for mass audience",
+    descZh: "图文种草笔记创作",
+    prompt: "我要创建小红书笔记。请交给小红书专家。",
+    priority: 5,
+  },
+  {
+    id: "producthunt",
+    icon: Rocket,
+    color: "from-orange-500 to-amber-600",
+    labelEn: "Product Hunt",
+    labelZh: "Product Hunt",
+    descEn: "Launch copy, taglines & maker comments",
+    descZh: "产品上线文案、标语和制作者评论",
+    prompt: "I want to prepare a Product Hunt launch. Please hand off to the Product Hunt expert.",
+    priority: 5,
+  },
+  // ⭐⭐⭐⭐ platforms
+  {
+    id: "hackernews",
+    icon: Newspaper,
+    color: "from-orange-600 to-red-600",
+    labelEn: "Hacker News",
+    labelZh: "Hacker News",
+    descEn: "Show HN posts for developer audience",
+    descZh: "面向开发者的 Show HN 帖子",
+    prompt: "I want to create a Hacker News Show HN post. Please hand off to the HN expert.",
+    priority: 4,
+  },
+  {
+    id: "v2ex",
+    icon: Code2,
+    color: "from-zinc-600 to-slate-800",
+    labelEn: "V2EX",
+    labelZh: "V2EX",
+    descEn: "Developer community posts (share/create)",
+    descZh: "开发者社区发帖 (分享/创造)",
+    prompt: "我要在 V2EX 发帖。请交给 V2EX 专家。",
+    priority: 4,
+  },
+  {
+    id: "juejin",
+    icon: PenTool,
+    color: "from-blue-400 to-cyan-500",
+    labelEn: "掘金",
+    labelZh: "掘金",
+    descEn: "Technical blog articles & tutorials",
+    descZh: "掘金技术博客文章",
+    prompt: "我要写掘金技术文章。请交给掘金专家。",
+    priority: 4,
+  },
+  // ⭐⭐⭐ platforms
   {
     id: "twitter",
     icon: Twitter,
@@ -43,6 +135,62 @@ const AGENTS: AgentCard[] = [
     descEn: "Tweets, threads & engagement strategy",
     descZh: "推文、话题串和互动策略",
     prompt: "I want to create Twitter/X marketing content. Please hand off to the Twitter/X expert.",
+    priority: 3,
+  },
+  {
+    id: "jike",
+    icon: Coffee,
+    color: "from-yellow-400 to-amber-500",
+    labelEn: "即刻",
+    labelZh: "即刻",
+    descEn: "Indie dev & startup circle posts",
+    descZh: "独立开发者 / 创业者圈子动态",
+    prompt: "我要发即刻动态。请交给即刻专家。",
+    priority: 3,
+  },
+  {
+    id: "wechat",
+    icon: MessageSquare,
+    color: "from-green-500 to-emerald-600",
+    labelEn: "微信公众号",
+    labelZh: "微信公众号",
+    descEn: "WeChat long-form tech articles",
+    descZh: "微信公众号技术长文",
+    prompt: "我要写微信公众号文章。请交给微信公众号专家。",
+    priority: 3,
+  },
+  {
+    id: "oschina",
+    icon: Globe,
+    color: "from-green-600 to-teal-700",
+    labelEn: "OSChina",
+    labelZh: "开源中国",
+    descEn: "Open-source project listings",
+    descZh: "开源项目收录和推荐文",
+    prompt: "我要在 OSChina 收录项目。请交给 OSChina 专家。",
+    priority: 3,
+  },
+  {
+    id: "sspai",
+    icon: Zap,
+    color: "from-red-500 to-rose-600",
+    labelEn: "少数派",
+    labelZh: "少数派",
+    descEn: "Tool reviews & productivity articles",
+    descZh: "工具测评和效率文章投稿",
+    prompt: "我要给少数派投稿。请交给少数派专家。",
+    priority: 3,
+  },
+  {
+    id: "devto",
+    icon: Rss,
+    color: "from-slate-700 to-zinc-900",
+    labelEn: "Dev.to",
+    labelZh: "Dev.to",
+    descEn: "Developer blog articles & tutorials",
+    descZh: "开发者博客文章和教程",
+    prompt: "I want to write a Dev.to article. Please hand off to the Dev.to expert.",
+    priority: 3,
   },
   {
     id: "reddit",
@@ -53,7 +201,32 @@ const AGENTS: AgentCard[] = [
     descEn: "Authentic community posts & subreddit strategy",
     descZh: "社区帖子撰写和子版块策略",
     prompt: "I want to create Reddit posts. Please hand off to the Reddit expert.",
+    priority: 3,
   },
+  // ⭐⭐ platforms
+  {
+    id: "gitcode",
+    icon: GitBranch,
+    color: "from-red-600 to-orange-700",
+    labelEn: "GitCode",
+    labelZh: "GitCode",
+    descEn: "Repository mirror for CSDN users",
+    descZh: "仓库镜像 + CSDN 配套文章",
+    prompt: "我要在 GitCode 设置仓库。请交给 GitCode 专家。",
+    priority: 2,
+  },
+  {
+    id: "infoq",
+    icon: Briefcase,
+    color: "from-purple-600 to-indigo-700",
+    labelEn: "InfoQ",
+    labelZh: "InfoQ",
+    descEn: "Enterprise-grade tech articles",
+    descZh: "面向架构师的深度技术文章",
+    prompt: "我要给 InfoQ 投稿。请交给 InfoQ 专家。",
+    priority: 2,
+  },
+  // Other tools (no priority — utility agents)
   {
     id: "linkedin",
     icon: Linkedin,
@@ -65,28 +238,8 @@ const AGENTS: AgentCard[] = [
     prompt: "I want to create LinkedIn content. Please hand off to the LinkedIn expert.",
   },
   {
-    id: "producthunt",
-    icon: Rocket,
-    color: "from-orange-500 to-amber-600",
-    labelEn: "Product Hunt",
-    labelZh: "Product Hunt",
-    descEn: "Launch copy, taglines & maker comments",
-    descZh: "产品上线文案、标语和制作者评论",
-    prompt: "I want to prepare a Product Hunt launch. Please hand off to the Product Hunt expert.",
-  },
-  {
-    id: "hackernews",
-    icon: Newspaper,
-    color: "from-orange-600 to-red-600",
-    labelEn: "Hacker News",
-    labelZh: "Hacker News",
-    descEn: "Show HN posts for developer audience",
-    descZh: "面向开发者的 Show HN 帖子",
-    prompt: "I want to create a Hacker News Show HN post. Please hand off to the HN expert.",
-  },
-  {
     id: "blog",
-    icon: PenTool,
+    icon: FileText,
     color: "from-emerald-500 to-teal-600",
     labelEn: "Blog / SEO Writer",
     labelZh: "博客 / SEO 写手",
@@ -126,6 +279,14 @@ const AGENTS: AgentCard[] = [
   },
 ];
 
+function PriorityStars({ count }: { count: number }) {
+  return (
+    <span className="text-[10px] text-amber-500 ml-1">
+      {"★".repeat(count)}
+    </span>
+  );
+}
+
 export function AgentGrid({ onSelect }: { onSelect: (prompt: string) => void }) {
   const { locale } = useI18n();
   const isZh = locale === "zh";
@@ -142,7 +303,7 @@ export function AgentGrid({ onSelect }: { onSelect: (prompt: string) => void }) 
             : "Or type anything below — the CMO will auto-route to the right expert"}
         </p>
       </div>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
         {AGENTS.map((agent) => {
           const Icon = agent.icon;
           return (
@@ -163,6 +324,7 @@ export function AgentGrid({ onSelect }: { onSelect: (prompt: string) => void }) 
               </div>
               <span className="text-sm font-semibold text-slate-800">
                 {isZh ? agent.labelZh : agent.labelEn}
+                {agent.priority && <PriorityStars count={agent.priority} />}
               </span>
               <span className="mt-0.5 text-[11px] leading-tight text-slate-400">
                 {isZh ? agent.descZh : agent.descEn}

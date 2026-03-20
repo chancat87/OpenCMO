@@ -4,45 +4,34 @@ import * as THREE from "three";
 import type { GraphData, GraphNode } from "../../api/graph";
 import { useI18n } from "../../i18n";
 
-/* ─── Color palette per node type ─── */
+/* ─── Light Elegant Color Palette ─── */
 const NODE_COLORS: Record<string, number> = {
-  brand: 0x6366f1,            // indigo
-  keyword: 0x06b6d4,          // cyan
-  discussion: 0xf59e0b,       // amber
-  serp: 0x10b981,             // emerald
-  competitor: 0xef4444,       // red
-  competitor_keyword: 0xf97316, // orange
+  brand: 0x6366f1,            // Indigo
+  keyword: 0x0ea5e9,          // Sky blue
+  discussion: 0xf59e0b,       // Amber
+  serp: 0x10b981,             // Emerald
+  competitor: 0xf43f5e,       // Rose
+  competitor_keyword: 0xf97316, // Orange
 };
 
 const NODE_COLORS_CSS: Record<string, string> = {
   brand: "#6366f1",
-  keyword: "#06b6d4",
+  keyword: "#0ea5e9",
   discussion: "#f59e0b",
   serp: "#10b981",
-  competitor: "#ef4444",
+  competitor: "#f43f5e",
   competitor_keyword: "#f97316",
 };
 
 const LINK_COLORS: Record<string, string> = {
-  has_keyword: "rgba(165, 180, 252, 0.5)",
-  has_discussion: "rgba(252, 211, 77, 0.4)",
-  serp_rank: "rgba(110, 231, 183, 0.4)",
-  competitor_of: "rgba(252, 165, 165, 0.5)",
-  comp_keyword: "rgba(253, 186, 116, 0.4)",
-  keyword_overlap: "rgba(248, 113, 113, 0.7)",
+  has_keyword: "rgba(99, 102, 241, 0.25)",
+  has_discussion: "rgba(245, 158, 11, 0.25)",
+  serp_rank: "rgba(16, 185, 129, 0.25)",
+  competitor_of: "rgba(244, 63, 94, 0.35)", // Slightly more opaque for emphasis
+  comp_keyword: "rgba(249, 115, 22, 0.25)",
+  keyword_overlap: "rgba(225, 29, 72, 0.6)", // Rose-600 overlap
 };
 
-/* ─── Node size by type ─── */
-function getNodeSize(node: GraphNode): number {
-  if (node.type === "brand") return 12;
-  if (node.type === "competitor") return 8;
-  if (node.type === "discussion") return 3 + Math.min((node.engagement ?? 0) / 30, 6);
-  if (node.type === "keyword") return 5;
-  if (node.type === "serp") return 4;
-  return 3;
-}
-
-/* ─── Labels ─── */
 const TYPE_LABELS_EN: Record<string, string> = {
   brand: "Brand",
   keyword: "Keyword",
@@ -61,77 +50,32 @@ const TYPE_LABELS_ZH: Record<string, string> = {
   competitor_keyword: "竞品关键词",
 };
 
-interface Props {
-  data: GraphData;
+/* ─── Sizing ─── */
+function getNodeSize(node: GraphNode): number {
+  if (node.type === "brand") return 12;
+  if (node.type === "competitor") return 9;
+  if (node.type === "discussion") return 3 + Math.min((node.engagement ?? 0) / 30, 6);
+  if (node.type === "keyword") return 5;
+  if (node.type === "serp") return 4;
+  return 3;
 }
 
-/* ─── Create a glowing sphere with a sprite halo ─── */
-function createNodeObject(node: any): THREE.Group {
-  const group = new THREE.Group();
-  const color = NODE_COLORS[node.type] ?? 0x94a3b8;
-  const size = getNodeSize(node as GraphNode);
-
-  // Core sphere with MeshPhong for shininess
-  const geo = new THREE.SphereGeometry(size, 32, 32);
-  const mat = new THREE.MeshPhongMaterial({
-    color,
-    emissive: color,
-    emissiveIntensity: 0.3,
-    shininess: 80,
-    transparent: true,
-    opacity: 0.92,
-  });
-  const sphere = new THREE.Mesh(geo, mat);
-  group.add(sphere);
-
-  // Glow halo (sprite)
-  const canvas = document.createElement("canvas");
-  canvas.width = 128;
-  canvas.height = 128;
-  const ctx = canvas.getContext("2d")!;
-  const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-  const hex = "#" + color.toString(16).padStart(6, "0");
-  gradient.addColorStop(0, hex + "60");
-  gradient.addColorStop(0.4, hex + "30");
-  gradient.addColorStop(1, hex + "00");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, 128, 128);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  const spriteMat = new THREE.SpriteMaterial({
-    map: texture,
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-  });
-  const sprite = new THREE.Sprite(spriteMat);
-  sprite.scale.set(size * 5, size * 5, 1);
-  group.add(sprite);
-
-  // Brand gets a ring
-  if (node.type === "brand") {
-    const ringGeo = new THREE.RingGeometry(size + 2, size + 3.5, 64);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.4,
-      side: THREE.DoubleSide,
-    });
-    const ring = new THREE.Mesh(ringGeo, ringMat);
-    group.add(ring);
-  }
-
-  return group;
+interface NewNodeData extends GraphNode {
+  __isNew?: number; // timestamp when added
 }
 
-export function KnowledgeGraph({ data }: Props) {
+export function KnowledgeGraph({ data }: { data: GraphData }) {
   const fgRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-  const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
   const { locale } = useI18n();
   const isZh = locale === "zh";
   const typeLabels = isZh ? TYPE_LABELS_ZH : TYPE_LABELS_EN;
+
+  // Track previous nodes to detect new ones and animate them
+  const prevNodesRef = useRef<Set<string>>(new Set());
+  const animatedMeshesRef = useRef<THREE.Mesh[]>([]);
+  const animationFrameRef = useRef<number>();
 
   // Measure container
   useEffect(() => {
@@ -145,23 +89,89 @@ export function KnowledgeGraph({ data }: Props) {
     return () => ro.disconnect();
   }, []);
 
-  // Auto-rotate + zoom to fit on data change
+  // Update Data & detect newly added nodes
+  const graphData = useMemo(() => {
+    const currentNodes = new Set(data.nodes.map(n => String(n.id)));
+    const hasHistory = prevNodesRef.current.size > 0;
+    
+    const nodes = data.nodes.map((n) => {
+      const isNew = hasHistory && !prevNodesRef.current.has(String(n.id));
+      return { 
+        ...n, 
+        __isNew: isNew ? Date.now() : undefined 
+      } as NewNodeData;
+    });
+
+    prevNodesRef.current = currentNodes;
+    
+    return {
+      nodes,
+      links: data.links.map((l) => ({ ...l })),
+    };
+  }, [data]);
+
+  // Handle graph auto-rotation & lighting customization
   useEffect(() => {
     const fg = fgRef.current;
-    if (!fg || data.nodes.length === 0) return;
+    if (!fg || graphData.nodes.length === 0) return;
 
-    // Zoom to fit
+    // Zoom to fit on initial load
     setTimeout(() => fg.zoomToFit(800, 80), 500);
 
-    // Enable orbit auto-rotation
+    // Auto rotate
     const controls = fg.controls();
     if (controls) {
       controls.autoRotate = true;
-      controls.autoRotateSpeed = 0.8;
+      controls.autoRotateSpeed = 0.5;
     }
-  }, [data]);
 
-  // Stop rotation on interaction
+    // Adjust lighting for white background
+    const scene = fg.scene();
+    if (scene) {
+      // Clean up previous custom lights if any
+      scene.children = scene.children.filter((c: any) => !c.__customLight);
+
+      // Add a bright, soft ambient light
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+      (ambientLight as any).__customLight = true;
+      scene.add(ambientLight);
+
+      // Add a directional light with soft shadows capability (for physical materials)
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+      dirLight.position.set(1, 2, 3);
+      (dirLight as any).__customLight = true;
+      scene.add(dirLight);
+    }
+  }, [graphData]);
+
+  // Handle animation loop for new node pulses
+  useEffect(() => {
+    const renderLoop = () => {
+      const now = Date.now();
+      // Animate all pulse rings
+      animatedMeshesRef.current.forEach(mesh => {
+        // mesh.userData.startTime is stored when creating the mesh
+        const elapsed = now - (mesh.userData.startTime || now);
+        const cycle = (elapsed % 2000) / 2000; // 0 to 1 over 2 seconds
+        
+        // Scale from 1 to 2
+        const scale = 1 + cycle;
+        mesh.scale.set(scale, scale, scale);
+        
+        // Fade out as it expands
+        if (mesh.material && (mesh.material as THREE.Material).transparent) {
+          (mesh.material as THREE.MeshBasicMaterial).opacity = 0.8 * (1 - cycle);
+        }
+      });
+      animationFrameRef.current = requestAnimationFrame(renderLoop);
+    };
+    
+    animationFrameRef.current = requestAnimationFrame(renderLoop);
+    return () => {
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    };
+  }, []);
+
   const handleNodeClick = useCallback((node: any) => {
     const fg = fgRef.current;
     if (fg) {
@@ -171,98 +181,215 @@ export function KnowledgeGraph({ data }: Props) {
     if (node.url) window.open(node.url, "_blank");
   }, []);
 
-  // Link color
-  const getLinkColor = useCallback((link: any) => {
-    return LINK_COLORS[link.type] ?? "rgba(203, 213, 225, 0.3)";
+  /* ─── 3D Object Creation for Light elegant theme ─── */
+  const createNodeObject = useCallback((node: any) => {
+    const group = new THREE.Group();
+    const color = NODE_COLORS[node.type] ?? 0x94a3b8;
+    const size = getNodeSize(node as GraphNode);
+    const n = node as NewNodeData;
+
+    // Use MeshPhysicalMaterial for a polished, glassy "app-like" look
+    const geo = new THREE.SphereGeometry(size, 32, 32);
+    const mat = new THREE.MeshPhysicalMaterial({
+      color,
+      roughness: 0.15,
+      transmission: 0.1,  // slight glass effect
+      thickness: 1,
+      clearcoat: 1.0,     // highly polished
+      clearcoatRoughness: 0.1,
+    });
+    const sphere = new THREE.Mesh(geo, mat);
+    group.add(sphere);
+
+    // If Brand node, add an elegant double ring
+    if (n.type === "brand") {
+      const ringGeo = new THREE.TorusGeometry(size + 3, 0.4, 16, 64);
+      const ringMat = new THREE.MeshStandardMaterial({ 
+        color: 0x6366f1, 
+        roughness: 0.2, 
+        metalness: 0.8 
+      });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      
+      const ringGeo2 = new THREE.TorusGeometry(size + 5, 0.2, 16, 64);
+      const ringMat2 = new THREE.MeshStandardMaterial({ 
+        color: 0x818cf8, 
+        transparent: true,
+        opacity: 0.6
+      });
+      const ring2 = new THREE.Mesh(ringGeo2, ringMat2);
+      
+      // Rotate them slightly so they aren't completely flat
+      ring.rotation.x = Math.PI / 3;
+      ring2.rotation.y = Math.PI / 3;
+      
+      group.add(ring);
+      group.add(ring2);
+    }
+
+    // If it's a NEW node, add an animated pulse effect
+    if (n.__isNew) {
+      // Only keep bubbling for a minute or so to not degrade performance long term
+      const age = Date.now() - n.__isNew;
+      if (age < 60000) {
+        const pulseGeo = new THREE.SphereGeometry(size + 0.5, 32, 32);
+        const pulseMat = new THREE.MeshBasicMaterial({
+          color,
+          transparent: true,
+          opacity: 0.8,
+          side: THREE.BackSide,
+        });
+        const pulseMesh = new THREE.Mesh(pulseGeo, pulseMat);
+        pulseMesh.userData = { startTime: n.__isNew };
+        group.add(pulseMesh);
+        
+        // Save to animated meshes array
+        animatedMeshesRef.current.push(pulseMesh);
+        
+        // Clean up when the object is removed
+        group.addEventListener('removed', () => {
+          animatedMeshesRef.current = animatedMeshesRef.current.filter(m => m !== pulseMesh);
+        });
+      }
+    }
+
+    return group;
   }, []);
 
-  // Link width
-  const getLinkWidth = useCallback((link: any) => {
-    return link.type === "keyword_overlap" ? 2.5 : 1;
-  }, []);
-
-  // Link particles
-  const getLinkParticles = useCallback((link: any) => {
-    if (link.type === "keyword_overlap") return 4;
-    if (link.type === "competitor_of") return 2;
-    return 0;
-  }, []);
-
-  // Node label (HTML)
-  const getNodeLabel = useCallback((node: any) => {
-    const n = node as GraphNode;
-    const typeName = typeLabels[n.type] ?? n.type;
-    let html = `<div style="background:rgba(15,23,42,0.9);backdrop-filter:blur(8px);color:#fff;padding:10px 14px;border-radius:12px;font-size:12px;max-width:260px;line-height:1.5;border:1px solid rgba(99,102,241,0.3);">`;
-    html += `<div style="font-size:14px;font-weight:600;margin-bottom:4px;">${n.label}</div>`;
-    html += `<div style="color:#a5b4fc;font-size:11px;">${typeName}</div>`;
-    if (n.platform) html += `<div style="color:#94a3b8;margin-top:3px;">${isZh ? "平台" : "Platform"}: ${n.platform}</div>`;
-    if (n.engagement != null) html += `<div style="color:#94a3b8;">${isZh ? "互动分" : "Engagement"}: ${n.engagement}</div>`;
-    if (n.comments != null) html += `<div style="color:#94a3b8;">${isZh ? "评论数" : "Comments"}: ${n.comments}</div>`;
-    if (n.position != null) html += `<div style="color:#94a3b8;">${isZh ? "排名" : "Rank"}: #${n.position}</div>`;
-    if (n.url) html += `<div style="color:#818cf8;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${n.url}</div>`;
-    html += `</div>`;
-    return html;
-  }, [typeLabels, isZh]);
-
-  // Label above node
   const getNodeThreeLabel = useCallback((node: any) => {
     const n = node as GraphNode;
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d")!;
     const text = n.label;
-    const fontSize = n.type === "brand" ? 28 : 18;
+    const fontSize = n.type === "brand" ? 36 : 24;
+    
+    // Measure text to size canvas accurately
     ctx.font = `${n.type === "brand" ? "bold " : ""}${fontSize}px Inter, system-ui, sans-serif`;
-    const metrics = ctx.measureText(text);
-    const textWidth = metrics.width;
-    canvas.width = textWidth + 20;
-    canvas.height = fontSize + 12;
+    const textWidth = ctx.measureText(text).width;
+    canvas.width = textWidth + 32;
+    canvas.height = fontSize + 24;
+    
+    // Draw text with shadow (looks better on light bg)
     ctx.font = `${n.type === "brand" ? "bold " : ""}${fontSize}px Inter, system-ui, sans-serif`;
-    ctx.fillStyle = "#e2e8f0";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
+    
+    // Text shadow for legibility over links
+    ctx.shadowColor = "rgba(255, 255, 255, 0.8)";
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    
+    // Fill text (dark slate color instead of white)
+    ctx.fillStyle = n.type === "brand" ? "#312e81" : "#1e293b";
+    
+    if (n.type === "brand") {
+      ctx.fillStyle = "#4f46e5"; // Indigo for brand text
+    } else if ((node as NewNodeData).__isNew) {
+      ctx.fillStyle = NODE_COLORS_CSS[n.type]; // Colored text for new nodes to grab attention
+    }
+    
     ctx.fillText(text, canvas.width / 2, canvas.height / 2);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
+    texture.minFilter = THREE.LinearFilter; // for crispness
+    
     const spriteMat = new THREE.SpriteMaterial({
       map: texture,
       transparent: true,
-      depthWrite: false,
+      depthWrite: false, // Prevents z-fighting
     });
+    
     const sprite = new THREE.Sprite(spriteMat);
-    const scaleFactor = n.type === "brand" ? 1.2 : 0.8;
+    const scaleFactor = n.type === "brand" ? 1.0 : 0.6;
     sprite.scale.set(canvas.width * 0.08 * scaleFactor, canvas.height * 0.08 * scaleFactor, 1);
-    sprite.position.set(0, getNodeSize(n) + 6, 0);
+    sprite.position.set(0, getNodeSize(n) + 5, 0); // Position slightly above the node
     return sprite;
   }, []);
 
-  // Extend each node's 3D object to include its label
   const nodeThreeObject = useCallback((node: any) => {
     const group = createNodeObject(node);
     const label = getNodeThreeLabel(node);
     group.add(label);
     return group;
-  }, [getNodeThreeLabel]);
+  }, [createNodeObject, getNodeThreeLabel]);
 
-  // Deep-copy data for force-graph (it mutates nodes)
-  const graphData = useMemo(() => {
-    return {
-      nodes: data.nodes.map((n) => ({ ...n })),
-      links: data.links.map((l) => ({ ...l })),
-    };
-  }, [data]);
+  // Link colors & properties
+  const getLinkColor = useCallback((link: any) => {
+    return LINK_COLORS[link.type] ?? "rgba(203, 213, 225, 0.4)"; // Slate 300
+  }, []);
+
+  const getLinkWidth = useCallback((link: any) => {
+    return link.type === "keyword_overlap" ? 2.5 : 0.8;
+  }, []);
+
+  const getLinkParticles = useCallback((link: any) => {
+    if (link.type === "keyword_overlap") return 4;
+    if (link.type === "competitor_of") return 3;
+    return 0;
+  }, []);
+  
+  const getLinkParticleColor = useCallback((link: any) => {
+    if (link.type === "keyword_overlap") return "#e11d48"; // Rose 600
+    if (link.type === "competitor_of") return "#f43f5e"; // Rose 500
+    return "#94a3b8";
+  }, []);
+
+  // HTML Node Label Tooltip (Light Theme Card)
+  const getNodeLabelHtml = useCallback((node: any) => {
+    const n = node as NewNodeData;
+    const typeName = typeLabels[n.type] ?? n.type;
+    const isNew = !!n.__isNew;
+    
+    let html = `<div style="
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(12px);
+      color: #1e293b;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      max-width: 280px;
+      line-height: 1.5;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      font-family: Inter, system-ui, sans-serif;
+    ">`;
+    
+    html += `<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">`;
+    html += `<div style="font-size:15px; font-weight:700; color: #0f172a;">${n.label}</div>`;
+    if (isNew) {
+      html += `<span style="background: linear-gradient(135deg, #a855f7, #ef4444); -webkit-background-clip: text; color: transparent; font-size:11px; font-weight:700; letter-spacing:0.5px; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;">NEW!</span>`;
+    }
+    html += `</div>`;
+    
+    // Badge for type
+    const badgeColor = NODE_COLORS_CSS[n.type] || "#94a3b8";
+    html += `<div style="display:inline-block; padding: 2px 8px; border-radius: 999px; background: ${badgeColor}15; color: ${badgeColor}; font-size: 11px; font-weight: 600; margin-bottom: 8px; border: 1px solid ${badgeColor}30;">${typeName}</div>`;
+    
+    if (n.platform) html += `<div style="color: #64748b; margin-top: 4px; display:flex; justify-content:space-between;"><span>${isZh ? "平台" : "Platform"}</span> <span style="font-weight:500; color:#334155;">${n.platform}</span></div>`;
+    if (n.engagement != null) html += `<div style="color: #64748b; margin-top: 4px; display:flex; justify-content:space-between;"><span>${isZh ? "互动分" : "Engagement"}</span> <span style="font-weight:600; color:#334155;">${n.engagement}</span></div>`;
+    if (n.comments != null) html += `<div style="color: #64748b; margin-top: 4px; display:flex; justify-content:space-between;"><span>${isZh ? "评论数" : "Comments"}</span> <span style="font-weight:500; color:#334155;">${n.comments}</span></div>`;
+    if (n.position != null) html += `<div style="color: #64748b; margin-top: 4px; display:flex; justify-content:space-between;"><span>${isZh ? "排名" : "Rank"}</span> <span style="font-weight:600; color:#10b981;">#${n.position}</span></div>`;
+    if (n.url) html += `<div style="color: #6366f1; margin-top: 8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;">${n.url}</div>`;
+    html += `</div>`;
+    return html;
+  }, [typeLabels, isZh]);
 
   return (
-    <div className="relative rounded-2xl border border-zinc-800/60 bg-zinc-950 shadow-xl overflow-hidden">
+    <div className="relative rounded-2xl border border-zinc-200/50 bg-white shadow-xl overflow-hidden ring-1 ring-zinc-900/5">
+      {/* Background Gradient to make it look premium but light */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 opacity-80 pointer-events-none" />
+
       {/* Legend */}
-      <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-2 rounded-xl bg-zinc-900/80 backdrop-blur-md px-3 py-2 shadow-lg ring-1 ring-white/5">
+      <div className="absolute top-4 left-4 z-10 flex flex-wrap gap-2.5 rounded-xl bg-white/70 backdrop-blur-xl px-4 py-3 shadow-lg ring-1 ring-zinc-200/60 transition-all">
         {Object.entries(NODE_COLORS_CSS).map(([type, color]) => (
-          <div key={type} className="flex items-center gap-1.5">
+          <div key={type} className="flex items-center gap-2">
             <span
-              className="inline-block h-2.5 w-2.5 rounded-full shadow-sm"
-              style={{ backgroundColor: color, boxShadow: `0 0 6px ${color}80` }}
+              className="inline-block h-3 w-3 rounded-full shadow-sm"
+              style={{ backgroundColor: color }}
             />
-            <span className="text-[10px] font-medium text-zinc-400">
+            <span className="text-[11px] font-semibold text-slate-700 tracking-wide uppercase">
               {typeLabels[type] ?? type}
             </span>
           </div>
@@ -270,31 +397,31 @@ export function KnowledgeGraph({ data }: Props) {
       </div>
 
       {/* Controls hint */}
-      <div className="absolute bottom-3 left-3 z-10 rounded-lg bg-zinc-900/60 px-3 py-1.5 text-[10px] text-zinc-500 backdrop-blur-sm">
-        {isZh ? "🖱 拖拽旋转 · 滚轮缩放 · 点击节点打开链接" : "🖱 Drag to rotate · Scroll to zoom · Click nodes to open"}
+      <div className="absolute bottom-4 left-4 z-10 rounded-xl bg-white/70 px-3 py-2 text-[11px] font-medium text-slate-500 backdrop-blur-xl shadow-sm ring-1 ring-zinc-200/50">
+        {isZh ? "🖱 拖拽旋转 · 滚轮缩放 · 右键平移 · 点击节点打开链接" : "🖱 Drag to rotate · Scroll to zoom · Right-click to pan · Click nodes"}
       </div>
 
       {/* 3D Graph container */}
-      <div ref={containerRef} style={{ width: "100%", height: 600 }}>
+      <div ref={containerRef} style={{ width: "100%", height: 600, zIndex: 1 }}>
         <ForceGraph3D
           ref={fgRef}
           graphData={graphData}
           width={dimensions.width}
           height={600}
-          backgroundColor="#09090b"
+          backgroundColor="rgba(0,0,0,0)" // Transparent to show the CSS gradient behind
           nodeThreeObject={nodeThreeObject}
-          nodeLabel={getNodeLabel}
+          nodeLabel={getNodeLabelHtml}
           onNodeClick={handleNodeClick}
           linkColor={getLinkColor}
           linkWidth={getLinkWidth}
-          linkOpacity={0.6}
+          linkOpacity={0.8}
           linkDirectionalParticles={getLinkParticles}
-          linkDirectionalParticleColor={getLinkColor}
-          linkDirectionalParticleWidth={1.5}
-          linkDirectionalParticleSpeed={0.006}
-          linkCurvature={0.1}
+          linkDirectionalParticleColor={getLinkParticleColor}
+          linkDirectionalParticleWidth={2}
+          linkDirectionalParticleSpeed={0.008}
+          linkCurvature={0.15}
           d3AlphaDecay={0.02}
-          d3VelocityDecay={0.3}
+          d3VelocityDecay={0.4}
           cooldownTicks={100}
           enableNodeDrag={true}
           enableNavigationControls={true}
