@@ -43,8 +43,12 @@ A modern React SPA with glassmorphic design, built for maximum clarity and contr
 </div>
 
 <div align="center">
-  <video src="https://github.com/study8677/OpenCMO/raw/main/assets/demo.mp4" width="850" controls></video>
-  <p><i>Watch the HD version on <a href="https://www.bilibili.com/video/BV1T5AMzoEKV/">Bilibili</a></i></p>
+  <h3>
+    <a href="https://www.bilibili.com/video/BV1T5AMzoEKV/">
+      ▶ Watch the full demo video on Bilibili
+    </a>
+  </h3>
+  <sub>10-minute walkthrough covering all features: SEO Audit, GEO Detection, SERP Tracking, Knowledge Graph, Multi-Agent Chat, and more.</sub>
 </div>
 
 ---

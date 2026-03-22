@@ -43,8 +43,12 @@ OpenCMO 是一个专为独立开发者、初创公司和小团队设计的 **多
 </div>
 
 <div align="center">
-  <video src="https://github.com/study8677/OpenCMO/raw/main/assets/demo.mp4" width="850" controls></video>
-  <p><i>在 <a href="https://www.bilibili.com/video/BV1T5AMzoEKV/">Bilibili</a> 观看高清版本</i></p>
+  <h3>
+    <a href="https://www.bilibili.com/video/BV1T5AMzoEKV/">
+      ▶ 在 Bilibili 观看完整演示视频
+    </a>
+  </h3>
+  <sub>10 分钟全功能演示：SEO 审计、GEO 检测、SERP 追踪、知识图谱、多智能体对话等。</sub>
 </div>
 
 ---
