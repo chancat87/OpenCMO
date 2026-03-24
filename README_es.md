@@ -323,6 +323,15 @@ npm run build   # Build de produccion
 
 ---
 
+## Colaboradores
+
+- [study8677](https://github.com/study8677) - Creador y mantenedor de OpenCMO
+- [ParakhJaggi](https://github.com/ParakhJaggi) - Contribuciones de integracion Tavily mediante [#2](https://github.com/study8677/OpenCMO/pull/2) y [#3](https://github.com/study8677/OpenCMO/pull/3)
+
+> El grafico predeterminado de Contributors de GitHub depende de la asociacion entre el email del autor del commit y la cuenta de GitHub. Si un PR se fusiona con commits firmados con un email no vinculado a la cuenta del colaborador, ese trabajo puede no aparecer en el grafico aunque la contribucion sea real.
+
+---
+
 <p align="center">
   Hecho con dedicacion por la Comunidad de Codigo Abierto.<br/>
   <b>Si OpenCMO te ahorra tiempo, por favor dale una estrella en GitHub!</b>

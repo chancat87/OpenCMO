@@ -323,6 +323,15 @@ npm run build   # 프로덕션 빌드
 
 ---
 
+## Contributors
+
+- [study8677](https://github.com/study8677) - OpenCMO의 제작자이자 메인테이너
+- [ParakhJaggi](https://github.com/ParakhJaggi) - [#2](https://github.com/study8677/OpenCMO/pull/2), [#3](https://github.com/study8677/OpenCMO/pull/3)을 통한 Tavily 통합 기여
+
+> GitHub 기본 Contributors 그래프는 commit author 이메일이 GitHub 계정에 연결되어 있는지에 따라 집계됩니다. 계정에 연결되지 않은 이메일로 작성된 커밋이 머지되면 실제 기여가 있었더라도 기본 그래프에는 표시되지 않을 수 있습니다.
+
+---
+
 <p align="center">
   오픈소스 커뮤니티가 정성을 다해 만들었습니다.<br/>
   <b>OpenCMO가 도움이 되셨다면, GitHub에서 스타를 눌러주세요!</b>
