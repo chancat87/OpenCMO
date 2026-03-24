@@ -27,7 +27,7 @@ async def _research_topic_impl(topic: str, keywords: str) -> str:
 
     # Step 1: Search for competing content — try Tavily first, fall back to httpx
     search_urls = []
-    tavily_snippets: dict[str, str] = {}  # url -> snippet from Tavily
+    tavily_titles: dict[str, str] = {}  # url -> title from Tavily
     try:
         from opencmo.tools.tavily_helper import tavily_search
 
@@ -36,8 +36,8 @@ async def _research_topic_impl(topic: str, keywords: str) -> str:
             for tr in tavily_results:
                 if tr.url and "google.com" not in tr.url:
                     search_urls.append(tr.url)
-                    if tr.snippet:
-                        tavily_snippets[tr.url] = tr.snippet
+                    if tr.title:
+                        tavily_titles[tr.url] = tr.title
     except Exception as exc:
         logger.debug("Tavily import/search failed, falling back to httpx: %s", exc)
 
@@ -68,40 +68,15 @@ async def _research_topic_impl(topic: str, keywords: str) -> str:
         except Exception as exc:
             logger.warning("Search failed: %s", exc)
 
-    # Step 2: Crawl top 2 articles for content (use Tavily snippets if available)
+    # Step 2: Crawl top 2 articles for full content (Tavily titles used as fallback)
     crawl_urls = search_urls[:5]  # try up to 5, take first 2 that succeed
     crawled = 0
     for url in crawl_urls:
         if crawled >= 2:
             break
 
-        # Use Tavily snippet directly if available, skip crawl
-        if url in tavily_snippets and tavily_snippets[url]:
-            text = tavily_snippets[url][:3000]
-            title = ""
-            for line in text.split("\n"):
-                line = line.strip()
-                if line.startswith("# "):
-                    title = line[2:].strip()
-                    break
-                if line and len(line) > 10 and not line.startswith("["):
-                    title = line[:100]
-                    break
-            key_points = []
-            for line in text.split("\n"):
-                line = line.strip()
-                if line.startswith("## ") and len(line) > 5:
-                    key_points.append(line[3:].strip())
-                if len(key_points) >= 5:
-                    break
-            competing_articles.append({
-                "title": title or url,
-                "url": url,
-                "key_points": key_points,
-                "excerpt": text[:500],
-            })
-            crawled += 1
-            continue
+        # Use Tavily title + snippet for metadata; still crawl for full content
+        tavily_title = tavily_titles.get(url, "")
 
         try:
             from crawl4ai import AsyncWebCrawler
@@ -139,7 +114,7 @@ async def _research_topic_impl(topic: str, keywords: str) -> str:
                     break
 
             competing_articles.append({
-                "title": title or url,
+                "title": title or tavily_title or url,
                 "url": url,
                 "key_points": key_points,
                 "excerpt": text[:500],
