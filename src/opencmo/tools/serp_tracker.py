@@ -149,10 +149,69 @@ class DataForSeoProvider(SerpProvider):
 
 
 # ---------------------------------------------------------------------------
+# TavilySerpProvider — Tavily search API
+# ---------------------------------------------------------------------------
+
+
+class TavilySerpProvider(SerpProvider):
+    name = "tavily"
+
+    @property
+    def is_enabled(self) -> bool:
+        import os
+
+        return bool(os.environ.get("TAVILY_API_KEY"))
+
+    async def check_ranking(
+        self, keyword: str, target_domain: str, num_results: int = 20
+    ) -> SerpResult:
+        try:
+            from tavily import TavilyClient
+
+            client = TavilyClient()
+            response = client.search(query=keyword, max_results=num_results)
+            results = response.get("results", [])
+
+            target = target_domain.lower().removeprefix("www.")
+            for i, item in enumerate(results):
+                url = item.get("url", "")
+                domain = urlparse(url).netloc.lower().removeprefix("www.")
+                if target in domain:
+                    return SerpResult(
+                        position=i + 1,
+                        url_found=url,
+                        total_results=len(results),
+                        provider=self.name,
+                        error=None,
+                    )
+
+            return SerpResult(
+                position=None,
+                url_found=None,
+                total_results=len(results),
+                provider=self.name,
+                error=None,
+            )
+
+        except Exception as exc:
+            return SerpResult(
+                position=None,
+                url_found=None,
+                total_results=0,
+                provider=self.name,
+                error=str(exc),
+            )
+
+
+# ---------------------------------------------------------------------------
 # Registry & provider resolution
 # ---------------------------------------------------------------------------
 
-SERP_PROVIDER_REGISTRY: list[SerpProvider] = [CrawlSerpProvider(), DataForSeoProvider()]
+SERP_PROVIDER_REGISTRY: list[SerpProvider] = [
+    TavilySerpProvider(),
+    CrawlSerpProvider(),
+    DataForSeoProvider(),
+]
 
 
 def _get_active_provider() -> SerpProvider:
