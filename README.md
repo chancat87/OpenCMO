@@ -334,6 +334,12 @@ npm run build   # Production build
 
 ---
 
+## Acknowledgments
+
+- [last30days-skill](https://github.com/mvanhorn/last30days-skill) by [@mvanhorn](https://github.com/mvanhorn) — OpenCMO's multi-signal scoring system, cross-platform convergence detection, and trend research tool were inspired by last30days' approach to multi-platform community research and quality ranking.
+
+---
+
 <p align="center">
   Made with care by the Open Source Community. <br/>
   <b>If OpenCMO saves you time, please give it a star on GitHub!</b>

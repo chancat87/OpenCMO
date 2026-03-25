@@ -335,6 +335,12 @@ npm run build   # 生产构建
 
 ---
 
+## 致谢
+
+- [last30days-skill](https://github.com/mvanhorn/last30days-skill) by [@mvanhorn](https://github.com/mvanhorn) — OpenCMO 的多信号评分系统、跨平台收敛检测和趋势研究工具的设计灵感来源于 last30days 的多平台社区研究和质量排序方案。
+
+---
+
 <p align="center">
   由开源社区倾情打造 <br/>
   <b>如果 OpenCMO 帮您节省了时间，请在 GitHub 给我们一颗 Star！</b>
