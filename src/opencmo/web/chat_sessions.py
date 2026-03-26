@@ -10,10 +10,10 @@ from opencmo import storage
 MAX_HISTORY = 20
 
 
-async def create_session() -> str:
+async def create_session(project_id: int | None = None) -> str:
     """Create a new chat session. Returns session_id."""
     session_id = uuid.uuid4().hex[:12]
-    await storage.create_chat_session(session_id)
+    await storage.create_chat_session(session_id, project_id=project_id)
     return session_id
 
 
@@ -48,7 +48,7 @@ async def update_session(session_id: str, input_items: list) -> None:
 
 
 async def list_sessions() -> list[dict]:
-    """Return all sessions (id, title, created_at, updated_at)."""
+    """Return all sessions with lightweight project metadata."""
     return await storage.list_chat_sessions()
 
 

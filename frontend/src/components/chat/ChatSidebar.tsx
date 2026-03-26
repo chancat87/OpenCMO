@@ -73,9 +73,14 @@ export function ChatSidebar({
               >
                 <button
                   onClick={() => onSelect(s.id)}
-                  className="min-w-0 flex-1 truncate text-left"
+                  className="min-w-0 flex-1 text-left"
                 >
-                  {s.title || t("chat.newChat")}
+                  <p className="truncate">{s.title || t("chat.newChat")}</p>
+                  {s.project_name ? (
+                    <p className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-[0.16em] text-slate-400">
+                      {s.project_name}
+                    </p>
+                  ) : null}
                 </button>
                 <button
                   onClick={(e) => {

@@ -133,6 +133,8 @@ OpenCMO doesn't wait for you to check — it **tells you when something matters*
 
 The knowledge graph is no longer just a visualization — it's an **active intelligence layer**. Graph data (competitors, keyword gaps, overlaps, SERP rankings) is automatically injected into chat sessions and research briefs, and the CMO agent can query the competitive landscape on demand via `get_competitive_landscape`. New keywords and competitors added anywhere in the system are automatically seeded into the graph expansion frontier.
 
+Project chat is now **project-scoped by default**. Every project page exposes a **Discuss This Project** entry point that opens Chat with that `project_id`, the Chat header shows the active project, and each saved conversation keeps its project binding when you revisit it later. The injected context comes from the persisted knowledge-graph and monitoring summary built by `build_project_context()` — useful for competitor, keyword, SERP, GEO, and gap analysis, but intentionally not a live mirror of whatever metric card happens to be on screen.
+
 ### Approval Queue & Scheduled Operations
 
 Review exact publish payloads in the SPA, approve or reject them with a durable audit trail, and let the web process keep scheduled monitors alive. Safe publishing still honors `OPENCMO_AUTO_PUBLISH=1`, so approval never bypasses the final safety gate.
@@ -258,6 +260,10 @@ By allowing agents to read and react to each other, OpenCMO produces strategies 
 ## AI Chat Interface
 
 Chat directly with 25+ specialized agents. The CMO agent auto-routes to the optimal expert. Real-time responses via SSE streaming.
+
+- **Project-level conversations** — jump into Chat from any project page with the full project context preselected.
+- **Persistent project scope** — the active project is shown in Chat and stored with each session, so history restores the same project context.
+- **Graph-backed summaries** — injected chat context is built from saved project intelligence, not transient page state.
 
 <div align="center">
   <img src="assets/screenshots/chat-interface.png" alt="AI Chat Interface" width="850" />

@@ -167,6 +167,12 @@ export const zh: Record<TranslationKey, string> = {
   "chat.yesterday": "昨天",
   "chat.older": "更早",
   "chat.noHistory": "暂无对话记录",
+  "chat.discussProject": "讨论这个项目",
+  "chat.currentProject": "当前项目",
+  "chat.selectProject": "选择项目",
+  "chat.allProjects": "不限定项目",
+  "chat.noProjectSelected": "未选择项目",
+  "chat.projectHint": "聊天会使用所选项目已保存的监控摘要，不会自动读取当前页面上临时显示的状态。",
 
   // Settings
   "settings.title": "设置",

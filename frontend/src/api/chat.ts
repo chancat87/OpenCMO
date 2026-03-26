@@ -1,8 +1,11 @@
 import { apiFetch, apiJson } from "./client";
 import type { ChatEvent, ChatSessionSummary } from "../types";
 
-export async function createSession(): Promise<string> {
-  const resp = await apiFetch("/chat/sessions", { method: "POST" });
+export async function createSession(projectId?: number | null): Promise<string> {
+  const resp = await apiFetch("/chat/sessions", {
+    method: "POST",
+    body: projectId != null ? JSON.stringify({ project_id: projectId }) : undefined,
+  });
   if (!resp.ok) throw new Error("Failed to create chat session");
   const data = await resp.json();
   return data.session_id;
@@ -27,6 +30,7 @@ export function deleteSession(
 export async function* streamChat(
   sessionId: string,
   message: string,
+  projectId?: number | null,
 ): AsyncGenerator<ChatEvent> {
   const token = localStorage.getItem("opencmo_token");
   const headers: Record<string, string> = {
@@ -37,7 +41,11 @@ export async function* streamChat(
   const resp = await fetch("/api/v1/chat", {
     method: "POST",
     headers,
-    body: JSON.stringify({ session_id: sessionId, message }),
+    body: JSON.stringify({
+      session_id: sessionId,
+      message,
+      ...(projectId != null ? { project_id: projectId } : {}),
+    }),
   });
 
   if (!resp.ok) {

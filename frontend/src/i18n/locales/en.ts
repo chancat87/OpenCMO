@@ -165,6 +165,12 @@ export const en = {
   "chat.yesterday": "Yesterday",
   "chat.older": "Older",
   "chat.noHistory": "No conversations yet",
+  "chat.discussProject": "Discuss This Project",
+  "chat.currentProject": "Current Project",
+  "chat.selectProject": "Select project",
+  "chat.allProjects": "No project scope",
+  "chat.noProjectSelected": "No project selected",
+  "chat.projectHint": "Chat uses the stored monitoring summary for the selected project, not the page state currently on screen.",
 
   // Settings
   "settings.title": "Settings",

@@ -110,6 +110,7 @@ CREATE TABLE IF NOT EXISTS chat_sessions (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL DEFAULT '',
     input_items TEXT NOT NULL DEFAULT '[]',
+    project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -332,6 +333,12 @@ async def ensure_db() -> None:
                 await db.execute(stmt)
             except Exception:
                 pass
+        # Chat sessions: keep optional project association for project-scoped chat.
+        try:
+            await db.execute("ALTER TABLE chat_sessions ADD COLUMN project_id INTEGER REFERENCES projects(id)")
+        except Exception:
+            pass
+
         await db.commit()
         _SCHEMA_READY_FOR = _DB_PATH
     finally:
@@ -421,6 +428,7 @@ async def delete_project(project_id: int) -> bool:
     """Delete a project and all its related data. Returns True if deleted."""
     db = await get_db()
     try:
+        await db.execute("UPDATE chat_sessions SET project_id = NULL WHERE project_id = ?", (project_id,))
         await db.execute("DELETE FROM approvals WHERE project_id = ?", (project_id,))
         # Delete graph expansion data
         await db.execute("DELETE FROM graph_expansion_edges WHERE project_id = ?", (project_id,))
@@ -1307,12 +1315,14 @@ async def get_all_serp_latest(project_id: int) -> list[dict]:
 # --- Chat sessions ---
 
 
-async def create_chat_session(session_id: str, title: str = "") -> None:
+async def create_chat_session(
+    session_id: str, title: str = "", project_id: int | None = None
+) -> None:
     db = await get_db()
     try:
         await db.execute(
-            "INSERT INTO chat_sessions (id, title) VALUES (?, ?)",
-            (session_id, title),
+            "INSERT INTO chat_sessions (id, title, project_id) VALUES (?, ?, ?)",
+            (session_id, title, project_id),
         )
         await db.commit()
     finally:
@@ -1323,11 +1333,21 @@ async def list_chat_sessions() -> list[dict]:
     db = await get_db()
     try:
         cursor = await db.execute(
-            "SELECT id, title, created_at, updated_at FROM chat_sessions ORDER BY updated_at DESC"
+            """SELECT s.id, s.title, s.created_at, s.updated_at, s.project_id, p.brand_name
+               FROM chat_sessions s
+               LEFT JOIN projects p ON p.id = s.project_id
+               ORDER BY s.updated_at DESC, s.id DESC"""
         )
         rows = await cursor.fetchall()
         return [
-            {"id": r[0], "title": r[1], "created_at": r[2], "updated_at": r[3]}
+            {
+                "id": r[0],
+                "title": r[1],
+                "created_at": r[2],
+                "updated_at": r[3],
+                "project_id": r[4],
+                "project_name": r[5],
+            }
             for r in rows
         ]
     finally:
@@ -1338,7 +1358,10 @@ async def get_chat_session(session_id: str) -> dict | None:
     db = await get_db()
     try:
         cursor = await db.execute(
-            "SELECT id, title, input_items, created_at, updated_at FROM chat_sessions WHERE id = ?",
+            """SELECT s.id, s.title, s.input_items, s.created_at, s.updated_at, s.project_id, p.brand_name
+               FROM chat_sessions s
+               LEFT JOIN projects p ON p.id = s.project_id
+               WHERE s.id = ?""",
             (session_id,),
         )
         row = await cursor.fetchone()
@@ -1347,6 +1370,7 @@ async def get_chat_session(session_id: str) -> dict | None:
         return {
             "id": row[0], "title": row[1], "input_items": row[2],
             "created_at": row[3], "updated_at": row[4],
+            "project_id": row[5], "project_name": row[6],
         }
     finally:
         await db.close()

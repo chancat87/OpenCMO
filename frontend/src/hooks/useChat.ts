@@ -13,8 +13,9 @@ function nextId() {
   return `msg-${++msgIdCounter}`;
 }
 
-export function useChat() {
+export function useChat(initialProjectId: number | null = null) {
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState<number | null>(initialProjectId);
   const [sessions, setSessions] = useState<ChatSessionSummary[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -31,16 +32,31 @@ export function useChat() {
 
   // Load sessions + create initial session on mount
   useEffect(() => {
-    refreshSessions();
-    createSession().then(setSessionId).catch(console.error);
-  }, [refreshSessions]);
+    let cancelled = false;
+
+    void refreshSessions();
+    createSession(initialProjectId)
+      .then(async (id) => {
+        if (cancelled) return;
+        setSessionId(id);
+        setProjectId(initialProjectId);
+        await refreshSessions();
+      })
+      .catch(console.error);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialProjectId, refreshSessions]);
 
   const loadSession = useCallback(
     async (id: string) => {
       if (isStreaming) return;
       try {
         const msgs = await getSessionMessages(id);
+        const session = sessions.find((item) => item.id === id);
         setSessionId(id);
+        setProjectId(session?.project_id ?? null);
         setMessages(
           msgs.map((m) => ({
             id: nextId(),
@@ -53,7 +69,7 @@ export function useChat() {
         // session might be stale
       }
     },
-    [isStreaming],
+    [isStreaming, sessions],
   );
 
   const sendMessage = useCallback(
@@ -77,11 +93,11 @@ export function useChat() {
       setIsStreaming(true);
 
       try {
-        for await (const event of streamChat(sessionId, content.trim())) {
+        for await (const event of streamChat(sessionId, content.trim(), projectId)) {
           handleEvent(event, assistantMsg.id);
         }
         // Refresh session list after completion (title may have changed)
-        refreshSessions();
+        await refreshSessions();
       } catch (err) {
         setMessages((prev) =>
           prev.map((m) =>
@@ -99,7 +115,7 @@ export function useChat() {
         setIsStreaming(false);
       }
     },
-    [sessionId, isStreaming, currentAgent, refreshSessions],
+    [sessionId, isStreaming, currentAgent, projectId, refreshSessions],
   );
 
   const handleEvent = useCallback(
@@ -194,16 +210,27 @@ export function useChat() {
     [],
   );
 
-  const resetChat = useCallback(async () => {
+  const resetChat = useCallback(async (nextProjectId: number | null = projectId) => {
+    if (isStreaming) return;
     setMessages([]);
     setCurrentAgent("CMO Agent");
+    setProjectId(nextProjectId);
     try {
-      const newId = await createSession();
+      const newId = await createSession(nextProjectId);
       setSessionId(newId);
+      await refreshSessions();
     } catch (e) {
       console.error("Failed to create new session", e);
     }
-  }, []);
+  }, [isStreaming, projectId, refreshSessions]);
+
+  const selectProject = useCallback(
+    async (nextProjectId: number | null) => {
+      if (nextProjectId === projectId) return;
+      await resetChat(nextProjectId);
+    },
+    [projectId, resetChat],
+  );
 
   const removeSession = useCallback(
     async (id: string) => {
@@ -212,21 +239,23 @@ export function useChat() {
         setSessions((prev) => prev.filter((s) => s.id !== id));
         // If deleted session is the active one, reset
         if (id === sessionId) {
-          await resetChat();
+          await resetChat(projectId);
         }
       } catch {
         // ignore
       }
     },
-    [sessionId, resetChat],
+    [projectId, sessionId, resetChat],
   );
 
   return {
     messages,
     isStreaming,
     currentAgent,
+    projectId,
     sendMessage,
     resetChat,
+    selectProject,
     sessionReady: !!sessionId,
     sessionId,
     sessions,

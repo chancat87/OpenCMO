@@ -214,6 +214,7 @@ def test_api_v1_delete_project_with_related_records(tmp_path):
                 "{}",
             )
         )
+        session_id = asyncio.run(chat_sessions.create_session(project_id=pid))
 
         conn = sqlite3.connect(db_path)
         try:
@@ -234,6 +235,9 @@ def test_api_v1_delete_project_with_related_records(tmp_path):
             assert resp.json() == {"ok": True}
 
         assert asyncio.run(storage.get_project(pid)) is None
+        session = asyncio.run(storage.get_chat_session(session_id))
+        assert session is not None
+        assert session["project_id"] is None
 
         conn = sqlite3.connect(db_path)
         try:
@@ -570,6 +574,18 @@ def test_api_v1_chat_session_lifecycle(client):
     assert len(session_id) == 12
 
 
+def test_api_v1_chat_session_project_scope(client):
+    pid = _seed_project("Scoped", "https://scoped.com")
+
+    resp = client.post("/api/v1/chat/sessions", json={"project_id": pid})
+    assert resp.status_code == 201
+    assert resp.json()["project_id"] == pid
+
+    sessions = client.get("/api/v1/chat/sessions").json()
+    assert sessions[0]["project_id"] == pid
+    assert sessions[0]["project_name"] == "Scoped"
+
+
 def test_api_v1_chat_sse(client):
     """Mock Runner.run_streamed and verify SSE event flow."""
     resp = client.post("/api/v1/chat/sessions")
@@ -619,6 +635,48 @@ def test_api_v1_chat_sse(client):
     session = asyncio.run(chat_sessions.get_session(session_id))
     assert session is not None
     assert len(session) == 2  # user + assistant from to_input_list
+
+
+def test_api_v1_chat_uses_session_project_context(client):
+    pid = _seed_project("Context", "https://context.com")
+    resp = client.post("/api/v1/chat/sessions", json={"project_id": pid})
+    session_id = resp.json()["session_id"]
+
+    mock_result = MagicMock()
+    mock_result.last_agent.name = "CMO Agent"
+    mock_result.final_output = "Hello from CMO"
+    mock_result.to_input_list.return_value = [
+        {"role": "user", "content": "hi"},
+        {"role": "assistant", "content": "Hello from CMO"},
+    ]
+
+    class MockDelta:
+        type = "response.output_text.delta"
+        delta = "Hello"
+
+    class MockRawEvent:
+        type = "raw_response_event"
+        data = MockDelta()
+
+    async def mock_stream():
+        yield MockRawEvent()
+
+    mock_result.stream_events = mock_stream
+
+    with patch("opencmo.context.build_project_context", new_callable=AsyncMock) as mock_context:
+        mock_context.return_value = "# Context"
+        with patch("agents.Runner.run_streamed", return_value=mock_result) as mock_runner:
+            resp = client.post("/api/v1/chat", json={
+                "session_id": session_id,
+                "message": "hi",
+            })
+
+    assert resp.status_code == 200
+    mock_context.assert_awaited_once_with(pid, depth="brief")
+    input_items = mock_runner.call_args.args[1]
+    assert input_items[0]["role"] == "system"
+    assert "[Project Context]" in input_items[0]["content"]
+    assert "# Context" in input_items[0]["content"]
 
 
 def test_api_v1_chat_invalid_session(client):

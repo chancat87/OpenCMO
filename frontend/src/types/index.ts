@@ -255,6 +255,8 @@ export interface ChatSessionSummary {
   title: string;
   created_at: string;
   updated_at: string;
+  project_id: number | null;
+  project_name?: string | null;
 }
 
 export interface AISettings {

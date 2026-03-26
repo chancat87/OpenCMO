@@ -1121,10 +1121,27 @@ def _get_item_name(item) -> str:
 
 
 @app.post("/api/v1/chat/sessions")
-async def api_v1_chat_session_create():
+async def api_v1_chat_session_create(request: Request):
     from opencmo.web import chat_sessions
-    session_id = await chat_sessions.create_session()
-    return JSONResponse({"session_id": session_id}, status_code=201)
+    body_bytes = await request.body()
+    try:
+        body = json.loads(body_bytes) if body_bytes else {}
+    except json.JSONDecodeError:
+        return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+
+    raw_project_id = body.get("project_id")
+    project_id: int | None = None
+    if raw_project_id is not None:
+        try:
+            project_id = int(raw_project_id)
+        except (TypeError, ValueError):
+            return JSONResponse({"error": "project_id must be an integer"}, status_code=400)
+        project = await storage.get_project(project_id)
+        if not project:
+            return JSONResponse({"error": "Project not found"}, status_code=404)
+
+    session_id = await chat_sessions.create_session(project_id=project_id)
+    return JSONResponse({"session_id": session_id, "project_id": project_id}, status_code=201)
 
 
 @app.get("/api/v1/chat/sessions")
@@ -1162,9 +1179,13 @@ async def api_v1_chat(request: Request):
     if not message:
         return JSONResponse({"error": "message is required"}, status_code=400)
 
-    input_items = await chat_sessions.get_session(session_id)
-    if input_items is None:
+    session = await storage.get_chat_session(session_id)
+    if session is None:
         return JSONResponse({"error": "Invalid session_id"}, status_code=404)
+    input_items = json.loads(session["input_items"])
+
+    if body.get("project_id") is None and session.get("project_id") is not None:
+        body["project_id"] = session["project_id"]
 
     context_item = None
     # Inject project context from knowledge graph
