@@ -79,20 +79,13 @@ async def _research_topic_impl(topic: str, keywords: str) -> str:
         tavily_title = tavily_titles.get(url, "")
 
         try:
-            from crawl4ai import AsyncWebCrawler
+            from opencmo.tools.crawl import fetch_url_content
 
-            async with AsyncWebCrawler() as crawler:
-                result = await crawler.arun(url=url)
-            md = getattr(result, "markdown", None)
-            if md and hasattr(md, "raw_markdown"):
-                text = md.raw_markdown
-            elif isinstance(md, str):
-                text = md
-            else:
-                text = str(md) if md else ""
-
-            # Extract key points (first ~1000 chars)
-            text = text[:3000] if text else ""
+            text, _source = await fetch_url_content(
+                url,
+                max_chars=3000,
+                tavily_extract_depth="advanced",
+            )
 
             # Try to extract title from content
             title = ""

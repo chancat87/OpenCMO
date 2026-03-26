@@ -18,6 +18,34 @@ def _extract_markdown(result) -> str:
     return str(md)
 
 
+async def fetch_url_content(
+    url: str,
+    *,
+    max_chars: int | None = None,
+    tavily_extract_depth: str = "advanced",
+) -> tuple[str, str]:
+    """Fetch page content with Tavily-first fallback to crawl4ai."""
+    from opencmo.tools.tavily_helper import tavily_extract
+
+    content = await tavily_extract(
+        url,
+        extract_depth=tavily_extract_depth,
+        format="markdown",
+    )
+    source = "tavily"
+
+    if not content:
+        async with AsyncWebCrawler() as crawler:
+            result = await crawler.arun(url=url)
+        content = _extract_markdown(result)
+        source = "crawl4ai"
+
+    if max_chars is not None and len(content) > max_chars:
+        content = content[:max_chars]
+
+    return content, source
+
+
 @function_tool
 async def crawl_website(url: str) -> str:
     """Crawl a website and return its content as markdown.
@@ -26,11 +54,9 @@ async def crawl_website(url: str) -> str:
         url: The URL of the website to crawl.
     """
     try:
-        async with AsyncWebCrawler() as crawler:
-            result = await crawler.arun(url=url)
-            content = _extract_markdown(result)
-            if len(content) > 10000:
-                content = content[:10000] + "\n\n... [content truncated at 10000 characters]"
-            return content
+        content, _source = await fetch_url_content(url)
+        if len(content) > 10000:
+            content = content[:10000] + "\n\n... [content truncated at 10000 characters]"
+        return content
     except Exception as e:
         return f"Failed to crawl {url}: {e}"

@@ -1,7 +1,8 @@
 """Tests for the service layer."""
 
 import asyncio
-from unittest.mock import patch, AsyncMock
+import os
+from unittest.mock import patch, AsyncMock, MagicMock
 
 import pytest
 
@@ -137,3 +138,75 @@ def test_remove_monitor_unschedules_runtime_job():
         ok = run(service.remove_monitor(result["monitor_id"]))
         assert ok is True
         mock_unschedule.assert_called_once_with(result["monitor_id"])
+
+
+@pytest.mark.asyncio
+async def test_analyze_url_uses_shared_fetch_helper():
+    """URL analysis should go through the Tavily-first shared fetch helper."""
+    fetch_mock = AsyncMock(return_value=("# Supabase\n\nBuild in a weekend.", "tavily"))
+    crawl_result = MagicMock()
+    crawl_result.markdown = "# Crawl fallback"
+    crawl_mock = AsyncMock()
+    crawl_mock.__aenter__ = AsyncMock(return_value=crawl_mock)
+    crawl_mock.__aexit__ = AsyncMock(return_value=False)
+    crawl_mock.arun = AsyncMock(return_value=crawl_result)
+    llm_mock = AsyncMock(side_effect=[
+        "Filtered product summary",
+        "Product analysis",
+        "SEO analysis",
+        "Community analysis",
+        "Product refinement",
+        "SEO refinement",
+        "Community refinement",
+        (
+            '{"brand_name": "Supabase", "category": "database", '
+            '"keywords": ["supabase", "postgres backend"], "competitors": []}'
+        ),
+    ])
+
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=False), \
+         patch("opencmo.tools.crawl.fetch_url_content", fetch_mock, create=True), \
+         patch("crawl4ai.AsyncWebCrawler", return_value=crawl_mock), \
+         patch("openai.AsyncOpenAI", return_value=MagicMock()), \
+         patch("opencmo.service._llm_call", llm_mock):
+        result = await service.analyze_url_with_ai("https://supabase.com")
+
+    assert result["brand_name"] == "Supabase"
+    assert result["category"] == "database"
+    fetch_mock.assert_awaited_once_with(
+        "https://supabase.com",
+        max_chars=20000,
+        tavily_extract_depth="advanced",
+    )
+
+
+@pytest.mark.asyncio
+async def test_analyze_url_helper_fallback_still_returns_result():
+    """URL analysis should still complete when shared fetch falls back to crawl."""
+    fetch_mock = AsyncMock(return_value=("# Crawl content", "crawl4ai"))
+    llm_mock = AsyncMock(side_effect=[
+        "Filtered product summary",
+        "Product analysis",
+        "SEO analysis",
+        "Community analysis",
+        "Product refinement",
+        "SEO refinement",
+        "Community refinement",
+        (
+            '{"brand_name": "Example", "category": "saas", '
+            '"keywords": ["example"], "competitors": []}'
+        ),
+    ])
+
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=False), \
+         patch("opencmo.tools.crawl.fetch_url_content", fetch_mock, create=True), \
+         patch("openai.AsyncOpenAI", return_value=MagicMock()), \
+         patch("opencmo.service._llm_call", llm_mock):
+        result = await service.analyze_url_with_ai("https://example.com")
+
+    assert result["brand_name"] == "Example"
+    fetch_mock.assert_awaited_once_with(
+        "https://example.com",
+        max_chars=20000,
+        tavily_extract_depth="advanced",
+    )

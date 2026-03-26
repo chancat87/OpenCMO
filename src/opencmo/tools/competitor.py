@@ -1,7 +1,6 @@
 from agents import function_tool
-from crawl4ai import AsyncWebCrawler
 
-from opencmo.tools.crawl import _extract_markdown
+from opencmo.tools.crawl import fetch_url_content
 
 
 @function_tool
@@ -15,12 +14,11 @@ async def analyze_competitor(url: str) -> str:
         url: The competitor's website URL.
     """
     try:
-        async with AsyncWebCrawler() as crawler:
-            result = await crawler.arun(url=url)
-
-        content = _extract_markdown(result)
-        if len(content) > 8000:
-            content = content[:8000]
+        content, _source = await fetch_url_content(
+            url,
+            max_chars=8000,
+            tavily_extract_depth="advanced",
+        )
 
         report = f"""## Competitor Analysis: {url}
 

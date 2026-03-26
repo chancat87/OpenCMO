@@ -353,17 +353,20 @@ async def analyze_url_with_ai(url: str, on_progress=None, locale: str = "en") ->
 
     # 1. Crawl the URL
     try:
-        from crawl4ai import AsyncWebCrawler
+        from opencmo.tools.crawl import fetch_url_content
 
-        emit("system", f"Crawling {url} ...", 0)
-        async with AsyncWebCrawler() as crawler:
-            result = await crawler.arun(url=url)
-        raw_content = (result.markdown or "")[:20000]
+        emit("system", f"Fetching {url} ...", 0)
+        raw_content, source = await fetch_url_content(
+            url,
+            max_chars=20000,
+            tavily_extract_depth="advanced",
+        )
         if not raw_content.strip():
             logger.warning("Empty crawl result for %s", url)
             emit("system", "No content found on page.", 0)
             return fallback
-        emit("system", f"Crawled {len(raw_content)} chars. Filtering noise...", 0)
+        verb = "Extracted" if source == "tavily" else "Crawled"
+        emit("system", f"{verb} {len(raw_content)} chars. Filtering noise...", 0)
     except Exception:
         logger.exception("Failed to crawl %s", url)
         emit("system", "Failed to crawl the page.", 0)

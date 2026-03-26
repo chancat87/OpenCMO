@@ -298,9 +298,12 @@ cp .env.example .env
 OPENAI_API_KEY=sk-您的APIKey
 OPENAI_BASE_URL=https://api.deepseek.com/v1
 OPENCMO_MODEL_DEFAULT=deepseek-chat
+TAVILY_API_KEY=tvly-您的TavilyKey
 ```
 
 > **提示：** 启动后也可以直接在 Web 仪表盘的**设置**面板中配置所有 API 密钥，无需再手动编辑 `.env`。
+
+> 当配置了 `TAVILY_API_KEY` 时，OpenCMO 会优先用 Tavily 处理通用 URL 分析和共享网页内容获取；只有 Tavily 不可用或没有返回可用内容时，才会回退到原有的抓取逻辑。依赖真实 HTML 结构的审计和特定平台抓取仍保留原有专用路径。
 
 ### 3. 启动仪表盘
 

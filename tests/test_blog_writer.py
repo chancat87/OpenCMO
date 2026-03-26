@@ -2,6 +2,7 @@
 
 import json
 import pytest
+from opencmo.tools.tavily_helper import TavilyResult
 from unittest.mock import AsyncMock, patch, MagicMock
 
 
@@ -69,6 +70,43 @@ async def test_research_crawl_failure():
     data = json.loads(result)
     assert "competing_articles" in data
     assert data["search_urls_found"] >= 0
+
+
+@pytest.mark.asyncio
+async def test_research_topic_uses_shared_fetch_helper():
+    """Blog research should use shared Tavily-first fetch for article content."""
+    from opencmo.tools.blog_writer import _research_topic_impl
+
+    search_results = [
+        TavilyResult(
+            title="Article 1",
+            url="https://blog.example.com/article1",
+            snippet="Snippet",
+        )
+    ]
+    fetch_mock = AsyncMock(
+        return_value=(
+            "# Article 1\n\n## Section 1\nSome content here with 50% improvement",
+            "tavily",
+        )
+    )
+    mock_crawler = AsyncMock()
+    mock_crawler.__aenter__ = AsyncMock(return_value=mock_crawler)
+    mock_crawler.__aexit__ = AsyncMock(return_value=False)
+    mock_crawler.arun = AsyncMock(side_effect=AssertionError("crawl should not be used"))
+
+    with patch("opencmo.tools.tavily_helper.tavily_search", AsyncMock(return_value=search_results)), \
+         patch("opencmo.tools.crawl.fetch_url_content", fetch_mock, create=True), \
+         patch("crawl4ai.AsyncWebCrawler", return_value=mock_crawler):
+        result = await _research_topic_impl("web scraping tools", "web scraping,python")
+
+    data = json.loads(result)
+    assert data["competing_articles"][0]["title"] == "Article 1"
+    fetch_mock.assert_awaited_once_with(
+        "https://blog.example.com/article1",
+        max_chars=3000,
+        tavily_extract_depth="advanced",
+    )
 
 
 def test_blog_expert_has_tools():

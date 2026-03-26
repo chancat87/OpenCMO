@@ -208,6 +208,8 @@ All integrations are configurable via the built-in **Settings panel** in the web
 | **SEO Audit** | Google PageSpeed Insights | HTTP API (optional key for higher limits) |
 | **SERP Tracking** | Google, DataForSEO | Web crawling or DataForSEO API |
 
+> When `TAVILY_API_KEY` is configured, OpenCMO now prefers Tavily for general-purpose URL analysis and shared web research fetches, then falls back to crawl-based fetching if Tavily is unavailable or returns no usable content. HTML-dependent audits and provider-specific crawls still use their existing specialized fetch paths.
+
 ### Publishing (user-controlled)
 
 | Platform | Method | Setup |
@@ -300,6 +302,7 @@ Edit `.env` with your provider credentials. *Example for OpenAI:*
 ```env
 OPENAI_API_KEY=sk-yourAPIKeyHere
 OPENCMO_MODEL_DEFAULT=gpt-4o
+TAVILY_API_KEY=tvly-yourTavilyKeyHere
 ```
 
 > **Tip:** You can also configure all API keys directly from the web dashboard's **Settings** panel — no `.env` editing needed after initial setup.

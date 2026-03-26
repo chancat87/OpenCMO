@@ -1,8 +1,4 @@
-"""Shared Tavily search helper — used by blog_writer and graph_expansion.
-
-Returns structured results when TAVILY_API_KEY is set, otherwise returns None
-so callers can fall back to their existing scraping logic.
-"""
+"""Shared Tavily helpers for search and URL extraction."""
 
 from __future__ import annotations
 
@@ -63,4 +59,48 @@ async def tavily_search(
 
     except Exception as exc:
         logger.warning("Tavily search failed for %r: %s", query, exc)
+        return None
+
+
+def _extract_result_content(result: dict) -> str:
+    """Normalize Tavily extract payloads into plain string content."""
+    content = result.get("raw_content") or result.get("content") or ""
+    if not isinstance(content, str):
+        content = str(content)
+    return content.strip()
+
+
+async def tavily_extract(
+    url: str,
+    *,
+    extract_depth: str = "basic",
+    format: str = "markdown",
+) -> str | None:
+    """Extract page content from a URL via Tavily.
+
+    Returns None when Tavily is unavailable, extraction fails, or the response
+    contains no usable content so callers can fall back to crawl-based fetching.
+    """
+    if not tavily_available():
+        return None
+
+    try:
+        from tavily import AsyncTavilyClient
+
+        client = AsyncTavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+        response = await client.extract(
+            urls=[url],
+            extract_depth=extract_depth,
+            format=format,
+        )
+        results = response.get("results", []) if isinstance(response, dict) else []
+        for item in results:
+            if not isinstance(item, dict):
+                continue
+            content = _extract_result_content(item)
+            if content:
+                return content
+        return None
+    except Exception as exc:
+        logger.warning("Tavily extract failed for %r: %s", url, exc)
         return None
