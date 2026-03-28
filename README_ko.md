@@ -18,6 +18,11 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-green.svg?style=for-the-badge" alt="License"></a>
   <a href="https://github.com/study8677/OpenCMO/stargazers"><img src="https://img.shields.io/github/stars/study8677/OpenCMO?style=for-the-badge&color=yellow&logo=github" alt="Stars"></a>
   <img src="https://img.shields.io/badge/react-SPA-61DAFB.svg?style=for-the-badge&logo=react" alt="React SPA">
+  <a href="https://724claw.icu/app/"><img src="https://img.shields.io/badge/🚀_라이브_데모-724claw.icu-ff6b35.svg?style=for-the-badge" alt="Live Demo"></a>
+</p>
+
+<p align="center">
+  <b>🔑 BYOK (Bring Your Own Key) — 서버 측 키 저장소 없음. 사용자의 API 키는 브라우저 내에 로컬로 저장됩니다.</b>
 </p>
 
 ---

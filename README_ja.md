@@ -17,6 +17,11 @@
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg?style=for-the-badge&logo=python" alt="Python 3.10+"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-green.svg?style=for-the-badge" alt="License"></a>
   <a href="https://github.com/study8677/OpenCMO/stargazers"><img src="https://img.shields.io/badge/react-SPA-61DAFB.svg?style=for-the-badge&logo=react" alt="React SPA"></a>
+  <a href="https://724claw.icu/app/"><img src="https://img.shields.io/badge/🚀_ライブデモ-724claw.icu-ff6b35.svg?style=for-the-badge" alt="Live Demo"></a>
+</p>
+
+<p align="center">
+  <b>🔑 BYOK (Bring Your Own Key) — サーバー側でのキー保存なし。ユーザー自身のAPIキーをブラウザ内にローカル保存。</b>
 </p>
 
 ---

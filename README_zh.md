@@ -18,6 +18,11 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-green.svg?style=for-the-badge" alt="License"></a>
   <a href="https://github.com/study8677/OpenCMO/stargazers"><img src="https://img.shields.io/github/stars/study8677/OpenCMO?style=for-the-badge&color=yellow&logo=github" alt="Stars"></a>
   <img src="https://img.shields.io/badge/react-SPA-61DAFB.svg?style=for-the-badge&logo=react" alt="React SPA">
+  <a href="https://724claw.icu/app/"><img src="https://img.shields.io/badge/🚀_在线体验-724claw.icu-ff6b35.svg?style=for-the-badge" alt="在线体验 (Live Demo)"></a>
+</p>
+
+<p align="center">
+  <b>🔑 BYOK (自带 Key) — 无需登录，您的 API 密钥仅保存在本地浏览器中，服务端无中心化密钥存储。</b>
 </p>
 
 ---
