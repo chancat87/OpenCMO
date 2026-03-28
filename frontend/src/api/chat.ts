@@ -32,15 +32,9 @@ export async function* streamChat(
   message: string,
   projectId?: number | null,
 ): AsyncGenerator<ChatEvent> {
-  const token = localStorage.getItem("opencmo_token");
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-
   const resp = await fetch("/api/v1/chat", {
     method: "POST",
-    headers,
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       session_id: sessionId,
       message,
@@ -49,10 +43,6 @@ export async function* streamChat(
   });
 
   if (!resp.ok) {
-    if (resp.status === 401) {
-      localStorage.removeItem("opencmo_token");
-      window.dispatchEvent(new CustomEvent("opencmo:unauthorized"));
-    }
     throw new Error(`Chat request failed: ${resp.status}`);
   }
 

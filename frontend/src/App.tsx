@@ -10,16 +10,8 @@ import { GraphPage } from "./pages/GraphPage";
 import { MonitorsPage } from "./pages/MonitorsPage";
 import { ChatPage } from "./pages/ChatPage";
 import { ApprovalsPage } from "./pages/ApprovalsPage";
-import { TokenPrompt } from "./components/auth/TokenPrompt";
-import { useAuth } from "./components/auth/useAuth";
 
 function AppRoutes() {
-  const { isAuthenticated, needsAuth } = useAuth();
-
-  if (needsAuth && !isAuthenticated) {
-    return <TokenPrompt />;
-  }
-
   return (
     <AppShell>
       <Routes>
@@ -45,3 +37,4 @@ export default function App() {
     </BrowserRouter>
   );
 }
+
