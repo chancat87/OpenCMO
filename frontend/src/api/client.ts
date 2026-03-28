@@ -4,9 +4,7 @@ export async function apiFetch(
   path: string,
   init?: RequestInit,
 ): Promise<Response> {
-  const token = localStorage.getItem("opencmo_token");
   const headers = new Headers(init?.headers);
-  if (token) headers.set("Authorization", `Bearer ${token}`);
   if (
     init?.body &&
     typeof init.body === "string" &&
@@ -15,12 +13,7 @@ export async function apiFetch(
     headers.set("Content-Type", "application/json");
   }
 
-  const resp = await fetch(`${API_PREFIX}${path}`, { ...init, headers });
-  if (resp.status === 401) {
-    localStorage.removeItem("opencmo_token");
-    window.dispatchEvent(new CustomEvent("opencmo:unauthorized"));
-  }
-  return resp;
+  return fetch(`${API_PREFIX}${path}`, { ...init, headers });
 }
 
 export async function apiJson<T>(

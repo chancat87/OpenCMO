@@ -77,60 +77,7 @@ async def _shutdown_runtime_services():
 # Auth middleware
 # ---------------------------------------------------------------------------
 
-_PUBLIC_PREFIXES = ("/static/", "/favicon", "/api/v1/auth/", "/api/v1/health")
-
-_LOGIN_HTML = """<!DOCTYPE html>
-<html><head><title>OpenCMO Login</title>
-<style>
-body{font-family:system-ui;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f8fafc}
-.card{background:#fff;padding:2rem;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1);max-width:360px;width:100%}
-h2{margin:0 0 1rem}input{width:100%;padding:.5rem;border:1px solid #d1d5db;border-radius:4px;margin:.5rem 0}
-button{width:100%;padding:.5rem;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-top:.5rem}
-button:hover{background:#1d4ed8}.error{color:#dc2626;font-size:.875rem;margin-top:.5rem;display:none}
-</style></head><body>
-<div class="card"><h2>OpenCMO</h2><p>Enter your access token to continue.</p>
-<form id="f"><input name="token" type="password" placeholder="Token" required>
-<button type="submit">Login</button><div class="error" id="e">Invalid token</div></form></div>
-<script>
-document.getElementById('f').onsubmit=async e=>{
-  e.preventDefault();const t=e.target.token.value;
-  const r=await fetch('/api/v1/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:t})});
-  if(r.ok)location.reload();else document.getElementById('e').style.display='block';
-};
-</script></body></html>"""
-
-
-@app.middleware("http")
-async def auth_middleware(request: Request, call_next):
-    token = os.environ.get("OPENCMO_WEB_TOKEN")
-    if token:
-        path = request.url.path
-        if path == "/" or any(path.startswith(p) for p in _PUBLIC_PREFIXES):
-            return await call_next(request)
-        # Check Authorization header or cookie
-        auth = request.headers.get("Authorization", "")
-        cookie_token = request.cookies.get("opencmo_token", "")
-        if auth != f"Bearer {token}" and cookie_token != token:
-            if path.startswith("/api/"):
-                return JSONResponse({"error": "Unauthorized"}, status_code=401)
-            return HTMLResponse(_LOGIN_HTML, status_code=401)
-    return await call_next(request)
-
-
-# ---------------------------------------------------------------------------
-# Auth endpoint
-# ---------------------------------------------------------------------------
-
-
-@app.post("/api/v1/auth/login")
-async def auth_login(request: Request):
-    body = await request.json()
-    expected = os.environ.get("OPENCMO_WEB_TOKEN", "")
-    if not expected or body.get("token") != expected:
-        return JSONResponse({"error": "Invalid token"}, status_code=401)
-    resp = JSONResponse({"ok": True})
-    resp.set_cookie("opencmo_token", expected, httponly=True, samesite="lax")
-    return resp
+# No auth middleware — app is open. Users configure API keys in Settings.
 
 
 @app.get("/api/v1/health")
