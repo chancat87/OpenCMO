@@ -1,6 +1,7 @@
 """Tests for the AI CMO report system."""
 
 import asyncio
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -186,3 +187,46 @@ async def test_send_project_report_reuses_latest_periodic_human_report(monkeypat
     assert result["ok"] is True
     sent_message = mock_server.send_message.call_args[0][0]
     assert "Weekly Human" in sent_message.as_string()
+
+
+@pytest.mark.asyncio
+async def test_generate_report_uses_persisted_llm_settings(monkeypatch):
+    project_id = await _seed_project()
+    await storage.set_setting("OPENAI_API_KEY", "persisted-key")
+    await storage.set_setting("OPENAI_BASE_URL", "https://example.test/v1")
+    await storage.set_setting("OPENCMO_MODEL_DEFAULT", "provider-model")
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENCMO_MODEL_DEFAULT", raising=False)
+
+    def fake_response(text: str):
+        return SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content=text))]
+        )
+
+    fake_create = AsyncMock(
+        side_effect=[
+            fake_response("# Human report"),
+            fake_response("# Agent brief"),
+        ]
+    )
+    fake_client = SimpleNamespace(
+        chat=SimpleNamespace(
+            completions=SimpleNamespace(create=fake_create),
+        )
+    )
+
+    with patch("openai.AsyncOpenAI", return_value=fake_client) as mock_client:
+        report = await service.regenerate_project_report(project_id, "strategic")
+
+    assert report["human"]["meta"]["used_fallback"] is False
+    assert report["human"]["meta"]["model"] == "provider-model"
+    assert mock_client.call_count == 2
+    for call in mock_client.call_args_list:
+        assert call.kwargs == {
+            "api_key": "persisted-key",
+            "base_url": "https://example.test/v1",
+        }
+    assert fake_create.await_count == 2
+    assert all(call.kwargs["model"] == "provider-model" for call in fake_create.await_args_list)

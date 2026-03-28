@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import html
 import json
 import logging
@@ -14,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 _REPORT_MODEL_DEFAULT = "gpt-4o"
 _PERIODIC_WINDOW_DAYS = 7
+_REPORT_LLM_TIMEOUT_SECONDS = 30.0
 
 
 def _json_dump(data: object) -> str:
@@ -100,25 +102,55 @@ def _simple_markdown_to_html(markdown_text: str) -> str:
 
 async def _generate_llm_markdown(system_prompt: str, user_prompt: str) -> str:
     """Generate markdown with the configured LLM."""
-    if not os.environ.get("OPENAI_API_KEY"):
+    api_key = await _get_runtime_setting("OPENAI_API_KEY")
+    if not api_key:
         raise RuntimeError("OPENAI_API_KEY is not configured.")
 
     from openai import AsyncOpenAI
 
     client = AsyncOpenAI(
-        api_key=os.environ.get("OPENAI_API_KEY"),
-        base_url=os.environ.get("OPENAI_BASE_URL") or None,
+        api_key=api_key,
+        base_url=(await _get_runtime_setting("OPENAI_BASE_URL")) or None,
     )
-    model = os.environ.get("OPENCMO_MODEL_DEFAULT", _REPORT_MODEL_DEFAULT)
-    response = await client.chat.completions.create(
-        model=model,
-        temperature=0.5,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    model = await _get_report_model()
+    response = await asyncio.wait_for(
+        client.chat.completions.create(
+            model=model,
+            temperature=0.5,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+        ),
+        timeout=await _get_report_timeout_seconds(),
     )
     return response.choices[0].message.content.strip()
+
+
+async def _get_runtime_setting(key: str, default: str | None = None) -> str | None:
+    value = await storage.get_setting(key)
+    if value not in (None, ""):
+        return value
+    env_value = os.environ.get(key)
+    if env_value not in (None, ""):
+        return env_value
+    return default
+
+
+async def _get_report_model() -> str:
+    return (await _get_runtime_setting("OPENCMO_MODEL_DEFAULT", _REPORT_MODEL_DEFAULT)) or _REPORT_MODEL_DEFAULT
+
+
+async def _get_report_timeout_seconds() -> float:
+    raw_value = await _get_runtime_setting(
+        "OPENCMO_REPORT_LLM_TIMEOUT_SECONDS",
+        str(_REPORT_LLM_TIMEOUT_SECONDS),
+    )
+    try:
+        timeout = float(raw_value or _REPORT_LLM_TIMEOUT_SECONDS)
+    except (TypeError, ValueError):
+        return _REPORT_LLM_TIMEOUT_SECONDS
+    return max(1.0, timeout)
 
 
 async def _get_recent_recommendations(project_id: int, limit: int = 6) -> list[dict]:
@@ -571,6 +603,7 @@ async def _generate_report_record(
     system_prompt, user_prompt = _prompts(kind, audience, facts, meta, previous_exists)
     used_fallback = False
     llm_error = None
+    model = await _get_report_model()
 
     try:
         content = await _generate_llm_markdown(system_prompt, user_prompt)
@@ -578,14 +611,14 @@ async def _generate_report_record(
             raise RuntimeError("LLM returned empty report content.")
     except Exception as exc:
         used_fallback = True
-        llm_error = str(exc)
+        llm_error = str(exc) or exc.__class__.__name__
         logger.exception("Report generation fell back to template for %s/%s", kind, audience)
         content = _fallback_markdown(kind, audience, facts, meta, previous_exists)
 
     record_meta = {
         **meta,
         "used_fallback": used_fallback,
-        "model": os.environ.get("OPENCMO_MODEL_DEFAULT", _REPORT_MODEL_DEFAULT),
+        "model": model,
     }
     if llm_error:
         record_meta["llm_error"] = llm_error
