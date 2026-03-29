@@ -245,6 +245,7 @@ export interface ToolStatus {
 
 export interface ProjectSummary {
   project: Project;
+  is_paused: boolean;
   latest: LatestScans;
   previous: {
     seo?: { scanned_at: string; score: number | null };

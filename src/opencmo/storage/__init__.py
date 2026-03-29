@@ -171,6 +171,13 @@ from opencmo.storage.reports import (
     get_latest_reports,
 )
 
+# --- Brand Kit ---
+from opencmo.storage.brand_kit import (
+    get_brand_kit,
+    upsert_brand_kit,
+    build_brand_kit_prompt,
+)
+
 
 # ---------------------------------------------------------------------------
 # Patch propagation: tests use ``patch.object(storage, "_DB_PATH", ...)``
@@ -268,4 +275,6 @@ __all__ = [
     # reports
     "create_report_bundle", "list_reports", "get_report",
     "get_latest_report", "get_latest_reports",
+    # brand_kit
+    "get_brand_kit", "upsert_brand_kit", "build_brand_kit_prompt",
 ]

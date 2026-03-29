@@ -11,6 +11,8 @@ import { MonitorsPage } from "./pages/MonitorsPage";
 import { ChatPage } from "./pages/ChatPage";
 import { ApprovalsPage } from "./pages/ApprovalsPage";
 import { ReportsPage } from "./pages/ReportsPage";
+import { BrandKitPage } from "./pages/BrandKitPage";
+import { PerformancePage } from "./pages/PerformancePage";
 
 function AppRoutes() {
   return (
@@ -20,6 +22,8 @@ function AppRoutes() {
         <Route path="/approvals" element={<ApprovalsPage />} />
         <Route path="/projects/:id" element={<ProjectPage />} />
         <Route path="/projects/:id/reports" element={<ReportsPage />} />
+        <Route path="/projects/:id/brand-kit" element={<BrandKitPage />} />
+        <Route path="/projects/:id/performance" element={<PerformancePage />} />
         <Route path="/projects/:id/seo" element={<SeoPage />} />
         <Route path="/projects/:id/geo" element={<GeoPage />} />
         <Route path="/projects/:id/serp" element={<SerpPage />} />

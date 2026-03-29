@@ -56,6 +56,25 @@ function MetricCard({
   );
 }
 
+function seoColor(score: number | null): string {
+  if (score == null) return "bg-slate-50 text-slate-400";
+  if (score >= 90) return "bg-emerald-50 text-emerald-600";
+  if (score >= 50) return "bg-amber-50 text-amber-600";
+  return "bg-rose-50 text-rose-600";
+}
+
+function geoColor(score: number | null): string {
+  if (score == null) return "bg-slate-50 text-slate-400";
+  if (score >= 60) return "bg-emerald-50 text-emerald-600";
+  if (score >= 30) return "bg-amber-50 text-amber-600";
+  return "bg-rose-50 text-rose-600";
+}
+
+function communityColor(hits: number): string {
+  if (hits > 0) return "bg-blue-50 text-blue-600";
+  return "bg-slate-50 text-slate-400";
+}
+
 export function GlobalOverview() {
   const { data } = useOverview();
   const { t } = useI18n();
@@ -69,19 +88,19 @@ export function GlobalOverview() {
           icon={Search}
           label={t("overview.avgSeo")}
           value={data.avg_seo_score ? `${data.avg_seo_score}%` : null}
-          color="bg-sky-50 text-sky-600"
+          color={seoColor(data.avg_seo_score)}
         />
         <MetricCard
           icon={Globe}
           label={t("overview.avgGeo")}
           value={data.avg_geo_score ? `${data.avg_geo_score}/100` : null}
-          color="bg-emerald-50 text-emerald-600"
+          color={geoColor(data.avg_geo_score)}
         />
         <MetricCard
           icon={Users}
           label={t("overview.communityHits")}
           value={data.total_community_hits}
-          color="bg-amber-50 text-amber-600"
+          color={communityColor(data.total_community_hits)}
         />
         <MetricCard
           icon={Hash}

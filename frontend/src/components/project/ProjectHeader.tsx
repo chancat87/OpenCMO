@@ -1,10 +1,17 @@
 import { Link } from "react-router";
-import { ExternalLink, MessageSquare } from "lucide-react";
+import { ExternalLink, MessageSquare, PauseCircle, PlayCircle } from "lucide-react";
 import type { Project } from "../../types";
 import { useI18n } from "../../i18n";
+import { useSetProjectPause } from "../../hooks/useProject";
 
-export function ProjectHeader({ project }: { project: Project }) {
-  const { t } = useI18n();
+export function ProjectHeader({ project, isPaused }: { project: Project; isPaused?: boolean }) {
+  const { t, locale } = useI18n();
+  const setPause = useSetProjectPause();
+  const isZh = locale === "zh";
+
+  const handleTogglePause = () => {
+    setPause.mutate({ id: project.id, pause: !isPaused });
+  };
 
   return (
     <div className="mb-10 flex flex-col md:flex-row md:items-start justify-between gap-4">
@@ -25,13 +32,29 @@ export function ProjectHeader({ project }: { project: Project }) {
         </a>
       </div>
 
-      <Link
-        to={`/chat?project_id=${project.id}`}
-        className="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-medium text-indigo-700 transition-colors hover:border-indigo-300 hover:bg-indigo-100"
-      >
-        <MessageSquare size={16} />
-        {t("chat.discussProject")}
-      </Link>
+      <div className="flex items-center gap-2 self-start">
+        {isPaused !== undefined && (
+          <button
+            onClick={handleTogglePause}
+            disabled={setPause.isPending}
+            className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors ${
+              isPaused
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100"
+                : "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300 hover:bg-amber-100"
+            }`}
+          >
+            {isPaused ? <PlayCircle size={16} /> : <PauseCircle size={16} />}
+            {isPaused ? (isZh ? "恢复运行" : "Resume") : (isZh ? "暂停运行" : "Pause")}
+          </button>
+        )}
+        <Link
+          to={`/chat?project_id=${project.id}`}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-medium text-indigo-700 transition-colors hover:border-indigo-300 hover:bg-indigo-100"
+        >
+          <MessageSquare size={16} />
+          {t("chat.discussProject")}
+        </Link>
+      </div>
     </div>
   );
 }

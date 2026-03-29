@@ -31,7 +31,7 @@ function getInsightRoute(actionParams: InsightActionParams): string | null {
     : null;
 }
 
-function formatTimeAgo(value: string, locale: "en" | "zh") {
+function formatTimeAgo(value: string, locale: string) {
   const timestamp = new Date(value).getTime();
   if (Number.isNaN(timestamp)) {
     return "";

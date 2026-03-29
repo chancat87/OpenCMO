@@ -735,6 +735,7 @@ async def _generate_report_record(
     facts: dict,
     meta: dict,
     previous_exists: bool,
+    on_progress=None,
 ) -> dict:
     used_fallback = False
     used_pipeline = False
@@ -750,6 +751,7 @@ async def _generate_report_record(
 
             content = await run_deep_report_pipeline(
                 facts, meta, previous_exists, kind=kind,
+                on_progress=on_progress,
             )
             used_pipeline = True
             if not content.strip():
@@ -809,6 +811,7 @@ async def _persist_bundle(
     window_end: str | None,
     facts: dict,
     meta: dict,
+    on_progress=None,
 ) -> dict:
     previous_human = await storage.get_latest_report(project_id, kind, "human")
     records = {
@@ -818,6 +821,7 @@ async def _persist_bundle(
             facts=facts,
             meta=meta,
             previous_exists=bool(previous_human),
+            on_progress=on_progress,
         ),
         "agent": await _generate_report_record(
             kind=kind,
@@ -840,7 +844,7 @@ async def _persist_bundle(
     return payload
 
 
-async def generate_strategic_report_bundle(project_id: int, source_run_id: int | None = None) -> dict:
+async def generate_strategic_report_bundle(project_id: int, source_run_id: int | None = None, on_progress=None) -> dict:
     """Generate and persist the latest strategic report bundle."""
     facts, meta = await _build_strategic_facts(project_id)
     return await _persist_bundle(
@@ -851,6 +855,7 @@ async def generate_strategic_report_bundle(project_id: int, source_run_id: int |
         window_end=None,
         facts=facts,
         meta=meta,
+        on_progress=on_progress,
     )
 
 
@@ -860,6 +865,7 @@ async def generate_periodic_report_bundle(
     source_run_id: int | None = None,
     now: datetime | None = None,
     window_days: int = _PERIODIC_WINDOW_DAYS,
+    on_progress=None,
 ) -> dict:
     """Generate and persist the latest periodic report bundle."""
     facts, meta = await _build_periodic_facts(project_id, now=now, window_days=window_days)
@@ -871,4 +877,5 @@ async def generate_periodic_report_bundle(
         window_end=meta["window_end"],
         facts=facts,
         meta=meta,
+        on_progress=on_progress,
     )

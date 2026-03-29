@@ -17,6 +17,14 @@ export function deleteProject(id: number): Promise<{ ok: boolean }> {
   return apiJson(`/projects/${id}`, { method: "DELETE" });
 }
 
+export function pauseProject(id: number): Promise<{ ok: boolean }> {
+  return apiJson(`/projects/${id}/pause`, { method: "POST" });
+}
+
+export function resumeProject(id: number): Promise<{ ok: boolean }> {
+  return apiJson(`/projects/${id}/resume`, { method: "POST" });
+}
+
 export interface NextAction {
   domain: string;
   priority: "high" | "medium" | "low";

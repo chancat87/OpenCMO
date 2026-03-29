@@ -12,6 +12,7 @@ import { CommunityBarChart } from "../components/charts/CommunityBarChart";
 import { PlatformBreakdownChart } from "../components/charts/PlatformBreakdownChart";
 import { ExternalLink, Users, MessageCircle, Flame, Layers } from "lucide-react";
 import { useI18n } from "../i18n";
+import { ActionTip } from "../components/common/ActionTip";
 
 const PLATFORM_BADGE: Record<string, string> = {
   reddit: "bg-orange-100 text-orange-700",
@@ -73,7 +74,7 @@ export function CommunityPage() {
           />
           <KpiCard
             icon={MessageCircle}
-            label="Latest Hits"
+            label={t("community.latestHits")}
             value={latestHits}
             delta={hitsDelta}
             accentBg="bg-amber-50"
@@ -81,14 +82,14 @@ export function CommunityPage() {
           />
           <KpiCard
             icon={Flame}
-            label="Avg Engagement"
+            label={t("community.avgEngagement")}
             value={avgEngagement != null ? avgEngagement.toFixed(1) : null}
             accentBg="bg-amber-50"
             accentText="text-amber-600"
           />
           <KpiCard
             icon={Layers}
-            label="Platforms"
+            label={t("community.platforms")}
             value={platformCount}
             accentBg="bg-amber-50"
             accentText="text-amber-600"
@@ -185,6 +186,13 @@ export function CommunityPage() {
           )}
         </ChartCard>
       </div>
+
+        {/* Action Tips */}
+        {!discussions?.length ? (
+          <ActionTip title={t("actionTip.communityNone")} severity="warning" actionLabel={t("chat.title")} actionTo="/chat" />
+        ) : discussions.length >= 5 ? (
+          <ActionTip title={t("actionTip.communityActive")} severity="success" actionLabel={t("nav.approvals")} actionTo="/approvals" />
+        ) : null}
     </div>
   );
 }

@@ -40,6 +40,43 @@ async def api_v1_delete_project(project_id: int):
     return JSONResponse({"ok": True})
 
 
+@router.post("/projects/{project_id}/pause")
+async def api_v1_pause_project(project_id: int):
+    # 1. Pause scheduled jobs
+    jobs = await storage.list_scheduled_jobs()
+    from opencmo.scheduler import sync_job_record
+    for job in jobs:
+        if job["project_id"] == project_id and job["enabled"]:
+            await storage.update_scheduled_job(job["id"], enabled=False)
+            job["enabled"] = False
+            sync_job_record(job)
+            
+    # 2. Pause graph expansion
+    expansion = await storage.get_expansion(project_id)
+    if expansion and expansion["desired_state"] == "running":
+        await storage.update_expansion(project_id, desired_state="paused")
+        
+    return JSONResponse({"ok": True, "status": "paused"})
+
+
+@router.post("/projects/{project_id}/resume")
+async def api_v1_resume_project(project_id: int):
+    # 1. Resume scheduled jobs
+    jobs = await storage.list_scheduled_jobs()
+    from opencmo.scheduler import sync_job_record
+    for job in jobs:
+        if job["project_id"] == project_id and not job["enabled"]:
+            await storage.update_scheduled_job(job["id"], enabled=True)
+            job["enabled"] = True
+            sync_job_record(job)
+            
+    # 2. Resume graph expansion
+    from opencmo.web.routers.graph import api_v1_expansion_start
+    await api_v1_expansion_start(project_id)
+    
+    return JSONResponse({"ok": True, "status": "running"})
+
+
 @router.get("/overview")
 async def api_v1_overview():
     """Global health overview — aggregated metrics across all projects."""
@@ -91,12 +128,18 @@ async def api_v1_project_summary(project_id: int):
     project = await storage.get_project(project_id)
     if not project:
         return JSONResponse({"error": "Not found"}, status_code=404)
+        
+    jobs = await storage.list_scheduled_jobs()
+    project_jobs = [j for j in jobs if j["project_id"] == project_id]
+    is_paused = len(project_jobs) > 0 and all(not j["enabled"] for j in project_jobs)
+    
     latest = await storage.get_latest_scans(project_id)
     previous = await storage.get_previous_scans(project_id)
     monitoring = await storage.get_latest_monitoring_summary(project_id)
     latest_reports = await storage.get_latest_reports(project_id)
     return JSONResponse({
         "project": project,
+        "is_paused": is_paused,
         "latest": latest,
         "previous": previous,
         "latest_monitoring": monitoring,

@@ -18,15 +18,14 @@ export function GraphPage() {
   const { data: expansion } = useExpansionStatus(projectId);
   const isExpanding = expansion?.runtime_state === "running";
   const { data: graph, isLoading: loadingGraph } = useGraphData(projectId, isExpanding);
-  const { t, locale } = useI18n();
-  const isZh = locale === "zh";
+  const { t } = useI18n();
 
   if (isLoading) return <LoadingSpinner />;
   if (!summary) return <ErrorAlert message={t("common.projectNotFound")} />;
 
   return (
     <div>
-      <ProjectHeader project={summary.project} />
+      <ProjectHeader project={summary.project} isPaused={summary.is_paused} />
       <ProjectTabs projectId={projectId} />
       <div className="space-y-6">
         {/* Expansion controls */}
@@ -37,8 +36,8 @@ export function GraphPage() {
           <LoadingSpinner />
         ) : !graph || graph.nodes.length === 0 ? (
           <EmptyState
-            title={isZh ? "暂无图谱数据" : "No graph data yet"}
-            description={isZh ? "运行扫描后，图谱将展示品牌、关键词、社区讨论和竞品之间的关系。" : "After running scans, the graph will show relationships between your brand, keywords, discussions, and competitors."}
+            title={t("graph.noData")}
+            description={t("graph.noDataDesc")}
           />
         ) : (
           <KnowledgeGraph data={graph} />

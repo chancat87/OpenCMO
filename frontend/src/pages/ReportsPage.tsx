@@ -1,16 +1,19 @@
-import { useMemo, type ElementType, type ReactNode } from "react";
+import { useState, useMemo, type ElementType, type ReactNode } from "react";
 import { useParams } from "react-router";
 import ReactMarkdown from "react-markdown";
-import { Bot, FileText, History, Mail, RefreshCcw, User, Download } from "lucide-react";
+import { Bot, FileText, History, Info, Mail, RefreshCcw, User, Download } from "lucide-react";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { ProjectHeader } from "../components/project/ProjectHeader";
 import { ProjectTabs } from "../components/project/ProjectTabs";
+import { PipelineProgress } from "../components/project/PipelineProgress";
 import { useProjectSummary } from "../hooks/useProject";
-import { useLatestReports, useRegenerateReport, useReports, useSendReport } from "../hooks/useReports";
+import { useLatestReports, useReports, useSendReport } from "../hooks/useReports";
+import { apiJson } from "../api/client";
 import type { ReportKind, ReportRecord } from "../types";
 import { useI18n } from "../i18n";
 import { downloadAsPDF } from "../utils/pdf";
+import { useQueryClient } from "@tanstack/react-query";
 
 function formatStamp(value: string | null | undefined) {
   if (!value) return "N/A";
@@ -19,14 +22,20 @@ function formatStamp(value: string | null | undefined) {
 
 function ReportCard({
   label,
+  tooltip,
   icon,
   report,
   allowDownload,
+  noReportText,
+  lowSampleText,
 }: {
   label: string;
+  tooltip?: string;
   icon: ElementType;
   report: ReportRecord | null;
   allowDownload?: boolean;
+  noReportText: string;
+  lowSampleText: string;
 }) {
   const Icon = icon;
 
@@ -38,7 +47,17 @@ function ReportCard({
             <Icon className="h-4 w-4" />
           </div>
           <div>
-            <div className="text-sm font-semibold text-slate-900">{label}</div>
+            <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+              {label}
+              {tooltip && (
+                <span className="group relative">
+                  <Info className="h-3.5 w-3.5 text-slate-400 cursor-help" />
+                  <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-56 -translate-x-1/2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-normal leading-relaxed text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                    {tooltip}
+                  </span>
+                </span>
+              )}
+            </div>
             {report ? (
               <div className="text-xs text-slate-500">
                 v{report.version} · {formatStamp(report.created_at)}
@@ -49,7 +68,7 @@ function ReportCard({
         <div className="flex items-center gap-3">
           {report?.meta?.low_sample ? (
             <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-700">
-              Low Sample
+              {lowSampleText}
             </span>
           ) : null}
           {allowDownload && report ? (
@@ -77,14 +96,14 @@ function ReportCard({
         </div>
       ) : (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-          No report generated yet.
+          {noReportText}
         </div>
       )}
     </div>
   );
 }
 
-function ReportHistory({ title, reports }: { title: string; reports: ReportRecord[] }) {
+function ReportHistory({ title, reports, latestLabel }: { title: string; reports: ReportRecord[]; latestLabel: string }) {
   if (!reports.length) return null;
 
   return (
@@ -106,7 +125,7 @@ function ReportHistory({ title, reports }: { title: string; reports: ReportRecor
                 </span>
                 {report.is_latest ? (
                   <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                    Latest
+                    {latestLabel}
                   </span>
                 ) : null}
                 <span className="text-slate-500">{formatStamp(report.created_at)}</span>
@@ -131,6 +150,13 @@ function ReportSection({
   onRegenerate,
   regenerating,
   extraAction,
+  regenerateLabel,
+  humanLabel,
+  humanTip,
+  agentLabel,
+  agentTip,
+  noReportText,
+  lowSampleText,
 }: {
   title: string;
   description: string;
@@ -140,6 +166,13 @@ function ReportSection({
   onRegenerate: (kind: ReportKind) => void;
   regenerating: boolean;
   extraAction?: ReactNode;
+  regenerateLabel: string;
+  humanLabel: string;
+  humanTip: string;
+  agentLabel: string;
+  agentTip: string;
+  noReportText: string;
+  lowSampleText: string;
 }) {
   return (
     <section className="space-y-4">
@@ -156,14 +189,14 @@ function ReportSection({
             className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <RefreshCcw className={`h-4 w-4 ${regenerating ? "animate-spin" : ""}`} />
-            {kind === "strategic" ? "Regenerate Strategic" : "Regenerate Weekly"}
+            {regenerateLabel}
           </button>
           {extraAction}
         </div>
       </div>
       <div className="grid gap-4 xl:grid-cols-2">
-        <ReportCard label="Human Readout" icon={User} report={human} allowDownload />
-        <ReportCard label="Agent Brief" icon={Bot} report={agent} />
+        <ReportCard label={humanLabel} tooltip={humanTip} icon={User} report={human} allowDownload noReportText={noReportText} lowSampleText={lowSampleText} />
+        <ReportCard label={agentLabel} tooltip={agentTip} icon={Bot} report={agent} noReportText={noReportText} lowSampleText={lowSampleText} />
       </div>
     </section>
   );
@@ -172,12 +205,15 @@ function ReportSection({
 export function ReportsPage() {
   const { id } = useParams();
   const projectId = Number(id);
+  const qc = useQueryClient();
   const summaryQuery = useProjectSummary(projectId);
   const latestQuery = useLatestReports(projectId);
   const reportsQuery = useReports(projectId);
-  const regenerateMutation = useRegenerateReport(projectId);
   const sendMutation = useSendReport(projectId);
   const { t } = useI18n();
+
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [regeneratingKind, setRegeneratingKind] = useState<ReportKind | null>(null);
 
   const summary = summaryQuery.data;
   const latest = latestQuery.data ?? summary?.latest_reports;
@@ -200,11 +236,30 @@ export function ReportsPage() {
     (summaryQuery.error instanceof Error && summaryQuery.error.message) ||
     (latestQuery.error instanceof Error && latestQuery.error.message) ||
     (reportsQuery.error instanceof Error && reportsQuery.error.message) ||
-    (regenerateMutation.error instanceof Error && regenerateMutation.error.message) ||
     (sendMutation.error instanceof Error && sendMutation.error.message) ||
     "";
 
   if (!summary) return <ErrorAlert message={t("common.projectNotFound")} />;
+
+  const handleRegenerate = async (kind: ReportKind) => {
+    setRegeneratingKind(kind);
+    try {
+      const result = await apiJson<{ task_id: string }>(`/projects/${projectId}/reports/${kind}/regenerate`, {
+        method: "POST",
+      });
+      setActiveTaskId(result.task_id);
+    } catch {
+      setRegeneratingKind(null);
+    }
+  };
+
+  const handlePipelineComplete = () => {
+    setActiveTaskId(null);
+    setRegeneratingKind(null);
+    qc.invalidateQueries({ queryKey: ["reports", projectId] });
+    qc.invalidateQueries({ queryKey: ["latest-reports", projectId] });
+    qc.invalidateQueries({ queryKey: ["project-summary", projectId] });
+  };
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -218,11 +273,9 @@ export function ReportsPage() {
               <FileText className="h-4 w-4" />
             </div>
             <div>
-              <h1 className="text-2xl font-semibold text-slate-900">AI CMO Reports</h1>
+              <h1 className="text-2xl font-semibold text-slate-900">{t("reports.title")}</h1>
               <p className="mt-1 max-w-3xl text-sm leading-relaxed text-slate-500">
-                Strategic reports explain what the project is, where its moat and risks are, and how
-                the market context is shifting. Weekly reports look back across the latest monitored
-                data and summarize what changed, why it matters, and what agents should focus on next.
+                {t("reports.description")}
               </p>
               {error ? <div className="mt-4"><ErrorAlert message={error} /></div> : null}
               {sendMutation.data?.ok ? (
@@ -234,24 +287,48 @@ export function ReportsPage() {
           </div>
         </div>
 
+        {/* Pipeline Progress Visualization */}
+        {activeTaskId && (
+          <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+            <PipelineProgress
+              taskId={activeTaskId}
+              onComplete={handlePipelineComplete}
+            />
+          </div>
+        )}
+
         <ReportSection
-          title="Strategic Report"
-          description="Generated from project context, current strengths and weaknesses, tracked competitors, and the latest monitoring evidence. This is the board-level view of where the project stands."
+          title={t("reports.strategic")}
+          description={t("reports.strategicDesc")}
           kind="strategic"
           human={latest?.strategic?.human ?? null}
           agent={latest?.strategic?.agent ?? null}
-          onRegenerate={(kind) => regenerateMutation.mutate(kind)}
-          regenerating={regenerateMutation.isPending && regenerateMutation.variables === "strategic"}
+          onRegenerate={handleRegenerate}
+          regenerating={regeneratingKind === "strategic"}
+          regenerateLabel={t("reports.regenerateStrategic")}
+          humanLabel={t("reports.humanReadout")}
+          humanTip={t("reports.humanReadoutTip")}
+          agentLabel={t("reports.agentBrief")}
+          agentTip={t("reports.agentBriefTip")}
+          noReportText={t("reports.noReport")}
+          lowSampleText={t("reports.lowSample")}
         />
 
         <ReportSection
-          title="Weekly Report"
-          description="Generated from the latest seven-day monitoring window. It summarizes the biggest changes, the confidence level of the underlying samples, and the next week’s focus for downstream agents."
+          title={t("reports.weekly")}
+          description={t("reports.weeklyDesc")}
           kind="periodic"
           human={latest?.periodic?.human ?? null}
           agent={latest?.periodic?.agent ?? null}
-          onRegenerate={(kind) => regenerateMutation.mutate(kind)}
-          regenerating={regenerateMutation.isPending && regenerateMutation.variables === "periodic"}
+          onRegenerate={handleRegenerate}
+          regenerating={regeneratingKind === "periodic"}
+          regenerateLabel={t("reports.regenerateWeekly")}
+          humanLabel={t("reports.humanReadout")}
+          humanTip={t("reports.humanReadoutTip")}
+          agentLabel={t("reports.agentBrief")}
+          agentTip={t("reports.agentBriefTip")}
+          noReportText={t("reports.noReport")}
+          lowSampleText={t("reports.lowSample")}
           extraAction={
             <button
               type="button"
@@ -260,14 +337,14 @@ export function ReportsPage() {
               className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Mail className="h-4 w-4" />
-              {sendMutation.isPending ? "Sending..." : "Send Weekly Email"}
+              {sendMutation.isPending ? t("reports.sending") : t("reports.sendEmail")}
             </button>
           }
         />
 
         <div className="grid gap-6 xl:grid-cols-2">
-          <ReportHistory title="Strategic History" reports={strategicHistory} />
-          <ReportHistory title="Weekly History" reports={periodicHistory} />
+          <ReportHistory title={t("reports.strategicHistory")} reports={strategicHistory} latestLabel={t("reports.latest")} />
+          <ReportHistory title={t("reports.weeklyHistory")} reports={periodicHistory} latestLabel={t("reports.latest")} />
         </div>
       </div>
     </div>

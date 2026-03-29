@@ -1,16 +1,32 @@
 import { useState } from "react";
 import { Link } from "react-router";
+import { motion } from "framer-motion";
 import { useProjects, useDeleteProject } from "../hooks/useProjects";
-import { LoadingSpinner } from "../components/common/LoadingSpinner";
-import { EmptyState } from "../components/common/EmptyState";
 import { ErrorAlert } from "../components/common/ErrorAlert";
+import { AnimatedPage } from "../components/common/AnimatedPage";
+import { SkeletonCard } from "../components/common/SkeletonCard";
 import { ProjectCard } from "../components/dashboard/ProjectCard";
 import { GlobalOverview } from "../components/dashboard/GlobalOverview";
 import { InsightBanner } from "../components/dashboard/InsightBanner";
 import { SetupBanner } from "../components/dashboard/SetupBanner";
+import { WelcomeHero } from "../components/dashboard/WelcomeHero";
 import { SettingsDialog } from "../components/settings/SettingsDialog";
 import { useI18n } from "../i18n";
 import { Plus } from "lucide-react";
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.97 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.06,
+      duration: 0.45,
+      ease: [0.25, 0.46, 0.45, 0.94] as const,
+    },
+  }),
+};
 
 export function DashboardPage() {
   const { data: projects, isLoading, error } = useProjects();
@@ -24,15 +40,25 @@ export function DashboardPage() {
         ? "Failed to delete project."
         : null;
 
-  if (isLoading) return <LoadingSpinner />;
+  if (isLoading) {
+    return (
+      <AnimatedPage>
+        <div className="mb-10">
+          <div className="h-8 w-48 rounded-lg bg-slate-100 animate-pulse mb-2" />
+          <div className="h-4 w-72 rounded bg-slate-50 animate-pulse" />
+        </div>
+        <SkeletonCard count={3} />
+      </AnimatedPage>
+    );
+  }
   if (error) return <ErrorAlert message={error.message} />;
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
+    <AnimatedPage>
       <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">{t("dashboard.title")}</h1>
-          <p className="text-[15px] text-slate-500 mt-1.5">Overview of your AI marketing campaigns</p>
+          <p className="text-[15px] text-slate-500 mt-1.5">{t("dashboard.subtitle")}</p>
         </div>
         <Link
           to="/monitors"
@@ -47,32 +73,34 @@ export function DashboardPage() {
       <InsightBanner />
       <GlobalOverview />
       {!projects?.length ? (
-        <EmptyState
-          title={t("dashboard.noProjects")}
-          description={t("dashboard.noProjectsDesc")}
-          action={
-            <Link
-              to="/monitors"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-6 py-3 text-sm font-medium text-white transition-all duration-200 hover:bg-slate-800 hover:shadow-md active:scale-95 mt-4"
-            >
-              <Plus size={16} />
-              {t("dashboard.createMonitor")}
-            </Link>
-          }
-        />
+        <WelcomeHero />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((p) => (
-            <ProjectCard
+          {projects.map((p, i) => (
+            <motion.div
               key={p.id}
-              project={p}
-              onDelete={(id) => deleteProject.mutate(id)}
-            />
+              custom={i}
+              variants={cardVariants}
+              initial="hidden"
+              animate="visible"
+              whileHover={{
+                y: -4,
+                transition: { duration: 0.2, ease: "easeOut" },
+              }}
+            >
+              <ProjectCard
+                project={p}
+                onDelete={(id) => {
+                  if (window.confirm(t("dashboard.deleteConfirm"))) {
+                    deleteProject.mutate(id);
+                  }
+                }}
+              />
+            </motion.div>
           ))}
         </div>
       )}
       {showSettings && <SettingsDialog onClose={() => setShowSettings(false)} />}
-    </div>
+    </AnimatedPage>
   );
 }
-

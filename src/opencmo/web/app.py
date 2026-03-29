@@ -151,6 +151,10 @@ from opencmo.web.routers.tasks import router as tasks_router
 from opencmo.web.routers.chat import router as chat_router
 from opencmo.web.routers.settings import router as settings_router
 from opencmo.web.routers.report import router as report_router
+from opencmo.web.routers.events import router as events_router
+from opencmo.web.routers.brand_kit import router as brand_kit_router
+from opencmo.web.routers.performance import router as performance_router
+from opencmo.web.routers.quick_actions import router as quick_actions_router
 
 app.include_router(legacy_router)
 app.include_router(projects_router)
@@ -164,6 +168,10 @@ app.include_router(tasks_router)
 app.include_router(chat_router)
 app.include_router(settings_router)
 app.include_router(report_router)
+app.include_router(events_router)
+app.include_router(brand_kit_router)
+app.include_router(performance_router)
+app.include_router(quick_actions_router)
 
 
 # ---------------------------------------------------------------------------

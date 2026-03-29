@@ -100,20 +100,29 @@ MAX_AUTOPILOT_PER_DAY = 3
 # ---------------------------------------------------------------------------
 
 
-async def _generate_content_with_agent(agent_name: str, prompt: str) -> str | None:
+async def _generate_content_with_agent(agent_name: str, prompt: str, project_id: int | None = None) -> str | None:
     """Call an expert agent to generate content. Returns None on failure."""
     try:
         from opencmo.config import get_model
 
         from agents import Agent, Runner
 
+        # Build brand-aware instructions
+        instructions = (
+            f"You are {agent_name}, an expert content creator. "
+            "Generate high-quality, publication-ready content based on the brief. "
+            "Return ONLY the content, no meta-commentary."
+        )
+
+        if project_id:
+            from opencmo.storage.brand_kit import build_brand_kit_prompt
+            brand_prompt = await build_brand_kit_prompt(project_id)
+            if brand_prompt:
+                instructions += f"\n\n{brand_prompt}"
+
         agent = Agent(
             name=agent_name,
-            instructions=(
-                f"You are {agent_name}, an expert content creator. "
-                "Generate high-quality, publication-ready content based on the brief. "
-                "Return ONLY the content, no meta-commentary."
-            ),
+            instructions=instructions,
             model=get_model(agent_name),
         )
         result = await Runner.run(agent, prompt)
@@ -193,7 +202,7 @@ async def execute_autopilot(project_id: int) -> list[dict]:
             )
 
             # Generate content
-            content = await _generate_content_with_agent(action["agent"], prompt)
+            content = await _generate_content_with_agent(action["agent"], prompt, project_id=project_id)
             if not content:
                 await storage.update_insight_execution(insight["id"], "failed")
                 continue

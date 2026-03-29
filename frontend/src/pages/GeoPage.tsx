@@ -10,6 +10,7 @@ import { KpiCard } from "../components/common/KpiCard";
 import { ChartCard } from "../components/common/ChartCard";
 import { GeoScoreChart } from "../components/charts/GeoScoreChart";
 import { useI18n } from "../i18n";
+import { ActionTip } from "../components/common/ActionTip";
 import { Globe, Eye, MapPin, Heart } from "lucide-react";
 
 function getDelta(arr: (number | null)[] | undefined): number | null {
@@ -61,7 +62,7 @@ export function GeoPage() {
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <KpiCard
               icon={Globe}
-              label="GEO Score"
+              label={t("geo.geoScore")}
               value={latest(geoScore) != null ? `${Math.round(latest(geoScore)!)}/100` : null}
               delta={getDelta(geoScore)}
               accentBg="bg-emerald-50"
@@ -69,7 +70,7 @@ export function GeoPage() {
             />
             <KpiCard
               icon={Eye}
-              label="Visibility"
+              label={t("geo.visibility")}
               value={latest(visibility) != null ? `${Math.round(latest(visibility)!)}/100` : null}
               delta={getDelta(visibility)}
               accentBg="bg-emerald-50"
@@ -77,7 +78,7 @@ export function GeoPage() {
             />
             <KpiCard
               icon={MapPin}
-              label="Position"
+              label={t("geo.position")}
               value={latest(position) != null ? `${Math.round(latest(position)!)}/100` : null}
               delta={getDelta(position)}
               accentBg="bg-emerald-50"
@@ -85,7 +86,7 @@ export function GeoPage() {
             />
             <KpiCard
               icon={Heart}
-              label="Sentiment"
+              label={t("geo.sentiment")}
               value={latest(sentiment) != null ? `${Math.round(latest(sentiment)!)}/100` : null}
               delta={getDelta(sentiment)}
               accentBg="bg-emerald-50"
@@ -99,7 +100,7 @@ export function GeoPage() {
           </ChartCard>
 
           {/* Latest Snapshot — progress bars */}
-          <ChartCard title="Latest Snapshot" accentBorder="border-l-emerald-500">
+          <ChartCard title={t("geo.latestSnapshot")} accentBorder="border-l-emerald-500">
             <div className="space-y-4">
               {SNAPSHOT_SERIES.map((s) => {
                 const arr = chart[s.key] as (number | null)[] | undefined;
@@ -123,6 +124,15 @@ export function GeoPage() {
               })}
             </div>
           </ChartCard>
+
+          {/* Action Tips */}
+          {(() => {
+            const score = latest(geoScore);
+            if (score == null) return null;
+            if (score >= 70) return <ActionTip title={t("actionTip.geoExcellent")} severity="success" />;
+            if (score >= 30) return <ActionTip title={t("actionTip.geoWarning")} severity="warning" />;
+            return <ActionTip title={t("actionTip.geoPoor")} severity="danger" />;
+          })()}
         </div>
       )}
     </div>

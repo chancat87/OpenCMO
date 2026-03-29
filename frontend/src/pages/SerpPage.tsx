@@ -12,6 +12,7 @@ import { AddKeywordForm } from "../components/keywords/AddKeywordForm";
 import { SerpRankingChart } from "../components/charts/SerpRankingChart";
 import { SerpDistributionBar } from "../components/charts/SerpDistributionBar";
 import { useI18n } from "../i18n";
+import { ActionTip } from "../components/common/ActionTip";
 import { Hash, Target, Trophy, TrendingUp, Trash2 } from "lucide-react";
 import type { TrackedKeyword, SerpSnapshot } from "../types";
 
@@ -123,7 +124,7 @@ export function SerpPage() {
           />
           <KpiCard
             icon={Target}
-            label="Avg Position"
+            label={t("serp.avgPosition")}
             value={avgPos != null ? avgPos.toFixed(1) : null}
             status={avgPos != null ? (avgPos <= 3 ? "good" : avgPos <= 10 ? "warning" : "poor") : undefined}
             accentBg="bg-indigo-50"
@@ -131,14 +132,14 @@ export function SerpPage() {
           />
           <KpiCard
             icon={Trophy}
-            label="In Top 3"
+            label={t("serp.inTop3")}
             value={top3}
             accentBg="bg-indigo-50"
             accentText="text-indigo-600"
           />
           <KpiCard
             icon={TrendingUp}
-            label="In Top 10"
+            label={t("serp.inTop10")}
             value={top10}
             accentBg="bg-indigo-50"
             accentText="text-indigo-600"
@@ -147,7 +148,7 @@ export function SerpPage() {
 
         {/* Position Distribution */}
         {ranked.length > 0 && (
-          <ChartCard title="Position Distribution" accentBorder="border-l-indigo-500">
+          <ChartCard title={t("serp.positionDistribution")} accentBorder="border-l-indigo-500">
             <SerpDistributionBar data={serpLatest ?? []} />
           </ChartCard>
         )}
@@ -170,6 +171,15 @@ export function SerpPage() {
           <ChartCard title={t("serp.rankingHistory")} subtitle="Top 5 keywords shown" accentBorder="border-l-indigo-500">
             <SerpRankingChart data={serpChart} />
           </ChartCard>
+        ) : null}
+
+        {/* Action Tips */}
+        {!keywords?.length ? (
+          <ActionTip title={t("actionTip.serpNoKeywords")} severity="warning" />
+        ) : avgPos != null && avgPos > 20 ? (
+          <ActionTip title={t("actionTip.serpPoor")} severity="danger" />
+        ) : top3 > 0 ? (
+          <ActionTip title={t("actionTip.serpGood", { count: top3 })} severity="success" />
         ) : null}
       </div>
     </div>

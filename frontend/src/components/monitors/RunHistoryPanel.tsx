@@ -18,7 +18,7 @@ const STATUS_LABELS: Record<MonitorRun["status"], TranslationKey> = {
   failed: "runHistory.status.failed",
 };
 
-function formatTimeAgo(value: string, locale: "en" | "zh") {
+function formatTimeAgo(value: string, locale: string) {
   const timestamp = new Date(value).getTime();
   if (Number.isNaN(timestamp)) {
     return "";
@@ -49,7 +49,7 @@ function formatTimeAgo(value: string, locale: "en" | "zh") {
   return rtf.format(diffYears, "year");
 }
 
-function formatAbsoluteTime(value: string, locale: "en" | "zh") {
+function formatAbsoluteTime(value: string, locale: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;

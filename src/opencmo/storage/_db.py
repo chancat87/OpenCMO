@@ -351,6 +351,41 @@ ON reports(project_id, kind, audience, version);
 
 CREATE INDEX IF NOT EXISTS idx_reports_project_latest
 ON reports(project_id, kind, audience, is_latest, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS brand_kits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL UNIQUE REFERENCES projects(id),
+    tone_of_voice TEXT NOT NULL DEFAULT '',
+    target_audience TEXT NOT NULL DEFAULT '',
+    core_values TEXT NOT NULL DEFAULT '',
+    forbidden_words TEXT NOT NULL DEFAULT '[]',
+    best_examples TEXT NOT NULL DEFAULT '',
+    custom_instructions TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS manual_tracking (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id),
+    platform TEXT NOT NULL DEFAULT 'other',
+    url TEXT NOT NULL,
+    title TEXT NOT NULL DEFAULT '',
+    notes TEXT NOT NULL DEFAULT '',
+    metrics_json TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS report_tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id TEXT NOT NULL UNIQUE,
+    project_id INTEGER NOT NULL REFERENCES projects(id),
+    kind TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    progress_json TEXT NOT NULL DEFAULT '[]',
+    error TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at TEXT
+);
 """
 
 

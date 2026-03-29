@@ -752,51 +752,77 @@ async def run_deep_report_pipeline(
     previous_exists: bool,
     *,
     kind: str = "strategic",
+    on_progress: Any = None,
 ) -> str:
     """Run the full 6-phase deep report pipeline.
+
+    Args:
+        on_progress: Optional callable(dict) for sending progress events.
 
     Returns the final Markdown report content.
     Raises on unrecoverable errors (caller should fallback).
     """
+    def _emit(phase: str, status: str, summary: str, detail: str = ""):
+        if on_progress:
+            on_progress({
+                "phase": phase,
+                "status": status,
+                "summary": summary,
+                "detail": detail or summary,
+            })
+
     logger.info(
         "=== Deep Report Pipeline START (%s) for %s ===",
         kind, facts["project"]["brand_name"],
     )
 
     # ── Phase 1: Reflection (parallel per-dimension) ──
+    _emit("reflection", "running", "Phase 1: Running data quality auditors...")
     reflection = await _phase_reflect(facts, meta)
+    _emit("reflection", "completed", f"Phase 1 complete: {len(reflection.get('dimensions', {}))} dimensions audited")
 
     # ── Phase 2: Distill insights (parallel per-dimension) ──
+    _emit("distillation", "running", "Phase 2: Distilling strategic insights...")
     distilled = await _phase_distill(facts, meta, reflection)
+    insight_count = len(distilled.get("insights", []))
+    _emit("distillation", "completed", f"Phase 2 complete: {insight_count} insights extracted")
 
     # ── Phase 3: Plan outline ──
+    _emit("planning", "running", "Phase 3: Planning report structure...")
     outline = await _phase_plan_outline(facts, distilled, reflection)
+    sections = outline.get("sections", [])
+    _emit("planning", "completed", f"Phase 3 complete: {len(sections)} sections planned")
 
     # Build insight lookup map
     insights_list = distilled.get("insights", [])
     insights_map: dict[str, dict] = {ins["id"]: ins for ins in insights_list if "id" in ins}
 
     # Separate main sections from final sections (intro/conclusion)
-    sections = outline.get("sections", [])
     main_sections = [s for s in sections if not s.get("is_final_section", False)]
 
     if not main_sections:
         raise RuntimeError("Outline planner returned no main sections")
 
     # ── Phase 4 + 5: Write & Grade (with retry loop) ──
+    _emit("writing", "running", f"Phase 4-5: Writing {len(main_sections)} sections in parallel...")
+
     async def _write_and_grade(section: dict) -> tuple[dict, str]:
         """Write a section, grade it, revise if needed."""
+        section_title = section.get("title", section.get("id", "?"))
+        _emit("writing", "running", f"Writing section: {section_title}")
         content = await _phase_write_section(outline, section, insights_map)
 
         for attempt in range(_MAX_GRADER_RETRIES + 1):
             grade = await _phase_grade_section(section, content)
             if grade.get("pass", False):
+                _emit("grading", "completed", f"Section passed: {section_title}")
                 return section, content
             if attempt < _MAX_GRADER_RETRIES:
                 logger.info(
                     "[Pipeline] Section %s failed grading (attempt %d/%d), revising...",
                     section.get("id", "?"), attempt + 1, _MAX_GRADER_RETRIES,
                 )
+                _emit("grading", "running", f"Revising section: {section_title} (attempt {attempt + 1})")
                 content = await _phase_revise_section(section, content, grade)
             else:
                 logger.warning(
@@ -818,17 +844,23 @@ async def run_deep_report_pipeline(
     for i, result in enumerate(section_results):
         if isinstance(result, Exception):
             logger.error("[Pipeline] Section %d failed: %s — skipping", i, result)
+            _emit("writing", "failed", f"Section {i} failed: {result}")
             continue
         completed_sections.append(result)
 
     if not completed_sections:
         raise RuntimeError("All section writers failed")
 
+    _emit("writing", "completed", f"Phase 4-5 complete: {len(completed_sections)} sections written and graded")
+
     # ── Phase 6: Synthesize (parallel summarizers + parallel writers) ──
+    _emit("synthesis", "running", "Phase 6: Synthesizing final report...")
     final_report = await _phase_synthesize(outline, completed_sections, distilled, facts)
+    _emit("synthesis", "completed", f"Phase 6 complete: {len(final_report)} chars")
 
     logger.info(
         "=== Deep Report Pipeline COMPLETE — %d chars, %d sections ===",
         len(final_report), len(completed_sections),
     )
     return final_report
+

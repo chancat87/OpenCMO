@@ -1,6 +1,7 @@
 import { Bot, Check, Clock3, ExternalLink, MessageSquare, Send, X } from "lucide-react";
 import type { ApprovalRecord } from "../../types";
 import { EmptyState } from "../common/EmptyState";
+import { useI18n } from "../../i18n";
 
 function getPrimaryCopy(approval: ApprovalRecord): string {
   const preview = approval.preview;
@@ -62,11 +63,13 @@ export function ApprovalCard({
   onApprove: () => void;
   onReject: () => void;
 }) {
+  const { t } = useI18n();
+
   if (!approval) {
     return (
       <EmptyState
-        title="Approval queue is clear"
-        description="Queued previews will appear here before anything gets published."
+        title={t("approvals.empty")}
+        description={t("approvals.emptyDesc")}
       />
     );
   }
@@ -105,7 +108,7 @@ export function ApprovalCard({
             )}
             <div className="flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700">
               <Clock3 className="h-4 w-4" />
-              {pendingCount} pending
+              {pendingCount} {t("approvals.pending")}
             </div>
           </div>
         </div>
@@ -114,7 +117,7 @@ export function ApprovalCard({
           <section className="rounded-[1.5rem] border border-slate-200/70 bg-white/80 p-6 shadow-inner">
             <div className="mb-4 flex items-center justify-between gap-3">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
-                Generated Preview
+                {t("approvals.preview")}
               </p>
               <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
                 {getMetaLabel(approval)}
@@ -129,7 +132,7 @@ export function ApprovalCard({
           <aside className="space-y-4 rounded-[1.5rem] border border-slate-200/70 bg-slate-950/[0.03] p-6">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
-                Channel
+                {t("approvals.channel")}
               </p>
               <p className="mt-2 text-sm font-semibold capitalize text-slate-900">
                 {approval.channel.replace(/_/g, " ")}
@@ -139,7 +142,7 @@ export function ApprovalCard({
             {approval.target_label && (
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
-                  Target
+                  {t("approvals.target")}
                 </p>
                 <p className="mt-2 text-sm font-medium text-slate-800">
                   {approval.target_label}
@@ -150,7 +153,7 @@ export function ApprovalCard({
             {approval.target_url && (
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
-                  Target URL
+                  {t("approvals.targetUrl")}
                 </p>
                 <a
                   href={approval.target_url}
@@ -167,7 +170,7 @@ export function ApprovalCard({
             {approval.source_insight_id && whyThis && (
               <div className="space-y-2 rounded-xl border border-violet-100 bg-violet-50/50 p-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-violet-500">
-                  AI Reasoning
+                  {t("approvals.aiReasoning")}
                 </p>
                 <p className="text-xs text-violet-700">
                   <span className="font-semibold">Why this:</span>{" "}
@@ -190,7 +193,7 @@ export function ApprovalCard({
 
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
-                Created
+                {t("approvals.created")}
               </p>
               <p className="mt-2 text-sm text-slate-700">
                 {new Date(approval.created_at).toLocaleString()}
@@ -206,7 +209,7 @@ export function ApprovalCard({
             className="group inline-flex h-14 items-center justify-center gap-2 rounded-full border border-rose-200 bg-white px-6 text-sm font-semibold text-rose-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <X className="h-4 w-4" />
-            Reject
+            {t("approvals.reject")}
           </button>
           <button
             onClick={onApprove}
@@ -214,7 +217,7 @@ export function ApprovalCard({
             className="group inline-flex h-14 items-center justify-center gap-2 rounded-full bg-emerald-500 px-6 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(16,185,129,0.32)] transition hover:-translate-y-0.5 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Check className="h-4 w-4" />
-            Approve & publish
+            {t("approvals.approvePublish")}
             <Send className="h-4 w-4" />
           </button>
         </div>

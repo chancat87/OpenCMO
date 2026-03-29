@@ -143,6 +143,11 @@ async def build_project_context(project_id: int, depth: str = "brief") -> str:
         if frontier:
             parts.append(f"Frontier: {len(frontier)} unexplored nodes")
 
+    # Append Brand Kit guidelines if available
+    brand_prompt = await storage.build_brand_kit_prompt(project_id)
+    if brand_prompt:
+        parts.append(f"\n{brand_prompt}")
+
     return "\n".join(parts)
 
 

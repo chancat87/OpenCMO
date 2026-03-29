@@ -11,6 +11,7 @@ import { ChartCard } from "../components/common/ChartCard";
 import { SeoPerformanceChart } from "../components/charts/SeoPerformanceChart";
 import { CwvMiniChart } from "../components/charts/CwvMiniChart";
 import { useI18n } from "../i18n";
+import { ActionTip } from "../components/common/ActionTip";
 import { Gauge, Timer, Move, Zap } from "lucide-react";
 
 function getCwvStatus(value: number | null | undefined, good: number, poor: number): "good" | "warning" | "poor" {
@@ -131,6 +132,21 @@ export function SeoPage() {
               />
             </ChartCard>
           </div>
+
+          {/* Action Tips */}
+          {latestPerf != null && latestPerf >= 0.9 ? (
+            <ActionTip title={t("actionTip.seoExcellent")} severity="success" />
+          ) : latestPerf != null && latestPerf < 0.5 ? (
+            <ActionTip title={t("actionTip.seoPoor")} severity="danger" />
+          ) : latestPerf != null ? (
+            <ActionTip title={t("actionTip.seoWarning")} severity="warning" />
+          ) : null}
+          {latestLcp != null && latestLcp > 4 ? (
+            <ActionTip title={t("actionTip.lcpSlow")} severity="warning" />
+          ) : null}
+          {latestCls != null && latestCls > 0.25 ? (
+            <ActionTip title={t("actionTip.clsHigh")} severity="warning" />
+          ) : null}
         </div>
       )}
     </div>

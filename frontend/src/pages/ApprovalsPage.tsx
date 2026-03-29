@@ -6,12 +6,14 @@ import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { useApproveApproval, useApprovals, useRejectApproval } from "../hooks/useApprovals";
 import { ApiError } from "../api/client";
 import { useNavigate } from "react-router";
+import { useI18n } from "../i18n";
 
 export function ApprovalsPage() {
   const approvalsQuery = useApprovals("pending", 20);
   const approveMutation = useApproveApproval();
   const rejectMutation = useRejectApproval();
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   const [actionError, setActionError] = useState<{
     message: string;
@@ -27,13 +29,13 @@ export function ApprovalsPage() {
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out h-full flex flex-col">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Content Approvals</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{t("approvals.title")}</h1>
           <p className="text-sm text-zinc-500 mt-1">
-            Review exact publish payloads before anything leaves OpenCMO.
+            {t("approvals.subtitle")}
           </p>
         </div>
         <div className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 shadow-sm">
-          {pendingCount} pending
+          {pendingCount} {t("approvals.pending")}
         </div>
       </div>
 
@@ -45,19 +47,17 @@ export function ApprovalsPage() {
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
           <div className="flex-1">
             <p className="text-sm font-semibold text-amber-900">
-              Auto-Publish is not enabled
+              {t("approvals.autoPublishDisabled")}
             </p>
             <p className="mt-1 text-sm text-amber-700">
-              To publish content to external platforms (Reddit, Twitter, etc.), you need to enable
-              <code className="mx-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-mono font-bold">OPENCMO_AUTO_PUBLISH</code>
-              in Settings.
+              {t("approvals.autoPublishHint")}
             </p>
             <button
               onClick={() => navigate("/?tab=settings")}
               className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-800 shadow-sm transition hover:bg-amber-50"
             >
               <Settings className="h-3.5 w-3.5" />
-              Go to Settings
+              {t("approvals.goToSettings")}
               <ExternalLink className="h-3 w-3" />
             </button>
           </div>

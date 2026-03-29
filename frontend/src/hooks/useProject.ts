@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getProject, getProjectSummary, getNextActions } from "../api/projects";
+import { getProject, getProjectSummary, getNextActions, pauseProject, resumeProject } from "../api/projects";
 import type { NextAction } from "../api/projects";
 import type { ProjectSummary } from "../types";
 
@@ -22,5 +22,18 @@ export function useNextActions(id: number) {
     queryKey: ["next-actions", id],
     queryFn: () => getNextActions(id),
     refetchInterval: 60_000,
+  });
+}
+
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+export function useSetProjectPause() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, pause }: { id: number; pause: boolean }) =>
+      pause ? pauseProject(id) : resumeProject(id),
+    onSuccess: (_, { id }) => {
+      qc.invalidateQueries({ queryKey: ["project-summary", id] });
+    },
   });
 }

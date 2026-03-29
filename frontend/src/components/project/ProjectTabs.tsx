@@ -5,6 +5,8 @@ import type { TranslationKey } from "../../i18n";
 const TABS: { path: string; labelKey: TranslationKey }[] = [
   { path: "", labelKey: "project.overview" },
   { path: "/reports", labelKey: "project.reports" },
+  { path: "/brand-kit", labelKey: "project.brandKit" },
+  { path: "/performance", labelKey: "project.performance" },
   { path: "/seo", labelKey: "project.seo" },
   { path: "/geo", labelKey: "project.geo" },
   { path: "/serp", labelKey: "project.serp" },
@@ -18,7 +20,7 @@ export function ProjectTabs({ projectId }: { projectId: number }) {
   const base = `/projects/${projectId}`;
 
   return (
-    <div className="mb-8 inline-flex items-center p-1 bg-slate-100/80 rounded-xl">
+    <div className="mb-8 inline-flex items-center p-1 bg-slate-100/80 rounded-xl overflow-x-auto scrollbar-none">
       {TABS.map(({ path, labelKey }) => {
         const to = `${base}${path}`;
         const active = pathname === to;
@@ -26,7 +28,7 @@ export function ProjectTabs({ projectId }: { projectId: number }) {
           <Link
             key={path}
             to={to}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
+            className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
               active
                 ? "bg-white text-slate-900 shadow-sm"
                 : "text-slate-500 hover:text-slate-900 hover:bg-black/[0.02]"
