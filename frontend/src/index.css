@@ -53,3 +53,110 @@
     @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-600 to-violet-600;
   }
 }
+
+/* Premium Report Typography System */
+@layer components {
+  .premium-report {
+    font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', -apple-system, sans-serif;
+    @apply text-slate-700 text-[15px] leading-relaxed max-w-none;
+  }
+  
+  .premium-report h1 {
+    @apply text-2xl font-extrabold text-slate-900 mt-10 mb-6 pb-4 border-b-[3px] border-brand-500 tracking-tight leading-tight;
+  }
+  .premium-report h1:first-child {
+    @apply mt-0;
+  }
+  
+  .premium-report h2 {
+    @apply text-xl font-bold text-slate-800 mt-10 mb-5 pb-2 border-b-2 border-slate-100 flex items-center leading-snug;
+  }
+  .premium-report h2::before {
+    content: "";
+    @apply inline-block w-1.5 h-6 bg-brand-500 rounded-full mr-2.5;
+  }
+  
+  .premium-report h3 {
+    @apply text-lg font-bold text-slate-800 mt-8 mb-4 border-l-4 border-brand-300 pl-3 leading-snug bg-slate-50 py-1.5 pr-2 w-fit rounded-r-md;
+  }
+
+  .premium-report h4 {
+    @apply text-base font-bold text-slate-700 mt-6 mb-3;
+  }
+  
+  .premium-report p {
+    @apply my-5 leading-[1.8] text-justify text-[15px];
+  }
+  
+  .premium-report ul, .premium-report ol {
+    @apply my-6 pl-5 space-y-2;
+  }
+  
+  .premium-report ul {
+    list-style-type: none;
+  }
+  
+  .premium-report ul > li {
+    @apply relative pl-2;
+  }
+  
+  .premium-report ul > li::before {
+    content: "•";
+    @apply absolute -left-[14px] text-brand-500 font-black scale-150 top-[1px];
+  }
+
+  .premium-report ol {
+    @apply list-decimal pl-6 marker:text-brand-500 marker:font-bold;
+  }
+  
+  .premium-report blockquote {
+    @apply my-8 pl-5 pr-4 py-3.5 bg-blue-50/60 border-l-[5px] border-brand-500 rounded-r-lg italic text-slate-700 shadow-[0_2px_10px_rgb(0,0,0,0.02)] border-y border-r border-slate-100/50;
+  }
+  .premium-report blockquote p {
+    @apply my-2;
+  }
+  
+  .premium-report code {
+    @apply font-mono text-[13.5px] px-1.5 py-0.5 bg-indigo-50 text-brand-600 border border-brand-100 rounded-md font-medium break-words;
+  }
+  
+  .premium-report pre {
+    @apply bg-[#0f172a] text-slate-200 p-5 rounded-xl overflow-x-auto my-6 shadow-md border border-slate-700/50 leading-relaxed;
+  }
+  
+  .premium-report pre code {
+    @apply bg-transparent text-[#e2e8f0] border-none px-0 py-0 text-[13.5px] font-normal;
+  }
+  
+  .premium-report table {
+    @apply w-full text-left border-collapse my-8 rounded-xl overflow-hidden shadow-sm border border-slate-200;
+  }
+  
+  .premium-report thead {
+    @apply bg-slate-50 border-b-2 border-slate-200;
+  }
+  
+  .premium-report th {
+    @apply py-3.5 px-4 font-bold text-slate-700 text-sm tracking-wide;
+  }
+  
+  .premium-report td {
+    @apply py-3 px-4 border-b border-slate-100 text-slate-600 text-[14.5px] bg-white;
+  }
+
+  .premium-report tr:last-child td {
+    @apply border-0;
+  }
+
+  .premium-report strong {
+    @apply font-bold text-slate-900 bg-slate-100/50 px-1 rounded-sm;
+  }
+
+  .premium-report a {
+    @apply text-brand-600 font-medium underline decoration-brand-200 decoration-2 underline-offset-2 hover:decoration-brand-500 transition-colors;
+  }
+
+  .premium-report hr {
+    @apply my-10 border-t-2 border-slate-100 w-2/3 mx-auto rounded-full;
+  }
+}

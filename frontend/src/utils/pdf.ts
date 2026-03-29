@@ -27,7 +27,7 @@ function buildPrintCSS(): string {
   return `
     @page {
       size: A4;
-      margin: 22mm 20mm 22mm 20mm;
+      margin: 24mm 22mm;
     }
 
     * {
@@ -37,10 +37,10 @@ function buildPrintCSS(): string {
     }
 
     body {
-      font-family: 'PingFang SC', 'Helvetica Neue', Helvetica, Arial, 'Microsoft YaHei', sans-serif;
+      font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', -apple-system, sans-serif;
       font-size: 14.5px;
-      line-height: 1.85;
-      color: #1e293b;
+      line-height: 1.8;
+      color: #334155;
       background: #fff;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
@@ -52,171 +52,219 @@ function buildPrintCSS(): string {
       align-items: center;
       gap: 16px;
       border-bottom: 3px solid #6366f1;
-      padding-bottom: 18px;
-      margin-bottom: 32px;
+      padding-bottom: 20px;
+      margin-bottom: 35px;
     }
     .report-header img {
-      width: 44px;
-      height: 44px;
-      border-radius: 10px;
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
       object-fit: contain;
     }
     .report-header-title {
-      font-size: 22px;
-      font-weight: 800;
-      color: #0f172a;
-      letter-spacing: -0.3px;
-      line-height: 1.3;
-    }
-    .report-header-sub {
-      font-size: 12px;
-      color: #94a3b8;
-      margin-top: 3px;
-    }
-
-    /* ---- Content ---- */
-    .report-content h1 {
       font-size: 24px;
       font-weight: 800;
       color: #0f172a;
-      margin: 34px 0 14px;
-      padding-bottom: 8px;
-      border-bottom: 2.5px solid #6366f1;
+      letter-spacing: -0.4px;
+      line-height: 1.3;
+    }
+    .report-header-sub {
+      font-size: 12.5px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+
+    /* ---- Content (matches .premium-report) ---- */
+    .premium-report h1 {
+      font-size: 24px;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 36px 0 16px;
+      padding-bottom: 12px;
+      border-bottom: 3px solid #6366f1;
       letter-spacing: -0.3px;
       line-height: 1.35;
       page-break-after: avoid;
       break-after: avoid;
     }
-    .report-content h1:first-child {
-      margin-top: 0;
-    }
+    .premium-report h1:first-child { margin-top: 0; }
 
-    .report-content h2 {
+    .premium-report h2 {
       font-size: 19px;
       font-weight: 700;
       color: #1e293b;
-      margin: 28px 0 10px;
+      margin: 30px 0 12px;
       padding-bottom: 6px;
-      border-bottom: 1.5px solid #e2e8f0;
+      border-bottom: 2px solid #f1f5f9;
       line-height: 1.35;
       page-break-after: avoid;
       break-after: avoid;
+      display: flex;
+      align-items: center;
+    }
+    .premium-report h2::before {
+      content: "";
+      display: inline-block;
+      width: 6px;
+      height: 22px;
+      background: #6366f1;
+      border-radius: 4px;
+      margin-right: 10px;
     }
 
-    .report-content h3 {
+    .premium-report h3 {
       font-size: 16px;
       font-weight: 700;
-      color: #334155;
-      margin: 22px 0 8px;
+      color: #1e293b;
+      margin: 24px 0 10px;
+      padding-left: 12px;
+      border-left: 4px solid #a5b4fc;
       line-height: 1.4;
+      background: #f8fafc;
+      padding-top: 6px;
+      padding-bottom: 6px;
+      padding-right: 10px;
+      border-radius: 0 4px 4px 0;
+      width: max-content;
       page-break-after: avoid;
       break-after: avoid;
     }
 
-    .report-content h4 {
+    .premium-report h4 {
       font-size: 14.5px;
       font-weight: 700;
-      color: #475569;
-      margin: 18px 0 6px;
+      color: #334155;
+      margin: 20px 0 8px;
       page-break-after: avoid;
       break-after: avoid;
     }
 
-    .report-content p {
-      margin: 0 0 13px;
+    .premium-report p {
+      margin: 0 0 18px;
       text-align: justify;
       orphans: 3;
       widows: 3;
     }
 
-    .report-content ul, .report-content ol {
-      margin: 6px 0 14px;
-      padding-left: 22px;
+    .premium-report ul { list-style: none; margin: 12px 0 20px; padding-left: 20px; }
+    .premium-report ol { list-style: decimal; margin: 12px 0 20px; padding-left: 28px; }
+    
+    .premium-report ul > li { position: relative; margin-bottom: 8px; line-height: 1.7; }
+    .premium-report ul > li::before {
+      content: "•";
+      position: absolute;
+      left: -16px;
+      color: #6366f1;
+      font-weight: 900;
+      font-size: 1.2em;
+      top: -2px;
     }
-    .report-content li {
-      margin-bottom: 6px;
-      line-height: 1.7;
-    }
+    .premium-report ol > li::marker { color: #6366f1; font-weight: 700; }
 
-    .report-content blockquote {
-      margin: 14px 0;
-      padding: 10px 16px;
-      border-left: 4px solid #6366f1;
-      background: #f8fafc;
-      border-radius: 0 6px 6px 0;
+    .premium-report blockquote {
+      margin: 20px 0;
+      padding: 12px 20px;
+      background: #eff6ff;
+      border-left: 5px solid #3b82f6;
+      border-top: 1px solid #e0e7ff;
+      border-right: 1px solid #e0e7ff;
+      border-bottom: 1px solid #e0e7ff;
+      border-radius: 0 8px 8px 0;
       color: #334155;
+      font-style: italic;
     }
-    .report-content blockquote p {
-      margin-bottom: 4px;
-    }
+    .premium-report blockquote p { margin-bottom: 8px; }
+    .premium-report blockquote p:last-child { margin-bottom: 0; }
 
-    .report-content strong {
+    .premium-report strong {
       font-weight: 700;
       color: #0f172a;
-    }
-
-    .report-content code {
-      font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
-      font-size: 12.5px;
       background: #f1f5f9;
-      padding: 1px 5px;
-      border-radius: 3px;
-      color: #6366f1;
+      padding: 0 4px;
+      border-radius: 2px;
     }
 
-    .report-content pre {
-      background: #1e293b;
-      color: #e2e8f0;
-      padding: 14px;
-      border-radius: 8px;
+    .premium-report code {
+      font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+      font-size: 13px;
+      background: #eef2ff;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #4f46e5;
+      border: 1px solid #e0e7ff;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .premium-report pre {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 18px;
+      border-radius: 10px;
       overflow: auto;
-      margin: 10px 0 16px;
-      font-size: 12.5px;
-      line-height: 1.55;
+      margin: 16px 0 24px;
+      font-size: 13px;
+      line-height: 1.6;
       page-break-inside: avoid;
     }
-    .report-content pre code {
+    .premium-report pre code {
       background: none;
       padding: 0;
+      border: none;
       color: inherit;
     }
 
-    .report-content table {
+    .premium-report table {
       width: 100%;
       border-collapse: collapse;
-      margin: 14px 0;
-      font-size: 13px;
+      margin: 24px 0;
+      font-size: 13.5px;
       page-break-inside: avoid;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
     }
-    .report-content th {
-      background: #f1f5f9;
+    .premium-report thead {
+      background: #f8fafc;
+      border-bottom: 2px solid #cbd5e1;
+    }
+    .premium-report th {
       font-weight: 700;
       text-align: left;
-      padding: 8px 12px;
-      border-bottom: 2px solid #cbd5e1;
+      padding: 10px 16px;
       color: #334155;
     }
-    .report-content td {
-      padding: 7px 12px;
-      border-bottom: 1px solid #e2e8f0;
+    .premium-report td {
+      padding: 9px 16px;
+      border-bottom: 1px solid #f1f5f9;
       color: #475569;
     }
+    .premium-report tr:last-child td { border-bottom: none; }
 
-    .report-content hr {
+    .premium-report hr {
       border: none;
-      border-top: 1.5px solid #e2e8f0;
-      margin: 24px 0;
+      border-top: 2px solid #f1f5f9;
+      margin: 30px auto;
+      width: 70%;
+      border-radius: 2px;
+    }
+
+    .premium-report a {
+      color: #4f46e5;
+      text-decoration: underline;
+      text-decoration-color: #c7d2fe;
+      text-decoration-thickness: 2px;
+      text-underline-offset: 2px;
     }
 
     /* ---- Footer ---- */
     .report-footer {
-      border-top: 1px solid #e2e8f0;
-      margin-top: 36px;
-      padding-top: 12px;
+      border-top: 1.5px solid #e2e8f0;
+      margin-top: 40px;
+      padding-top: 16px;
       display: flex;
       justify-content: space-between;
-      font-size: 10px;
-      color: #94a3b8;
+      font-size: 11.5px;
+      color: #64748b;
     }
   `;
 }
@@ -274,7 +322,7 @@ export async function downloadAsPDF({
     </div>
   </div>
 
-  <div class="report-content">
+  <div class="premium-report">
     ${element.innerHTML}
   </div>
 

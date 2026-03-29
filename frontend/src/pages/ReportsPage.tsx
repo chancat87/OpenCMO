@@ -72,7 +72,7 @@ function ReportCard({
       </div>
 
       {report ? (
-        <div id={`report-content-${report.id}`} className="prose prose-sm prose-slate max-w-none">
+        <div id={`report-content-${report.id}`} className="premium-report">
            <ReactMarkdown>{report.content}</ReactMarkdown>
         </div>
       ) : (
@@ -112,7 +112,7 @@ function ReportHistory({ title, reports }: { title: string; reports: ReportRecor
                 <span className="text-slate-500">{formatStamp(report.created_at)}</span>
               </div>
             </summary>
-            <div className="prose prose-sm prose-slate mt-4 max-w-none">
+            <div className="premium-report mt-4">
               <ReactMarkdown>{report.content}</ReactMarkdown>
             </div>
           </details>
