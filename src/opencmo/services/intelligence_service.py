@@ -38,11 +38,22 @@ async def analyze_url_with_ai(url: str, on_progress=None, locale: str = "en") ->
     fallback = {"brand_name": "", "category": "", "keywords": []}
     emit = on_progress or (lambda *a: None)
 
-    # Language instruction based on locale
+    # Language & ecosystem config based on locale
+    is_zh = locale == "zh"
     lang_instruction = (
         "You MUST respond in Chinese (中文). All your analysis and output should be in Chinese."
-        if locale == "zh"
+        if is_zh
         else "You MUST respond in English."
+    )
+    search_ecosystem = (
+        "Baidu, Sogou, 360 Search, Douyin Search, WeChat Search, Xiaohongshu Search, and Google"
+        if is_zh
+        else "Google, Bing, DuckDuckGo, and YouTube"
+    )
+    community_platforms = (
+        "知乎, V2EX, 掘金, 即刻, 小红书, 微信公众号, OSChina, CSDN, as well as Reddit, Hacker News, and Dev.to"
+        if is_zh
+        else "Reddit, Hacker News, Dev.to, Twitter/X, YouTube, Stack Overflow, and Product Hunt"
     )
 
     # 1. Crawl the URL
@@ -77,13 +88,22 @@ async def analyze_url_with_ai(url: str, on_progress=None, locale: str = "en") ->
             {
                 "role": "system",
                 "content": (
-                    "You are a content filter. Extract ONLY the useful product/project information "
-                    "from a crawled webpage. Remove all navigation menus, headers, footers, sidebars, "
-                    "cookie notices, sign-up prompts, GitHub UI chrome (star counts, fork buttons, "
-                    "file listings, contributor lists), ads, and other boilerplate. "
-                    "Keep: product name, description, features, tech stack, use cases, README content, "
-                    "taglines, pricing info, and any text that describes what the product does. "
-                    "Return the cleaned content as plain text, preserving the original language."
+                    "You are a content filter for product intelligence. Your job is to extract "
+                    "ONLY the useful product/project information from a crawled webpage.\n\n"
+                    "REMOVE: navigation menus, headers, footers, sidebars, cookie notices, "
+                    "sign-up prompts, GitHub UI chrome (star counts, fork buttons, file listings, "
+                    "contributor avatars, issue counts), ads, testimonials, and other boilerplate.\n\n"
+                    "KEEP and structure:\n"
+                    "- Product/project name and tagline\n"
+                    "- What it does (core value proposition)\n"
+                    "- Key features and capabilities\n"
+                    "- Tech stack and implementation details\n"
+                    "- Target users and use cases\n"
+                    "- Pricing model (free/freemium/paid/open-source)\n"
+                    "- Any mentioned integrations or ecosystem\n"
+                    "- README content if from a code repository\n\n"
+                    "Return the cleaned content as plain text, preserving the original language. "
+                    "If the page is a GitHub/GitLab repo, prioritize the README content over UI elements."
                 ),
             },
             {"role": "user", "content": f"URL: {url}\n\nRaw crawled content:\n{raw_content}"},
@@ -99,69 +119,243 @@ async def analyze_url_with_ai(url: str, on_progress=None, locale: str = "en") ->
 
         roles = {
             "product_analyst": (
-                "You are a Product Analyst. Focus on: what the product/project actually does, "
-                "its core features, target audience, and competitive positioning. "
-                "Identify the real brand/product name (NOT the hosting platform like GitHub/GitLab/npm). "
-                f"Be concise (3-5 sentences per round). {lang_instruction}"
+                "You are a Senior Product Analyst with 10+ years of experience in tech product strategy.\n\n"
+                "YOUR MISSION: Deconstruct this product to its strategic essence.\n\n"
+                "ANALYSIS FRAMEWORK — you MUST address every point with specifics, not generalities:\n"
+                "1. **Brand Identity**: The real product/brand name. NEVER use the hosting platform "
+                "(GitHub, GitLab, npm, PyPI) as the brand name. If the page is a repo, the brand is "
+                "the project name, not 'GitHub'.\n"
+                "2. **Value Proposition**: What specific problem does it solve? Write a one-sentence "
+                "pitch that a founder could use in an elevator.\n"
+                "3. **Target Persona**: Who is the ideal user? Be granular — role, company size, "
+                "pain level (e.g., 'solo indie devs shipping SaaS products who can't afford a "
+                "marketing team' NOT just 'developers').\n"
+                "4. **Competitive Moat**: What makes this defensible? Name specific moats: "
+                "open-source community, proprietary data, integration lock-in, vertical expertise, "
+                "network effects, or cost advantage.\n"
+                "5. **Category Fit**: Pick exactly ONE from: devtools / saas / ai / marketing / "
+                "analytics / ecommerce / fintech / productivity / security / infra / education / "
+                "design / other. Justify your choice in one sentence.\n\n"
+                "EXAMPLE OUTPUT (for a fictional project 'DataPipe'):\n"
+                "  1. Brand: DataPipe (not GitHub)\n"
+                "  2. Value Prop: DataPipe lets data engineers build ETL pipelines in Python "
+                "without managing infrastructure. [HIGH confidence — stated on landing page]\n"
+                "  3. Persona: Mid-level data engineers at Series A-C startups (50-200 employees) "
+                "who currently cobble together Airflow + custom scripts. [MEDIUM — inferred from "
+                "feature set and pricing]\n"
+                "  4. Moat: Open-core model with hosted Pro tier; 2.8k GitHub stars suggest "
+                "community traction. [HIGH — directly observed]\n"
+                "  5. Category: devtools — it's a developer infrastructure tool. [HIGH]\n\n"
+                "ANTI-HALLUCINATION RULES:\n"
+                "- Only claim features that are explicitly mentioned on the page.\n"
+                "- If the page doesn't mention pricing, say 'Pricing: not found on page' "
+                "instead of guessing.\n"
+                "- Tag each claim with [HIGH/MEDIUM/LOW confidence] based on evidence strength.\n"
+                "- HIGH = directly stated on page. MEDIUM = reasonably inferred. LOW = speculative.\n\n"
+                f"{lang_instruction}"
             ),
             "seo_specialist": (
-                "You are an SEO Specialist. Focus on: what search keywords users would type to "
-                "find this kind of product, competitor product names, high-intent long-tail keywords. "
-                "Think about what people search on Google/Bing when looking for solutions in this space. "
-                f"Be concise (3-5 sentences per round). {lang_instruction}"
+                "You are a Senior SEO & Search Strategist specializing in product discoverability.\n\n"
+                "YOUR MISSION: Identify the exact keywords that will drive qualified traffic "
+                "to this product.\n\n"
+                f"TARGET SEARCH ECOSYSTEM: {search_ecosystem}.\n\n"
+                "KEYWORD FRAMEWORK — produce keywords in EXACTLY these 5 buckets:\n"
+                "1. **Brand Keywords** (2-3): exact product name, common abbreviations, "
+                "and likely misspellings.\n"
+                "2. **Category Keywords** (2-3): what users search when exploring this product "
+                "category (e.g., 'open source CRM', 'AI writing tool').\n"
+                "3. **Problem Keywords** (2-3): search queries describing the pain point "
+                "(e.g., 'how to automate SEO audit', 'monitor brand mentions automatically').\n"
+                "4. **Competitor Keywords** (1-2): names of real, verifiable competitor products.\n"
+                "5. **Long-tail Intent Keywords** (2-3): 3-6 word phrases with adoption intent "
+                "(e.g., 'best free alternative to Ahrefs', 'self-hosted analytics 2024').\n\n"
+                "EXAMPLE OUTPUT (for a fictional project 'DataPipe'):\n"
+                "  1. Brand: 'DataPipe', 'datapipe etl' [HIGH]\n"
+                "  2. Category: 'open source ETL tool', 'Python data pipeline framework' [HIGH]\n"
+                "  3. Problem: 'how to build ETL pipeline without Airflow', "
+                "'simplify data engineering workflow' [MEDIUM]\n"
+                "  4. Competitor: 'Dagster', 'Prefect' [HIGH — well-known in this space]\n"
+                "  5. Long-tail: 'best Airflow alternative for small teams', "
+                "'managed ETL pipeline Python' [MEDIUM]\n\n"
+                "QUALITY RULES:\n"
+                "- Every keyword must be something a real human would actually type into a search box.\n"
+                "- Do NOT invent competitor names. Only name competitors you are certain exist.\n"
+                "- Tag each keyword with [HIGH/MEDIUM/LOW confidence].\n"
+                "- HIGH = certain this keyword has real search volume. MEDIUM = likely but unverified. "
+                "LOW = speculative.\n"
+                "- Prefer specific phrases over single generic words.\n\n"
+                f"{lang_instruction}"
             ),
             "community_strategist": (
-                "You are a Community Strategist. Focus on: what discussion topics to monitor on "
-                "Reddit/HN/Dev.to, community-specific jargon, pain points users discuss, "
-                "hashtags and category tags. "
-                f"Be concise (3-5 sentences per round). {lang_instruction}"
+                "You are a Senior Community Intelligence Strategist who monitors developer "
+                "and tech communities for market signals.\n\n"
+                "YOUR MISSION: Define the exact monitoring queries and platforms to capture "
+                "relevant market signals for this product.\n\n"
+                f"TARGET PLATFORMS: {community_platforms}.\n\n"
+                "MONITORING FRAMEWORK — produce monitoring items in EXACTLY these 5 buckets:\n"
+                "1. **Brand Queries** (2-3): exact phrases to catch direct product mentions "
+                "(include name variations and common misspellings).\n"
+                "2. **Problem Queries** (2-3): pain-point discussions where this product could "
+                "be recommended (e.g., 'struggling with SEO for my startup', "
+                "'need a tool to monitor competitors').\n"
+                "3. **Competitor Queries** (1-2): discussions comparing or seeking alternatives "
+                "to competitors in this space.\n"
+                "4. **Trend Signals** (2-3): specific subreddits, tags, hashtags, or topic areas "
+                "where the target audience congregates.\n"
+                "5. **Engagement Hooks** (1-2): types of threads where mentioning this product "
+                "would be genuinely helpful, not spammy (e.g., 'what tools do you use for X', "
+                "'looking for Y alternative').\n\n"
+                "EXAMPLE OUTPUT (for a fictional project 'DataPipe'):\n"
+                "  1. Brand: 'DataPipe', 'datapipe.io' [HIGH]\n"
+                "  2. Problem: 'tired of managing Airflow', 'simple ETL for small team' [MEDIUM]\n"
+                "  3. Competitor: 'Dagster vs Prefect', 'Airflow alternatives 2024' [HIGH]\n"
+                "  4. Trends: r/dataengineering, #DataEngineering, 'ETL' tag on Dev.to [HIGH]\n"
+                "  5. Hooks: 'What ETL tool does your team use?' threads, "
+                "'Show HN' posts about data tools [MEDIUM]\n\n"
+                "QUALITY RULES:\n"
+                "- Every query must be a phrase someone would naturally write in a community post "
+                "or search within a platform.\n"
+                "- Include platform-specific formats where useful (subreddit names, hashtags).\n"
+                "- Do NOT include generic queries like 'best tool' without context.\n"
+                "- Tag each item with [HIGH/MEDIUM/LOW confidence].\n"
+                "- Think about WHERE the target persona actually hangs out, not where you wish "
+                "they were.\n\n"
+                f"{lang_instruction}"
             ),
         }
 
         discussion: list[str] = []
 
-        # Round 1: Each role gives initial analysis
+        # Round 1: Each role gives structured initial analysis with role-specific prompts
+        round1_prompts = {
+            "product_analyst": (
+                f"{briefing}\n\n"
+                "ROUND 1 — Product Deconstruction\n"
+                "Follow your 5-point framework strictly. For each point, cite specific evidence "
+                "from the webpage content (quote key phrases when possible). Tag every claim "
+                "with a confidence level."
+            ),
+            "seo_specialist": (
+                f"{briefing}\n\n"
+                "ROUND 1 — Keyword Discovery\n"
+                "Follow your 5-bucket framework strictly. For each keyword, explain in 1 sentence "
+                "why this keyword matters for this specific product (not generic reasons). "
+                "Tag every keyword with a confidence level."
+            ),
+            "community_strategist": (
+                f"{briefing}\n\n"
+                "ROUND 1 — Community Signal Mapping\n"
+                "Follow your 5-bucket framework strictly. For each monitoring query, specify "
+                "which platform(s) it targets and what type of signal it would capture "
+                "(awareness / demand / competitive intel / sentiment). Tag with confidence level."
+            ),
+        }
         for role_name, system_prompt in roles.items():
             reply = await _llm_call(client, model, [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"{briefing}\n\nGive your initial analysis."},
+                {"role": "user", "content": round1_prompts[role_name]},
             ])
             discussion.append(f"[{role_name}] {reply}")
             emit(role_name, reply, 1)
             logger.info("Round 1 - %s done", role_name)
 
-        # Round 2: Each role responds to others' analysis
+        # Round 2: Adversarial cross-review with role-specific challenges
         round1_summary = "\n\n".join(discussion)
+        round2_prompts = {
+            "product_analyst": (
+                f"{briefing}\n\n"
+                f"Round 1 discussion:\n{round1_summary}\n\n"
+                "ROUND 2 — Cross-Review (Product Analyst)\n"
+                "Review your colleagues' Round 1 output and respond to these:\n"
+                "1. Does the SEO Specialist's category keyword match your Category Fit? "
+                "If not, argue which is correct.\n"
+                "2. Does the Community Strategist's target persona match your Target Persona? "
+                "Flag any misalignment.\n"
+                "3. Are any competitor names the SEO Specialist mentioned actually NOT competitors? "
+                "Challenge any you believe are wrong.\n"
+                "4. Based on their insights, REVISE your analysis — especially refine the "
+                "Target Persona and Competitive Moat if needed.\n"
+                "Tag all revisions with [REVISED] and explain why."
+            ),
+            "seo_specialist": (
+                f"{briefing}\n\n"
+                f"Round 1 discussion:\n{round1_summary}\n\n"
+                "ROUND 2 — Cross-Review (SEO Specialist)\n"
+                "Review your colleagues' Round 1 output and respond to these:\n"
+                "1. Does the Product Analyst's brand name give you better brand keyword ideas? "
+                "Add any you missed.\n"
+                "2. Does the Community Strategist's problem queries reveal problem keywords "
+                "you didn't think of? Adopt the good ones.\n"
+                "3. Challenge: are your competitor keywords REAL products? Remove any you're "
+                "not at least MEDIUM confidence about.\n"
+                "4. Based on their insights, produce a FINAL refined keyword list — "
+                "re-rank by priority (must-have vs nice-to-have).\n"
+                "Tag all changes with [ADDED], [REMOVED], or [PROMOTED]."
+            ),
+            "community_strategist": (
+                f"{briefing}\n\n"
+                f"Round 1 discussion:\n{round1_summary}\n\n"
+                "ROUND 2 — Cross-Review (Community Strategist)\n"
+                "Review your colleagues' Round 1 output and respond to these:\n"
+                "1. Does the Product Analyst's target persona help you narrow down WHICH "
+                "communities to prioritize? Re-rank your platform list.\n"
+                "2. Does the SEO Specialist's keyword list give you better monitoring queries? "
+                "Adopt any that would work as community search terms.\n"
+                "3. Challenge: are your suggested platforms actually where THIS product's "
+                "audience hangs out? Remove any that are too generic.\n"
+                "4. Based on their insights, produce a FINAL refined monitoring plan — "
+                "prioritize the top 3-4 highest-signal monitoring queries.\n"
+                "Tag all changes with [ADDED], [REMOVED], or [PROMOTED]."
+            ),
+        }
         for role_name, system_prompt in roles.items():
             reply = await _llm_call(client, model, [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"{briefing}\n\nRound 1 discussion:\n{round1_summary}\n\nBuild on your colleagues' insights. Refine your keyword suggestions."},
+                {"role": "user", "content": round2_prompts[role_name]},
             ])
             discussion.append(f"[{role_name}] {reply}")
             emit(role_name, reply, 2)
             logger.info("Round 2 - %s done", role_name)
 
-        # Round 3: Consensus — a moderator synthesizes the final strategy
+        # Round 3: Consensus — Strategy Director with quality gates
         full_discussion = "\n\n".join(discussion)
         final_text = await _llm_call(client, model, [
             {
                 "role": "system",
                 "content": (
-                    "You are the Strategy Director. Synthesize the team discussion into a final monitoring strategy. "
-                    "Return ONLY valid JSON, no markdown fences, no extra text."
+                    "You are the Strategy Director. You synthesize multi-expert discussions into "
+                    "a final, validated monitoring strategy.\n\n"
+                    "SYNTHESIS RULES:\n"
+                    "1. Return ONLY valid JSON. No markdown fences, no commentary, no extra text.\n"
+                    "2. brand_name must be the ACTUAL product name confirmed by the Product Analyst. "
+                    "Never use a hosting platform name.\n"
+                    "3. category must be exactly ONE word from: devtools, saas, ai, marketing, "
+                    "analytics, ecommerce, fintech, productivity, security, infra, education, "
+                    "design, other. Use the Product Analyst's recommendation unless the SEO "
+                    "Specialist made a compelling counter-argument.\n"
+                    "4. keywords: select 6-10 of the HIGHEST confidence keywords from the SEO "
+                    "Specialist's final list. Must include: at least 1 brand keyword, at least "
+                    "2 category/problem keywords, and at least 1 competitor keyword.\n"
+                    "5. competitors: include 3-5 REAL products only. Only include competitors that "
+                    "the SEO Specialist tagged as at least MEDIUM confidence. Each must have a "
+                    "plausible website URL (or empty string).\n\n"
+                    "QUALITY GATES (check before outputting):\n"
+                    "- Does brand_name match what the Product Analyst identified?\n"
+                    "- Are all keywords specific enough to be useful search terms?\n"
+                    "- Are all competitors real products (not generic terms like 'other tools')?\n"
+                    "- Did you incorporate Round 2 refinements (items tagged [ADDED]/[PROMOTED])?\n"
                 ),
             },
             {
                 "role": "user",
                 "content": (
                     f"URL: {url}\n\n"
-                    f"Team discussion:\n{full_discussion}\n\n"
-                    f"Based on the discussion, produce the final monitoring strategy as JSON:\n"
+                    f"Expert discussion (2 rounds, 3 specialists):\n{full_discussion}\n\n"
+                    f"Produce the final monitoring strategy as JSON:\n"
                     f'{{"brand_name": "the actual product name",'
-                    f' "category": "one-word category (devtools/saas/ai/marketing/analytics/ecommerce/...)",'
-                    f' "keywords": ["5-8 monitoring keywords covering brand name, product category, competitor terms, and user search queries"],'
-                    f' "competitors": [{{"name": "competitor product/brand name", "url": "their website URL or empty string", "keywords": ["2-4 keywords that competitor ranks for"]}}]}}'
-                    f'\nProvide 3-5 real competitors in the same market space. Only include actual known products/brands, not generic terms.'
+                    f' "category": "one-word category",'
+                    f' "keywords": ["6-10 highest-confidence monitoring keywords"],'
+                    f' "competitors": [{{"name": "competitor name", "url": "website URL or empty string", "keywords": ["2-4 keywords"]}}]}}'
                 )
             },
         ])
