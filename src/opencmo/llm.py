@@ -164,6 +164,30 @@ async def get_model(purpose: str = "default") -> str:
 # ---------------------------------------------------------------------------
 
 
+_MAX_RETRIES = 3
+_RETRY_BACKOFF = [2, 5, 10]  # seconds
+
+
+async def _call_with_retry(coro_factory, *, timeout: float | None = None) -> Any:
+    """Call an LLM coroutine with retry + exponential backoff."""
+    for attempt in range(_MAX_RETRIES):
+        try:
+            coro = coro_factory()
+            if timeout:
+                resp = await asyncio.wait_for(coro, timeout=timeout)
+            else:
+                resp = await asyncio.wait_for(coro, timeout=120)
+            return resp
+        except Exception as exc:
+            if attempt < _MAX_RETRIES - 1:
+                wait = _RETRY_BACKOFF[attempt]
+                logger.warning("LLM call failed (attempt %d/%d): %s — retrying in %ds",
+                               attempt + 1, _MAX_RETRIES, exc, wait)
+                await asyncio.sleep(wait)
+            else:
+                raise
+
+
 async def chat_completion(
     system: str,
     user: str,
@@ -172,7 +196,7 @@ async def chat_completion(
     timeout: float | None = None,
     model_override: str | None = None,
 ) -> str:
-    """Unified LLM chat completion call.
+    """Unified LLM chat completion call with automatic retry.
 
     Args:
         system: System prompt.
@@ -187,21 +211,32 @@ async def chat_completion(
     client = await get_openai_client()
     model = model_override or await get_model()
 
-    coro = client.chat.completions.create(
-        model=model,
-        temperature=temperature,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-    )
+    def make_coro():
+        return client.chat.completions.create(
+            model=model,
+            temperature=temperature,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+        )
 
-    if timeout:
-        resp = await asyncio.wait_for(coro, timeout=timeout)
-    else:
-        resp = await coro
+    resp = await _call_with_retry(make_coro, timeout=timeout)
+    return _extract_content(resp)
 
-    return resp.choices[0].message.content.strip()
+
+def _extract_content(resp: Any) -> str:
+    """Extract text from a chat completion response.
+
+    Handles MiniMax-style responses where content may be null/empty
+    and the actual text lives in reasoning_content.
+    """
+    msg = resp.choices[0].message
+    content = msg.content
+    if not content:
+        # MiniMax / TeamoRouter: text may be in reasoning_content
+        content = getattr(msg, "reasoning_content", None) or ""
+    return content.strip()
 
 
 async def chat_completion_messages(
@@ -227,11 +262,8 @@ async def chat_completion_messages(
     if max_tokens:
         kwargs["max_tokens"] = max_tokens
 
-    coro = client.chat.completions.create(**kwargs)
+    def make_coro():
+        return client.chat.completions.create(**kwargs)
 
-    if timeout:
-        resp = await asyncio.wait_for(coro, timeout=timeout)
-    else:
-        resp = await coro
-
-    return resp.choices[0].message.content.strip()
+    resp = await _call_with_retry(make_coro, timeout=timeout)
+    return _extract_content(resp)

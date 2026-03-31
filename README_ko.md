@@ -36,6 +36,14 @@
 
 ---
 
+## 쇼케이스: 실제 사례
+
+**[Cursor.com](https://cursor.com) 실제 스캔**으로 OpenCMO를 체험하세요 — Reddit, Hacker News, Bilibili, Dev.to, V2EX에서 176건의 커뮤니티 토론을 발견하고 177개 노드의 지식 그래프를 생성했습니다.
+
+**[Cursor 쇼케이스(전체 데이터) 보기](docs/showcase/cursor/)**
+
+---
+
 ## 왜 OpenCMO인가
 
 - **URL에서 바로 시작**: full scan 이후 CMO 수준의 시장 판단을 먼저 받습니다.
@@ -135,6 +143,10 @@ npm run build
 - [x] 브랜드 포함 PDF 내보내기
 - [x] 3D 지식 그래프
 - [x] 승인 흐름과 통제된 발행
+- [x] 중국 플랫폼 커뮤니티 모니터링 (V2EX, Weibo, Bilibili, XueQiu)
+- [x] 완전한 i18n 지원 (영어, 중국어, 일본어, 한국어, 스페인어)
+- [x] 로케일 인식 AI 응답 (LLM이 UI 언어 설정을 따름)
+- [x] 불안정한 프로바이더를 위한 LLM 지수 백오프 재시도
 - [ ] 더 많은 발행 채널
 - [ ] 브랜드 보이스 제어
 - [ ] 더 깊은 엔터프라이즈 SEO 크롤링

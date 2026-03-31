@@ -24,3 +24,42 @@ Recent history follows Conventional Commit prefixes such as `feat:`, `docs:`, an
 
 ## Configuration & Security Tips
 Keep secrets in `.env` or the settings UI, never in tracked files. Use `OPENCMO_WEB_TOKEN` when exposing the dashboard beyond localhost, and avoid committing populated database or generated frontend build artifacts unless the change explicitly requires them.
+
+## Production Deployment (BWG Server)
+
+| Item | Value |
+|------|-------|
+| Host | `bwg` (SSH alias) |
+| IP | `97.64.16.217` |
+| Project path | `/opt/OpenCMO` |
+| Python env | `/opt/OpenCMO/.venv` (venv) |
+| Entry point | `/opt/OpenCMO/.venv/bin/opencmo-web` |
+| Service port | `8080` |
+
+### Deploy procedure
+
+```bash
+# 1. Pull latest code
+ssh bwg "cd /opt/OpenCMO && git pull origin main"
+
+# 2. Reinstall Python package (in venv)
+ssh bwg "cd /opt/OpenCMO && source .venv/bin/activate && pip install -e ."
+
+# 3. Build frontend LOCALLY (server has insufficient memory for vite build)
+cd frontend && npm run build
+
+# 4. Upload dist to server
+scp -r frontend/dist/ bwg:/opt/OpenCMO/frontend/dist/
+
+# 5. Restart service
+ssh bwg "pkill -f opencmo-web; sleep 1; cd /opt/OpenCMO && source .venv/bin/activate && nohup opencmo-web > /tmp/opencmo.log 2>&1 &"
+
+# 6. Verify
+ssh bwg "curl -s http://127.0.0.1:8080/api/v1/health"
+```
+
+### Important notes
+- Server memory is limited — **frontend must be built locally** and uploaded via `scp`.
+- The Python package uses a **venv** at `.venv`, not the system Python. Always `source .venv/bin/activate` before pip install or running commands.
+- Use `pip install -e .` (without `[all]`) — some optional deps (`browser-use`) don't have wheels for the server's platform.
+- Logs are written to `/tmp/opencmo.log`.
