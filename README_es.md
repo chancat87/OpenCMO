@@ -36,6 +36,14 @@
 
 ---
 
+## Showcase: Ejemplo Real
+
+Mira OpenCMO en accion con un **escaneo real de [Cursor.com](https://cursor.com)** — 176 discusiones de comunidad descubiertas en Reddit, Hacker News, Bilibili, Dev.to y V2EX, con un grafo de conocimiento de 177 nodos.
+
+**[Ver el showcase de Cursor con datos completos](docs/showcase/cursor/)**
+
+---
+
 ## Por Qué OpenCMO
 
 - **Empieza desde una URL**: tras un full scan recibes una lectura de nivel CMO sobre posicionamiento y mercado.
@@ -135,6 +143,10 @@ La app de desarrollo corre en `http://localhost:5173/app` y proxya la API a `:80
 - [x] Exportar PDF con marca
 - [x] Grafo de conocimiento 3D
 - [x] Aprobaciones y publicación controlada
+- [x] Monitoreo de comunidades en plataformas chinas (V2EX, Weibo, Bilibili, XueQiu)
+- [x] i18n completo (inglés, chino, japonés, coreano, español)
+- [x] Respuestas IA según el idioma (el LLM sigue la configuración de idioma de la UI)
+- [x] Reintentos LLM con backoff exponencial para proveedores inestables
 - [ ] Más destinos de publicación
 - [ ] Control de brand voice
 - [ ] Crawls SEO enterprise más profundos

@@ -1,0 +1,2832 @@
+{
+    "nodes": [
+        {
+            "id": "brand_34",
+            "label": "Cursor",
+            "type": "brand",
+            "url": "https://www.cursor.com",
+            "category": "devtools",
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_9267",
+            "label": "Bytemine MCP Search 130M+ B2B contacts f...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47576046",
+            "engagement": 71,
+            "comments": 0,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_10392",
+            "label": "Show HN: I sell the boring part of vibe ...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47578216",
+            "engagement": 71,
+            "comments": 0,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8786",
+            "label": "I made a floating overlay for DevTools",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/VibeCodeDevs/comments/1s7noun/i_made_a_floating_overlay_for_devtools/",
+            "engagement": 71,
+            "comments": 3,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8785",
+            "label": "The ECMAScript spec forces V8 to leak wh...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/programming/comments/1s78u0t/the_ecmascript_spec_forces_v8_to_leak_whether/",
+            "engagement": 70,
+            "comments": 34,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8783",
+            "label": "Gemini CLI \u901a\u8fc7 Chrome DevTools MCP \u63a7\u5236 Chr...",
+            "type": "discussion",
+            "platform": "bilibili",
+            "url": "https://www.bilibili.com/video/BV1xNXSBmEuN",
+            "engagement": 69,
+            "comments": 0,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8782",
+            "label": "The ECMAScript spec forces V8 to leak wh...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/ReverseEngineering/comments/1s78tov/the_ecmascript_spec_forces_v8_to_leak_whether/",
+            "engagement": 69,
+            "comments": 32,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8780",
+            "label": "I made a floating overlay for DevTools",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/chrome_extensions/comments/1s7man0/i_made_a_floating_overlay_for_devtools/",
+            "engagement": 69,
+            "comments": 1,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8779",
+            "label": "The ECMAScript spec forces V8 to leak wh...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/slopocalypse/comments/1s7mz42/the_ecmascript_spec_forces_v8_to_leak_whether/",
+            "engagement": 69,
+            "comments": 0,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8781",
+            "label": "\u5b9e\u6d4b\uff0c\u7528 AI (Stitch + Codex) \u7ed9\u4ea7\u54c1\u505a\u4e2a\u5b98\u7f51",
+            "type": "discussion",
+            "platform": "v2ex",
+            "url": "https://www.v2ex.com/t/1202280",
+            "engagement": 69,
+            "comments": 4,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8784",
+            "label": "Chrome DevTools MCP (2025)",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47390817",
+            "engagement": 68,
+            "comments": 235,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8944",
+            "label": "Cursor is continually self improving Com...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/singularity/comments/1s790if/cursor_is_continually_self_improving_composer_2/",
+            "engagement": 68,
+            "comments": 85,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8777",
+            "label": "Cursor Composer 2 is just Kimi K2.5 with...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47452404",
+            "engagement": 66,
+            "comments": 169,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8778",
+            "label": "Bungie, can you increase cursor speed on...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/Marathon/comments/1s475z9/bungie_can_you_increase_cursor_speed_on_console/",
+            "engagement": 66,
+            "comments": 88,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8775",
+            "label": "So cursor admits that Kimi K2.5 is the b...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/LocalLLaMA/comments/1s19ik2/so_cursor_admits_that_kimi_k25_is_the_best_open/",
+            "engagement": 65,
+            "comments": 87,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8774",
+            "label": "I built a browser DevTools extension for...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/htmx/comments/1s2iggg/i_built_a_browser_devtools_extension_for/",
+            "engagement": 65,
+            "comments": 27,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8773",
+            "label": "HTMX DevTools v0.2.0 - now with htmx 4.0...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/htmx/comments/1s354n1/htmx_devtools_v020_now_with_htmx_40_alpha_support/",
+            "engagement": 65,
+            "comments": 0,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8768",
+            "label": "\u8ba9 OpenClaw \u63a5\u7ba1\u6d4f\u89c8\u5668\uff1aChrome DevTools Protoco...",
+            "type": "discussion",
+            "platform": "bilibili",
+            "url": "https://www.bilibili.com/video/BV1dew1zCEnF",
+            "engagement": 64,
+            "comments": 4,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8770",
+            "label": "\u30102026\u6700\u65b0\u7248\u3011\u76ee\u524dB\u7ad9\u6700\u5168\u6700\u7ec6\u7684 CurSor AI\u7f16\u7a0b\u96f6\u57fa\u7840\u5168\u5957\u6559\u7a0b\uff0c\u624b\u628a...",
+            "type": "discussion",
+            "platform": "bilibili",
+            "url": "https://www.bilibili.com/video/BV1kowRzSEi3",
+            "engagement": 64,
+            "comments": 6,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8765",
+            "label": "All for 20 dollars? Thanks Cursor! XD",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/cursor/comments/1ryl666/all_for_20_dollars_thanks_cursor_xd/",
+            "engagement": 64,
+            "comments": 91,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8766",
+            "label": "I just came back from cursor and Iam sho...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/GithubCopilot/comments/1rzlax3/i_just_came_back_from_cursor_and_iam_shocked/",
+            "engagement": 64,
+            "comments": 74,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8767",
+            "label": "Moonshot says Cursor Composer was author...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/LocalLLaMA/comments/1rzqg06/moonshot_says_cursor_composer_was_authorized/",
+            "engagement": 64,
+            "comments": 56,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8762",
+            "label": "I built a Chrome DevTools extension that...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/coolgithubprojects/comments/1s5ykxm/i_built_a_chrome_devtools_extension_that_finds/",
+            "engagement": 64,
+            "comments": 6,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8764",
+            "label": "Speed at the cost of quality: Study of u...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47401734",
+            "engagement": 63,
+            "comments": 81,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8758",
+            "label": "I built IDE-layer policy enforcement for...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47570147",
+            "engagement": 63,
+            "comments": 1,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8757",
+            "label": "Show HN: AgentLair \u2013 Give your AI agent ...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47573245",
+            "engagement": 63,
+            "comments": 0,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_10364",
+            "label": "Show HN: I made a cheaper alternative to...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47579652",
+            "engagement": 63,
+            "comments": 3,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8761",
+            "label": "I was the hand model for the windows arr...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/notinteresting/comments/1rusog5/i_was_the_hand_model_for_the_windows_arrow_cursor/",
+            "engagement": 63,
+            "comments": 57,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8769",
+            "label": "This guy repelled down from the ceiling ...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/spiders/comments/1rwkk6f/this_guy_repelled_down_from_the_ceiling_to_play/",
+            "engagement": 63,
+            "comments": 71,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8759",
+            "label": "Composer 2 is now available in Cursor",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/cursor/comments/1ry5rgw/composer_2_is_now_available_in_cursor/",
+            "engagement": 63,
+            "comments": 165,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8760",
+            "label": "Well, I've fallen in love with Madeline ...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/celestegame/comments/1ryrhea/well_ive_fallen_in_love_with_madeline_and_ive/",
+            "engagement": 63,
+            "comments": 23,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8763",
+            "label": "Anyone using Cursor or Claude Code with ...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/Wordpress/comments/1rzbeik/anyone_using_cursor_or_claude_code_with_wordpress/",
+            "engagement": 63,
+            "comments": 145,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8772",
+            "label": "Three.js devtools as an MCP server \u2014 52 ...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/threejs/comments/1s0x4pe/threejs_devtools_as_an_mcp_server_52_tools_for/",
+            "engagement": 63,
+            "comments": 13,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8756",
+            "label": "Cursor would neverrr",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/programminghumor/comments/1riy8yk/cursor_would_neverrr/",
+            "engagement": 62,
+            "comments": 155,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8755",
+            "label": "I made the mouse cursor a little too big",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/kde/comments/1rsb10x/i_made_the_mouse_cursor_a_little_too_big/",
+            "engagement": 62,
+            "comments": 68,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8771",
+            "label": "[do not delete] Is Cursor Dead?",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/cursor/comments/1s598fb/do_not_delete_is_cursor_dead/",
+            "engagement": 62,
+            "comments": 19,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_10359",
+            "label": "\u3010Cursor\u3011\u53f2\u4e0a\u6700\u5f3aAI\u7f16\u7a0b\u5de5\u5177\u2014\u2014Cursor\uff0c\u624b\u628a\u624b\u6559\u4f60\u600e\u4e48\u5b89\u88c5\u914d\u7f6e\uff0c\u600e...",
+            "type": "discussion",
+            "platform": "bilibili",
+            "url": "https://www.bilibili.com/video/BV1bUXhBvEeb",
+            "engagement": 61,
+            "comments": 8,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8745",
+            "label": "terminals were never meant for coding ag...",
+            "type": "discussion",
+            "platform": "devto",
+            "url": "https://dev.to/liyakhar/terminals-were-never-meant-for-coding-agents-46n3",
+            "engagement": 60,
+            "comments": 3,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8746",
+            "label": "Claude Code Has 15 Power Features. I Was...",
+            "type": "discussion",
+            "platform": "devto",
+            "url": "https://dev.to/thestack_ai/claude-code-has-15-power-features-i-was-using-3-ici",
+            "engagement": 60,
+            "comments": 0,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8747",
+            "label": "Vibe coding is a black box. I got tired ...",
+            "type": "discussion",
+            "platform": "devto",
+            "url": "https://dev.to/wentao_long_b5409a04bcfb5/vibe-coding-is-a-black-box-i-got-tired-of-guessing-and-started-measuring-43k0",
+            "engagement": 60,
+            "comments": 0,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8744",
+            "label": "The Week AI Coding Went From 'Assistant'...",
+            "type": "discussion",
+            "platform": "devto",
+            "url": "https://dev.to/alanwest/the-week-ai-coding-went-from-assistant-to-autonomous-what-happened-a2g",
+            "engagement": 60,
+            "comments": 0,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_10348",
+            "label": "I Built a Tool Because 90% of My AI Agen...",
+            "type": "discussion",
+            "platform": "devto",
+            "url": "https://dev.to/narrator/i-built-a-tool-because-90-of-my-ai-agents-tokens-were-spent-searching-not-coding-1ee3",
+            "engagement": 60,
+            "comments": 1,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8753",
+            "label": "Improving Composer through real-time RL",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47532770",
+            "engagement": 60,
+            "comments": 33,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8790",
+            "label": "The ECMAScript spec forces V8 to leak wh...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47567966",
+            "engagement": 60,
+            "comments": 0,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8751",
+            "label": "I made a rat cursor!",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/RATS/comments/1rropkh/i_made_a_rat_cursor/",
+            "engagement": 60,
+            "comments": 63,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8749",
+            "label": "[OS] I made a free, open-source Screen S...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/macapps/comments/1rsf44t/os_i_made_a_free_opensource_screen_studio/",
+            "engagement": 60,
+            "comments": 249,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8748",
+            "label": "Has AI ruined software development?",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/devops/comments/1rsf8eo/has_ai_ruined_software_development/",
+            "engagement": 60,
+            "comments": 317,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8776",
+            "label": "I built a browser DevTools extension for...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/qwik/comments/1s6e4r9/i_built_a_browser_devtools_extension_for_qwik/",
+            "engagement": 60,
+            "comments": 3,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8754",
+            "label": "I've created a package of 2B Cursors :3",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/nier/comments/1s75qop/ive_created_a_package_of_2b_cursors_3/",
+            "engagement": 60,
+            "comments": 11,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_10356",
+            "label": "recruiter asked me to be more specific a...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/recruitinghell/comments/1s788lx/recruiter_asked_me_to_be_more_specific_about_my/",
+            "engagement": 60,
+            "comments": 77,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8740",
+            "label": "2026\u6700\u65b0\u7248\u4fdd\u59c6\u7ea7Cursor\u5b89\u88c5\u6559\u7a0b\u6765\u5566\uff01\u53f2\u4e0a\u6700\u5f3aAI\u7f16\u7a0b\u5de5\u5177Cursor\uff01...",
+            "type": "discussion",
+            "platform": "bilibili",
+            "url": "https://www.bilibili.com/video/BV1uBXVBJE7T",
+            "engagement": 59,
+            "comments": 7,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8742",
+            "label": "\u3010Cursor\u6559\u7a0b\u3011Cursor \u4fdd\u59c6\u7ea7\u4f7f\u7528\u6559\u7a0b\uff01\u6559\u4f60\u7528AI\u6bcf\u6b21\u90fd\u5199\u51fa\u5b8c\u7f8e\u7684Py...",
+            "type": "discussion",
+            "platform": "bilibili",
+            "url": "https://www.bilibili.com/video/BV1zpXbByEyu",
+            "engagement": 59,
+            "comments": 44,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8738",
+            "label": "Show HN: ProofShot \u2013 Give AI coding agen...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47499672",
+            "engagement": 59,
+            "comments": 106,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8724",
+            "label": "Cursor for YouTube Videos is here",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47562392",
+            "engagement": 59,
+            "comments": 0,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8752",
+            "label": "of a cursor",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/AbsoluteUnits/comments/1ow14pj/of_a_cursor/",
+            "engagement": 59,
+            "comments": 389,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8743",
+            "label": "Cursor: Don't move, his eyes react to mo...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/dankmemes/comments/1rmbg2f/cursor_dont_move_his_eyes_react_to_movement/",
+            "engagement": 59,
+            "comments": 139,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8750",
+            "label": "Roses are red, nothing really rhymes wit...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/rosesarered/comments/1rmjdo2/roses_are_red_nothing_really_rhymes_with_cursor/",
+            "engagement": 59,
+            "comments": 102,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8741",
+            "label": "Cursor spotted at new Toyota Land cruise...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/ForzaHorizon/comments/1rmrhnt/cursor_spotted_at_new_toyota_land_cruiser_video/",
+            "engagement": 59,
+            "comments": 43,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8736",
+            "label": "I built an AI tool that generates real R...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/reactjs/comments/1s6ygji/i_built_an_ai_tool_that_generates_real_react_apps/",
+            "engagement": 59,
+            "comments": 10,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8734",
+            "label": "of a cursor",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/AbsoluteUnits/comments/1p1htxh/of_a_cursor/",
+            "engagement": 58,
+            "comments": 35,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8732",
+            "label": "I am not using AI tools like Claude Code...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/cscareerquestions/comments/1rm226e/i_am_not_using_ai_tools_like_claude_code_or/",
+            "engagement": 58,
+            "comments": 376,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8733",
+            "label": "\"Cursor estimated last year that a $200-...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/theprimeagen/comments/1rna95z/cursor_estimated_last_year_that_a_200permonth/",
+            "engagement": 58,
+            "comments": 114,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8739",
+            "label": "Big Laundry List of Non-Controversial an...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/Marathon/comments/1s4g5lr/big_laundry_list_of_noncontroversial_and/",
+            "engagement": 58,
+            "comments": 275,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8730",
+            "label": "\u3010Cursor\u3011\u53f2\u4e0a\u6700\u5f3aAI\u7f16\u7a0b\u5de5\u5177\u2014\u2014Cursor\uff0c\u624b\u628a\u624b\u6559\u4f60\u600e\u4e48\u5b89\u88c5\u914d\u7f6e\uff0c\u600e...",
+            "type": "discussion",
+            "platform": "bilibili",
+            "url": "https://www.bilibili.com/video/BV14bQdBaEyf",
+            "engagement": 57,
+            "comments": 89,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_10330",
+            "label": "15\u59290\u57fa\u7840\u5b66AI\u7f16\u7a0b\uff086\uff09\uff1aCursor\u4e2d\u4f7f\u7528Git",
+            "type": "discussion",
+            "platform": "bilibili",
+            "url": "https://www.bilibili.com/video/BV1EeQBBNELb",
+            "engagement": 57,
+            "comments": 1,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8731",
+            "label": "2026\u5403\u900fCursor+Skills\u5b9e\u6218\u6307\u5357\u6559\u7a0b\uff0c\u624b\u628a\u624b\u5e26\u4f60\u5f00\u53d1\u7206\u6b3eapp\uff0c\u4ece...",
+            "type": "discussion",
+            "platform": "bilibili",
+            "url": "https://www.bilibili.com/video/BV1V7QZBmETr",
+            "engagement": 57,
+            "comments": 25,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8729",
+            "label": "This sub is slowly becoming a dumping gr...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/macapps/comments/1rj9mfo/this_sub_is_slowly_becoming_a_dumping_ground_for/",
+            "engagement": 57,
+            "comments": 189,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8728",
+            "label": "Cursor has reportedly surpassed $2B in a...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/technology/comments/1rjes4p/cursor_has_reportedly_surpassed_2b_in_annualized/",
+            "engagement": 57,
+            "comments": 129,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8735",
+            "label": "The preview picture for the Collegiate C...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/wow/comments/1rjzbaz/the_preview_picture_for_the_collegiate_calamity/",
+            "engagement": 57,
+            "comments": 251,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8726",
+            "label": "PSA for heavy daily use Claude Code user...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/claude/comments/1s131us/psa_for_heavy_daily_use_claude_code_users_give/",
+            "engagement": 57,
+            "comments": 12,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8727",
+            "label": "PSA for heavy daily use Claude Code user...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/ClaudeCode/comments/1s132j8/psa_for_heavy_daily_use_claude_code_users_give/",
+            "engagement": 57,
+            "comments": 120,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8723",
+            "label": "\u30102026\u6700\u65b0\u7248\u3011\u76ee\u524dB\u7ad9\u6700\u5168\u6700\u7ec6\u7684 Cursor+Skills\u5b9e\u6218\u6307\u5357\u6559\u7a0b\uff0c\u624b...",
+            "type": "discussion",
+            "platform": "bilibili",
+            "url": "https://www.bilibili.com/video/BV1zXAuzUEWt",
+            "engagement": 56,
+            "comments": 36,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8721",
+            "label": "Show HN: Context Plugins \u2013 API context f...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47530870",
+            "engagement": 56,
+            "comments": 6,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8737",
+            "label": "Show HN: Kagento \u2013 LeetCode for AI Agent...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47548048",
+            "engagement": 56,
+            "comments": 1,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8722",
+            "label": "Find my mouse cursor against my wallpape...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/FindTheSniper/comments/1rcwob8/find_my_mouse_cursor_against_my_wallpaper/",
+            "engagement": 56,
+            "comments": 202,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8725",
+            "label": "Benchmark oriented development is a road...",
+            "type": "discussion",
+            "platform": "devto",
+            "url": "https://dev.to/dmtrkovalenko/benchmark-oriented-development-is-a-road-to-nowhere-1518",
+            "engagement": 55,
+            "comments": 0,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8720",
+            "label": "Organisation asked to stop writing code ...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/developersIndia/comments/1ra2qgk/organisation_asked_to_stop_writing_code_manually/",
+            "engagement": 55,
+            "comments": 205,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8719",
+            "label": "Cursor\u2019s \u2018Composer 2\u2019 model is apparentl...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/singularity/comments/1ryrs2w/cursors_composer_2_model_is_apparently_just_kimi/",
+            "engagement": 55,
+            "comments": 118,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8717",
+            "label": "Cursor+RuoYi(\u82e5\u4f9d)=\u5168\u6808\u5f00\u53d1\u754c\u7684\u822a\u6bcd\u6218\u6597\u7fa4\u3002\u4e00\u955c\u5230\u5e95\uff1a\u804a\u5929\u5f0f\u7f16\u7a0b\uff0c...",
+            "type": "discussion",
+            "platform": "bilibili",
+            "url": "https://www.bilibili.com/video/BV16SwvzXEaU",
+            "engagement": 54,
+            "comments": 42,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8716",
+            "label": "what is going on with my cursor",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/softwaregore/comments/1r2ql0n/what_is_going_on_with_my_cursor/",
+            "engagement": 54,
+            "comments": 90,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8714",
+            "label": "built ai-setup to stop manually configur...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/webdev/comments/1s5wh6l/built_aisetup_to_stop_manually_configuring_cursor/",
+            "engagement": 54,
+            "comments": 4,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8713",
+            "label": "\u4e0d\u5199\u4ee3\u7801\u5c31\u80fd\u8f7b\u677e\u5f00\u53d1\u5e94\u7528\uff1fCursor+Gemini \u8d85\u5f3a\u6307\u6325\u5b98\u5de5\u4f5c\u6cd5\uff01",
+            "type": "discussion",
+            "platform": "bilibili",
+            "url": "https://www.bilibili.com/video/BV1XdFzz7Ei8",
+            "engagement": 53,
+            "comments": 144,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8703",
+            "label": "Fast regex search: indexing text for age...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47499242",
+            "engagement": 53,
+            "comments": 8,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8787",
+            "label": "Trail cursor (smear effect) is coming to...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47564750",
+            "engagement": 53,
+            "comments": 0,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8789",
+            "label": "Cursor Pagination out-of-the box for Pri...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47565041",
+            "engagement": 53,
+            "comments": 0,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8709",
+            "label": "Animated Vaporeon Mouse Cursor",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/pokemon/comments/1qwk18w/animated_vaporeon_mouse_cursor/",
+            "engagement": 53,
+            "comments": 51,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8711",
+            "label": "RIP Postman free tier. Here's an open-so...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/webdev/comments/1qyi3wz/rip_postman_free_tier_heres_an_opensource/",
+            "engagement": 53,
+            "comments": 198,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8710",
+            "label": "Cursor just sent me a new \u201ctab\u201d key, hon...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/cursor/comments/1qzipt1/cursor_just_sent_me_a_new_tab_key_honestly_its/",
+            "engagement": 53,
+            "comments": 118,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8712",
+            "label": "Riot wont let me have my 500% cursor sca...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/leagueoflegends/comments/1r0x04y/riot_wont_let_me_have_my_500_cursor_scale/",
+            "engagement": 53,
+            "comments": 119,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8707",
+            "label": "Help me find a use for this cursor tapes...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/CrochetHelp/comments/1ra6ky6/help_me_find_a_use_for_this_cursor_tapestry/",
+            "engagement": 53,
+            "comments": 72,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8706",
+            "label": "Cursor randomly replies in Chinese",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/cursor/comments/1rb0ce0/cursor_randomly_replies_in_chinese/",
+            "engagement": 53,
+            "comments": 113,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8702",
+            "label": "CLI-only workflow with OpenCode: How do ...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/opencodeCLI/comments/1s41ach/clionly_workflow_with_opencode_how_do_you/",
+            "engagement": 53,
+            "comments": 22,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8704",
+            "label": "Launch HN: Voygr (YC W26) \u2013 A better map...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47401042",
+            "engagement": 52,
+            "comments": 60,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8788",
+            "label": "Show HN: AgentLens \u2013 Chrome DevTools for...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47565649",
+            "engagement": 52,
+            "comments": 0,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8700",
+            "label": "The unexpected appreciation of shake Cur...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/kde/comments/1qar986/the_unexpected_appreciation_of_shake_cursor/",
+            "engagement": 52,
+            "comments": 77,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8699",
+            "label": "Phainon Cursor",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/PhainonMainsHSR/comments/1qz0lus/phainon_cursor/",
+            "engagement": 52,
+            "comments": 31,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8696",
+            "label": "Organisation asked to stop writing code ...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/cscareerquestions/comments/1ra3593/organisation_asked_to_stop_writing_code_manually/",
+            "engagement": 52,
+            "comments": 252,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8698",
+            "label": "We just got hit with the vibe-coding ham...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/ExperiencedDevs/comments/1rqt03s/we_just_got_hit_with_the_vibecoding_hammer/",
+            "engagement": 52,
+            "comments": 722,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8708",
+            "label": "BATTLEFIELD 6 GAME UPDATE 1.2.2.0",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/Battlefield/comments/1rsraae/battlefield_6_game_update_1220/",
+            "engagement": 52,
+            "comments": 998,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8705",
+            "label": "BATTLEFIELD 6 GAME UPDATE 1.2.2.0",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/Battlefield6/comments/1rsracz/battlefield_6_game_update_1220/",
+            "engagement": 52,
+            "comments": 472,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8693",
+            "label": "We pwned X, Vercel, Cursor, and Discord ...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=46317098",
+            "engagement": 51,
+            "comments": 433,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8689",
+            "label": "Show HN: Tiny pixel characters for Curso...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47453626",
+            "engagement": 51,
+            "comments": 7,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8695",
+            "label": "CEO of Cursor said they coordinated hund...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/singularity/comments/1qd541a/ceo_of_cursor_said_they_coordinated_hundreds_of/",
+            "engagement": 51,
+            "comments": 467,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8692",
+            "label": "Probably i am the most unemployed person...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/kde/comments/1qtnf9o/probably_i_am_the_most_unemployed_person_ever/",
+            "engagement": 51,
+            "comments": 94,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8691",
+            "label": "[AddOn] Frogski\u2019s Cursor Trail \u2013 Complet...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/WowUI/comments/1r36ggb/addon_frogskis_cursor_trail_completely_rebuilt/",
+            "engagement": 51,
+            "comments": 61,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8690",
+            "label": "Cursor charged me $118 for one message",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/cursor/comments/1r68jwh/cursor_charged_me_118_for_one_message/",
+            "engagement": 51,
+            "comments": 193,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8697",
+            "label": "Cursor charged me $2,000+ for an acciden...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/cursor/comments/1rdxva5/cursor_charged_me_2000_for_an_accidental_annual/",
+            "engagement": 51,
+            "comments": 103,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8694",
+            "label": "The AI coding productivity data is in an...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/ExperiencedDevs/comments/1rnkv2t/the_ai_coding_productivity_data_is_in_and_its_not/",
+            "engagement": 51,
+            "comments": 432,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8687",
+            "label": "How does screen.studio excludes cursor f...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/webdev/comments/1ryq8cv/how_does_screenstudio_excludes_cursor_from_being/",
+            "engagement": 51,
+            "comments": 25,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8688",
+            "label": "DevTools \u201cRecord &amp; Replay\u201d \u2013 Any way...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/vba/comments/1s3ahdj/devtools_record_replay_any_way_to_integrate_with/",
+            "engagement": 51,
+            "comments": 6,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8718",
+            "label": "[Seeking Advice] Lost my legacy Cursor p...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/AIcodingProfessionals/comments/1s5m80r/seeking_advice_lost_my_legacy_cursor_plan_are/",
+            "engagement": 51,
+            "comments": 2,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_10285",
+            "label": "\u6311\u6218\u7528Cursor30\u5206\u949f\u642d\u5efa\u5b8c\u6574\u5c0f\u7a0b\u5e8f",
+            "type": "discussion",
+            "platform": "bilibili",
+            "url": "https://www.bilibili.com/video/BV17YPqzcES4",
+            "engagement": 50,
+            "comments": 52,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8686",
+            "label": "\u30102025\u6700\u65b0\u7248\u3011\u76ee\u524dB\u7ad9\u6700\u5168\u6700\u7ec6\u7684 CurSor AI\u7f16\u7a0b\u96f6\u57fa\u7840\u5168\u5957\u6559\u7a0b\uff0c\u624b\u628a...",
+            "type": "discussion",
+            "platform": "bilibili",
+            "url": "https://www.bilibili.com/video/BV1E6CFBMEnk",
+            "engagement": 50,
+            "comments": 485,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8669",
+            "label": "Show HN: NerdFlair, a Claude Code QoL Pl...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47532007",
+            "engagement": 50,
+            "comments": 1,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8670",
+            "label": "Vox: Speech-to-text for macOS. Hold a ho...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47544961",
+            "engagement": 50,
+            "comments": 0,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8715",
+            "label": "Show HN: We built Cursor, but for data t...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47545627",
+            "engagement": 50,
+            "comments": 0,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8667",
+            "label": "Show HN: Cursorlag \u2013 add a lag trail to ...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47554915",
+            "engagement": 50,
+            "comments": 1,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8671",
+            "label": "Ask HN: People who run two Macs \u2013 how do...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47556137",
+            "engagement": 50,
+            "comments": 1,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8682",
+            "label": "never touching cursor again",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/vibecoding/comments/1mo0j3p/never_touching_cursor_again/",
+            "engagement": 50,
+            "comments": 564,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8683",
+            "label": "never touching cursor again",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/programminghorror/comments/1mp8qel/never_touching_cursor_again/",
+            "engagement": 50,
+            "comments": 385,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8681",
+            "label": "Be honest...how much time have you waste...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/kde/comments/1pj3pvz/be_honesthow_much_time_have_you_wasted_just/",
+            "engagement": 50,
+            "comments": 297,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8680",
+            "label": "Hey does this stack of platforms my curs...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/Terraria/comments/1ptd337/hey_does_this_stack_of_platforms_my_cursor_is_on/",
+            "engagement": 50,
+            "comments": 115,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8679",
+            "label": "Silly Problem Need Help",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/AnimalCrossing/comments/1q8uprb/silly_problem_need_help/",
+            "engagement": 50,
+            "comments": 99,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8676",
+            "label": "Cursor CEO Built a Browser using AI, but...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/programming/comments/1qdo9r3/cursor_ceo_built_a_browser_using_ai_but_does_it/",
+            "engagement": 50,
+            "comments": 375,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8677",
+            "label": "Cursor Implied Success Without Evidence ...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/programming/comments/1qeotkj/cursor_implied_success_without_evidence_not_one/",
+            "engagement": 50,
+            "comments": 242,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8674",
+            "label": "Everyone at conferences talking about Cu...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/cscareerquestions/comments/1r7vi5y/everyone_at_conferences_talking_about_cursor_this/",
+            "engagement": 50,
+            "comments": 128,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8675",
+            "label": "Coworker raising massive PRs",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/ExperiencedDevs/comments/1rkm4ie/coworker_raising_massive_prs/",
+            "engagement": 50,
+            "comments": 279,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8678",
+            "label": "[Spoilers for Multiple Anime] Fixing Cru...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/anime/comments/1rlmuid/spoilers_for_multiple_anime_fixing_crunchyrolls/",
+            "engagement": 50,
+            "comments": 139,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8668",
+            "label": "DevTools \u201cRecord &amp; Replay\u201d \u2013 Any way...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/PowerShell/comments/1s3agmx/devtools_record_replay_any_way_to_integrate_with/",
+            "engagement": 50,
+            "comments": 7,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8672",
+            "label": "CDP MCP - browser automation through raw...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/modelcontextprotocol/comments/1s4uoi3/cdp_mcp_browser_automation_through_raw_chrome/",
+            "engagement": 50,
+            "comments": 2,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8685",
+            "label": "There is a cursor in my jigsaw puzzle pi...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/mildlyinteresting/comments/aahi8a/there_is_a_cursor_in_my_jigsaw_puzzle_picture/",
+            "engagement": 50,
+            "comments": 855,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8684",
+            "label": "cursor",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/GoCommitDie/comments/l7vb9k/cursor/",
+            "engagement": 50,
+            "comments": 105,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8663",
+            "label": "\ud83d\ude80\u8c37\u6b4cChrome DevTools MCP\u5f7b\u5e95\u98a0\u8986AI\u6d4f\u89c8\u5668\u81ea\u52a8\u5316\uff01\u8ba9Curs...",
+            "type": "discussion",
+            "platform": "bilibili",
+            "url": "https://www.bilibili.com/video/BV1EynZzcEmh",
+            "engagement": 49,
+            "comments": 165,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8659",
+            "label": "\u901a\u8fc7\u4e00\u4e2a\u5b9e\u6218\u9879\u76ee\uff0c\u5e26\u4f60\u5165\u95e8VibeCoding\u548cCursor",
+            "type": "discussion",
+            "platform": "bilibili",
+            "url": "https://www.bilibili.com/video/BV1VEA8zYE9r",
+            "engagement": 49,
+            "comments": 115,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8658",
+            "label": "\u3010\u524d\u7aef\u6742\u8c0816\u3011\u4f60\u4e0d\u77e5\u9053\u7684 DevTools",
+            "type": "discussion",
+            "platform": "bilibili",
+            "url": "https://www.bilibili.com/video/BV1WAm2B9Ewd",
+            "engagement": 49,
+            "comments": 22,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8665",
+            "label": "\u666e\u901a\u4eba\u4e5f\u53ef\u4ee5\u770b\u7684 AI \u7f16\u7a0b\u6307\u5357 | Cursor \u6559\u7a0b\uff5cCursor \u4f7f\u7528\u6280\u5de7...",
+            "type": "discussion",
+            "platform": "bilibili",
+            "url": "https://www.bilibili.com/video/BV1yorUYWEGD",
+            "engagement": 49,
+            "comments": 1717,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8650",
+            "label": "Show HN: Vectimus \u2013 Cedar policy enforce...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47525283",
+            "engagement": 49,
+            "comments": 2,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8662",
+            "label": "Spider on my computer screen chasing my ...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/interesting/comments/1f8varq/spider_on_my_computer_screen_chasing_my_cursor/",
+            "engagement": 49,
+            "comments": 433,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8660",
+            "label": "Rob Greiner, the sixth human implanted w...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/nextfuckinglevel/comments/1lf7j4h/rob_greiner_the_sixth_human_implanted_with/",
+            "engagement": 49,
+            "comments": 1426,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8657",
+            "label": "Spotted a Windows mouse cursor on this I...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/FortNiteBR/comments/1p90o9y/spotted_a_windows_mouse_cursor_on_this_itchy_and/",
+            "engagement": 49,
+            "comments": 197,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8656",
+            "label": "macOS 26 Tahoe removed the Mickey Mouse ...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/MacOS/comments/1pmkghk/macos_26_tahoe_removed_the_mickey_mouse_hand/",
+            "engagement": 49,
+            "comments": 184,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8655",
+            "label": "Finally found a good cursor",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/GTAV/comments/1qa1di0/finally_found_a_good_cursor/",
+            "engagement": 49,
+            "comments": 19,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8673",
+            "label": "cursor now injecting \"co-authored by cur...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/cursor/comments/1r89r24/cursor_now_injecting_coauthored_by_cursor_into/",
+            "engagement": 49,
+            "comments": 171,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8661",
+            "label": "cursorWouldNever",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/ProgrammerHumor/comments/1rimgxg/cursorwouldnever/",
+            "engagement": 49,
+            "comments": 854,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8654",
+            "label": "I let Claude Code monitor its own Lighth...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/ClaudeAI/comments/1rn63fb/i_let_claude_code_monitor_its_own_lighthouse/",
+            "engagement": 49,
+            "comments": 12,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8666",
+            "label": "How do people use cursor and why.",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/cursor/comments/1rz908i/how_do_people_use_cursor_and_why/",
+            "engagement": 49,
+            "comments": 17,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8633",
+            "label": "I built a CLI for patchright that can be...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/webscraping/comments/1s2nqis/i_built_a_cli_for_patchright_that_can_be_used/",
+            "engagement": 49,
+            "comments": 3,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8664",
+            "label": "I saw the Google Earth cursor moving ove...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/funny/comments/e988dn/i_saw_the_google_earth_cursor_moving_over_sweden/",
+            "engagement": 49,
+            "comments": 1231,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8649",
+            "label": "\u53f2\u4e0a\u6700\u5f3a AI \u7f16\u7a0b\u5de5\u5177\u514d\u8d39\u5566\uff01Cursor \u4fdd\u59c6\u7ea7\u4f7f\u7528\u6559\u7a0b\uff01\u65b0\u624b\u53cb\u597d\uff01\u770b\u5230\u5c31\u662f...",
+            "type": "discussion",
+            "platform": "bilibili",
+            "url": "https://www.bilibili.com/video/BV1WBG9zgECp",
+            "engagement": 48,
+            "comments": 2061,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8638",
+            "label": "Vibe Coding Is Powerful, but Technical S...",
+            "type": "discussion",
+            "platform": "devto",
+            "url": "https://dev.to/aichannode/vibe-coding-is-powerful-but-technical-skills-still-matter-4pio",
+            "engagement": 48,
+            "comments": 6,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8651",
+            "label": "Cursor billed us $450 for a seat that ex...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47381336",
+            "engagement": 48,
+            "comments": 13,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8637",
+            "label": "Cursor admits its new coding model was b...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47484339",
+            "engagement": 48,
+            "comments": 1,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8635",
+            "label": "We scored 37 devtools companies to build...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47508142",
+            "engagement": 48,
+            "comments": 0,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8634",
+            "label": "Show HN: Build AI Trading Agents in Curs...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47545829",
+            "engagement": 48,
+            "comments": 1,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8701",
+            "label": "How Kimi, Cursor, and Chroma Train Agent...",
+            "type": "discussion",
+            "platform": "hackernews",
+            "url": "https://news.ycombinator.com/item?id=47557205",
+            "engagement": 48,
+            "comments": 0,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8647",
+            "label": "I built real dark mode for my website - ...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/developersIndia/comments/1nw0yj9/i_built_real_dark_mode_for_my_website_your_cursor/",
+            "engagement": 48,
+            "comments": 253,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8646",
+            "label": "Cursor appears vertically instead of hor...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/pcmasterrace/comments/1oyua4a/cursor_appears_vertically_instead_of_horizontally/",
+            "engagement": 48,
+            "comments": 219,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8645",
+            "label": "Using external mouse with an old smartph...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/antiwork/comments/1p5n7oo/using_external_mouse_with_an_old_smartphone_to/",
+            "engagement": 48,
+            "comments": 141,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8642",
+            "label": "Cursor AI CEO shares GPT 5.2 agents buil...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/singularity/comments/1qgb1j5/cursor_ai_ceo_shares_gpt_52_agents_building_a_3m/",
+            "engagement": 48,
+            "comments": 157,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8643",
+            "label": "I made an aphex twin cursor on my websit...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/aphextwin/comments/1qiwyn1/i_made_an_aphex_twin_cursor_on_my_website_that/",
+            "engagement": 48,
+            "comments": 38,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_9122",
+            "label": "Company is complaining about AI cost too...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/cscareerquestions/comments/1qvefyl/company_is_complaining_about_ai_cost_took_away/",
+            "engagement": 48,
+            "comments": 163,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8639",
+            "label": "How Cursor is going to survive",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/cursor/comments/1r4gekk/how_cursor_is_going_to_survive/",
+            "engagement": 48,
+            "comments": 171,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8641",
+            "label": "MSFT down 23% in 6 months. I found some ...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/ValueInvesting/comments/1rdu9vj/msft_down_23_in_6_months_i_found_some_uncommon/",
+            "engagement": 48,
+            "comments": 241,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8644",
+            "label": "Qwen3.5-35B-A3B is a gamechanger for age...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/LocalLLaMA/comments/1rdxfdu/qwen3535ba3b_is_a_gamechanger_for_agentic_coding/",
+            "engagement": 48,
+            "comments": 398,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8640",
+            "label": "AI is eating software development",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/vibecoding/comments/1re9ug4/ai_is_eating_software_development/",
+            "engagement": 48,
+            "comments": 364,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8653",
+            "label": "Great now I get ads in my devtools",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/webdev/comments/1rp2gwr/great_now_i_get_ads_in_my_devtools/",
+            "engagement": 48,
+            "comments": 20,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8652",
+            "label": "syntaqlite: high-fidelity devtools that ...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/programming/comments/1rwhfwl/syntaqlite_highfidelity_devtools_that_sqlite/",
+            "engagement": 48,
+            "comments": 4,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8632",
+            "label": "How to inspect devtools to check scholas...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/ScholasticArtWriting/comments/1s2sefg/how_to_inspect_devtools_to_check_scholastic/",
+            "engagement": 48,
+            "comments": 4,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8636",
+            "label": "GitHub - Epistates/awesome-mcp-devtools:...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/modelcontextprotocol/comments/1s4r7fx/github_epistatesawesomemcpdevtools_a_curated_list/",
+            "engagement": 48,
+            "comments": 5,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8648",
+            "label": "Cursor parking lot",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/BrandNewSentence/comments/oxk523/cursor_parking_lot/",
+            "engagement": 48,
+            "comments": 94,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_10237",
+            "label": "14 \u4e2a\u8ba9\u4f60\u6548\u7387\u7ffb\u500d\u7684 DevTools \u6280\u5de7",
+            "type": "discussion",
+            "platform": "bilibili",
+            "url": "https://www.bilibili.com/video/BV1PzNkzsEfs",
+            "engagement": 47,
+            "comments": 7,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8631",
+            "label": "\u53f2\u4e0a\u6700\u5f3a AI \u7f16\u7a0b\u5de5\u5177Cursor\u6765\u5566\uff01Cursor\u4fdd\u59c6\u7ea7\u4f7f\u7528\u6559\u7a0b\uff01\u65b0\u624b\u53cb\u597d\uff01...",
+            "type": "discussion",
+            "platform": "bilibili",
+            "url": "https://www.bilibili.com/video/BV1qGc7zwEX6",
+            "engagement": 47,
+            "comments": 542,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_10236",
+            "label": "I built real dark mode for my website - ...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/badUIbattles/comments/1nwq357/i_built_real_dark_mode_for_my_website_your_cursor/",
+            "engagement": 47,
+            "comments": 65,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_10234",
+            "label": "I made a Pompompurin Cursor",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/pompompurin/comments/1qefb00/i_made_a_pompompurin_cursor/",
+            "engagement": 47,
+            "comments": 39,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_10233",
+            "label": "Cuidado, a sua empresa sabe onde voc\u00ea us...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/brdev/comments/1qorjwh/cuidado_a_sua_empresa_sabe_onde_voc\u00ea_usa_o_cursor/",
+            "engagement": 47,
+            "comments": 132,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_10235",
+            "label": "Cautionary - Using AI in your job instea...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/developersIndia/comments/1rck902/cautionary_using_ai_in_your_job_instead_of/",
+            "engagement": 47,
+            "comments": 129,
+            "depth": 0,
+            "explored": true
+        },
+        {
+            "id": "disc_8630",
+            "label": "ULPT: If a computer illiterate relative/...",
+            "type": "discussion",
+            "platform": "reddit",
+            "url": "https://www.reddit.com/r/UnethicalLifeProTips/comments/a6z0eq/ulpt_if_a_computer_illiterate_relativefriend_asks/",
+            "engagement": 47,
+            "comments": 621,
+            "depth": 0,
+            "explored": true
+        }
+    ],
+    "links": [
+        {
+            "source": "brand_34",
+            "target": "disc_9267",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_10392",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8786",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8785",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8783",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8782",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8780",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8779",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8781",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8784",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8944",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8777",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8778",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8775",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8774",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8773",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8768",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8770",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8765",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8766",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8767",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8762",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8764",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8758",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8757",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_10364",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8761",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8769",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8759",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8760",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8763",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8772",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8756",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8755",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8771",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_10359",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8745",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8746",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8747",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8744",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_10348",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8753",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8790",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8751",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8749",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8748",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8776",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8754",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_10356",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8740",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8742",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8738",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8724",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8752",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8743",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8750",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8741",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8736",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8734",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8732",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8733",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8739",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8730",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_10330",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8731",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8729",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8728",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8735",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8726",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8727",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8723",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8721",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8737",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8722",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8725",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8720",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8719",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8717",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8716",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8714",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8713",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8703",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8787",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8789",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8709",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8711",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8710",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8712",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8707",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8706",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8702",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8704",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8788",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8700",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8699",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8696",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8698",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8708",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8705",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8693",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8689",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8695",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8692",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8691",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8690",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8697",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8694",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8687",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8688",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8718",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_10285",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8686",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8669",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8670",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8715",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8667",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8671",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8682",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8683",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8681",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8680",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8679",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8676",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8677",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8674",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8675",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8678",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8668",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8672",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8685",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8684",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8663",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8659",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8658",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8665",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8650",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8662",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8660",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8657",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8656",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8655",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8673",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8661",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8654",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8666",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8633",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8664",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8649",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8638",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8651",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8637",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8635",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8634",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8701",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8647",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8646",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8645",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8642",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8643",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_9122",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8639",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8641",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8644",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8640",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8653",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8652",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8632",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8636",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8648",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_10237",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8631",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_10236",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_10234",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_10233",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_10235",
+            "type": "has_discussion"
+        },
+        {
+            "source": "brand_34",
+            "target": "disc_8630",
+            "type": "has_discussion"
+        }
+    ],
+    "expansion": null
+}

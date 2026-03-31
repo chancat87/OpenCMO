@@ -36,6 +36,14 @@
 
 ---
 
+## Showcase: Real-World Example
+
+See OpenCMO in action with a **real scan of [Cursor.com](https://cursor.com)** — 176 community discussions discovered across Reddit, Hacker News, Bilibili, Dev.to, and V2EX, with a 177-node knowledge graph.
+
+**[View the Cursor showcase with full data](docs/showcase/cursor/)**
+
+---
+
 ## Why OpenCMO
 
 - **Start with a URL, not a setup project**: scan a site and get a CMO-level read on positioning, strengths, weaknesses, and competitive context.
@@ -138,6 +146,9 @@ The dev app runs at `http://localhost:5173/app` and proxies API traffic to `:808
 - [x] 3D knowledge graph
 - [x] Approval queue and controlled publishing
 - [x] Chinese platform community monitoring (V2EX, Weibo, Bilibili, XueQiu)
+- [x] Full i18n (English, Chinese, Japanese, Korean, Spanish)
+- [x] Locale-aware AI responses (LLM follows UI language setting)
+- [x] LLM retry with exponential backoff for unreliable providers
 - [ ] More publishing targets
 - [ ] Brand voice controls
 - [ ] Deeper enterprise SEO crawls
