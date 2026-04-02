@@ -47,6 +47,7 @@ export function GeoPage() {
   const visibility = chart?.visibility as (number | null)[] | undefined;
   const position = chart?.position as (number | null)[] | undefined;
   const sentiment = chart?.sentiment as (number | null)[] | undefined;
+  const sentimentUnavailable = latest(sentiment) == null;
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -126,7 +127,9 @@ export function GeoPage() {
           </ChartCard>
 
           {/* Action Tips */}
-          {(() => {
+          {sentimentUnavailable ? (
+            <ActionTip title={t("geo.sentimentUnavailable")} severity="warning" />
+          ) : (() => {
             const score = latest(geoScore);
             if (score == null) return null;
             if (score >= 70) return <ActionTip title={t("actionTip.geoExcellent")} severity="success" />;

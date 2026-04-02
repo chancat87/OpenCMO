@@ -132,6 +132,7 @@ async def run_scheduled_scan(
         try:
             import json
             from opencmo.tools.geo_providers import GEO_PROVIDER_REGISTRY
+            from opencmo.tools.text_signals import analyze_geo_sentiment
 
             enabled = [p for p in GEO_PROVIDER_REGISTRY if p.is_enabled]
             results = {}
@@ -146,13 +147,34 @@ async def run_scheduled_scan(
             visibility_score = int(platforms_mentioned / len(enabled) * 40) if enabled else 0
             position_scores = [30 * (1 - r.best_position_pct / 100) for r in results.values() if r.best_position_pct is not None]
             position_score = int(sum(position_scores) / len(position_scores)) if position_scores else 0
-            sentiment_score = 15 if platforms_mentioned > 0 else 0
-            geo_score = visibility_score + position_score + sentiment_score
+            sentiment_snippets: dict[str, str] = {}
+            for name, aggregated in results.items():
+                snippets = [
+                    qr.content_snippet
+                    for qr in getattr(aggregated, "per_query_results", [])
+                    if getattr(qr, "content_snippet", "")
+                ]
+                if snippets:
+                    sentiment_snippets[name] = "\n".join(snippets)
 
-            platform_json = json.dumps({
-                name: {"mentioned": r.mentioned, "mention_count": r.total_mention_count, "position_pct": r.best_position_pct}
+            sentiment_signal = await analyze_geo_sentiment(brand, sentiment_snippets)
+            sentiment_score = sentiment_signal.score
+            geo_score = visibility_score + position_score + (sentiment_score or 0)
+
+            payload = {
+                name: {
+                    "mentioned": r.mentioned,
+                    "mention_count": r.total_mention_count,
+                    "position_pct": r.best_position_pct,
+                }
                 for name, r in results.items()
-            })
+            }
+            payload["_sentiment"] = {
+                "score": sentiment_score,
+                "label": sentiment_signal.label,
+                "reasoning": sentiment_signal.reasoning,
+            }
+            platform_json = json.dumps(payload)
             await storage.save_geo_scan(
                 project_id, geo_score,
                 visibility_score=visibility_score,
@@ -201,13 +223,35 @@ async def run_scheduled_scan(
             import json
             from opencmo.tools.community import _scan_community_impl
 
-            raw = await _scan_community_impl(brand, category)
+            tracked_keywords = [
+                item["keyword"]
+                for item in await storage.list_tracked_keywords(project_id)
+            ]
+            competitors = await storage.list_competitors(project_id)
+            competitor_names = [item["name"] for item in competitors]
+            competitor_keywords: list[str] = []
+            for competitor in competitors:
+                competitor_keywords.extend(
+                    keyword["keyword"]
+                    for keyword in await storage.list_competitor_keywords(competitor["id"])
+                )
+
+            raw = await _scan_community_impl(
+                brand,
+                category,
+                tracked_keywords=tracked_keywords,
+                competitor_names=competitor_names,
+                competitor_keywords=competitor_keywords,
+                canonical_url=url,
+            )
             data = json.loads(raw)
             total_hits = len(data.get("hits", []))
             await storage.save_community_scan(project_id, total_hits, raw)
 
             # Track discussions + snapshots
             for hit in data.get("hits", []):
+                if hit.get("source_kind") == "external_search":
+                    continue
                 try:
                     disc_id = await storage.upsert_tracked_discussion(project_id, hit)
                     await storage.save_discussion_snapshot(

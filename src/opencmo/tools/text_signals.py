@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 class SentimentSignal:
     """Extracted sentiment signal from AI platform snippets."""
 
-    score: int  # 0-30
-    label: str  # "positive", "neutral", "negative", "not_mentioned"
+    score: int | None  # 0-30 when available
+    label: str  # "positive", "neutral", "negative", "not_mentioned", "unavailable"
     reasoning: str  # brief explanation
 
 
@@ -106,18 +106,17 @@ async def analyze_geo_sentiment(
             text = text.rsplit("```", 1)[0]
 
         result = json.loads(text.strip())
-        score = max(0, min(30, int(result.get("score", 0))))
-        label = result.get("label", "neutral")
+        raw_score = result.get("score")
+        score = max(0, min(30, int(raw_score))) if raw_score is not None else None
+        label = result.get("label", "unavailable")
         reasoning = result.get("reasoning", "")
 
         return SentimentSignal(score=score, label=label, reasoning=reasoning)
 
-    except Exception:
-        logger.debug("Sentiment analysis failed for %s, falling back", brand_name, exc_info=True)
-        # Fallback: if brand was mentioned at all, give neutral score
-        has_mentions = any(brand_name.lower() in s.lower() for s in snippets.values() if s)
+    except Exception as exc:
+        logger.debug("Sentiment analysis failed for %s", brand_name, exc_info=True)
         return SentimentSignal(
-            score=12 if has_mentions else 0,
-            label="neutral" if has_mentions else "not_mentioned",
-            reasoning="Fallback: LLM analysis unavailable",
+            score=None,
+            label="unavailable",
+            reasoning=f"Sentiment analysis unavailable: {exc}",
         )

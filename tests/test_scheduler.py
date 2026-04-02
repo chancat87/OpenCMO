@@ -1,5 +1,7 @@
 """Tests for scheduler module."""
 
+import json
+from types import SimpleNamespace
 from unittest.mock import patch, AsyncMock
 
 import pytest
@@ -163,3 +165,105 @@ async def test_run_scheduled_scan_generates_periodic_report_on_cron_full(tmp_pat
             await run_scheduled_scan(pid, "full", triggered_by="cron")
 
         mock_periodic.assert_awaited_once_with(pid, source_run_id=None)
+
+
+@pytest.mark.asyncio
+async def test_run_scheduled_scan_geo_uses_real_sentiment_analysis(tmp_path):
+    db_path = tmp_path / "test.db"
+    with patch.object(storage, "_DB_PATH", db_path):
+        pid = await storage.ensure_project("GeoBrand", "https://geo.test", "saas")
+
+        fake_provider = SimpleNamespace(
+            name="Perplexity",
+            is_enabled=True,
+            check_visibility_multi=AsyncMock(return_value=SimpleNamespace(
+                mentioned=True,
+                total_mention_count=2,
+                best_position_pct=25,
+                per_query_results=[
+                    SimpleNamespace(content_snippet="GeoBrand is frequently recommended."),
+                ],
+            )),
+        )
+
+        with patch("opencmo.tools.geo_providers.GEO_PROVIDER_REGISTRY", [fake_provider]), \
+             patch("opencmo.tools.text_signals.analyze_geo_sentiment", new_callable=AsyncMock, return_value=SimpleNamespace(score=21, label="positive", reasoning="Real snippet-based sentiment")), \
+             patch("opencmo.tools.citability._citability_impl", new_callable=AsyncMock, return_value={"avg_score": 80, "top_blocks": [], "bottom_blocks": [], "grade_distribution": {}, "error": False}), \
+             patch("opencmo.tools.brand_presence._brand_presence_impl", new_callable=AsyncMock, return_value={"footprint_score": 60, "platforms": []}), \
+             patch("opencmo.insights.detect_insights", new_callable=AsyncMock, return_value=[]), \
+             patch("opencmo.autopilot.execute_autopilot", new_callable=AsyncMock, return_value=[]):
+            await run_scheduled_scan(pid, "geo")
+
+        history = await storage.get_geo_history(pid, limit=1)
+        assert history[0]["sentiment_score"] == 21
+        assert history[0]["geo_score"] == 83
+        payload = json.loads(history[0]["platform_results_json"])
+        assert payload["_sentiment"]["label"] == "positive"
+
+
+@pytest.mark.asyncio
+async def test_run_scheduled_scan_geo_leaves_sentiment_empty_when_unavailable(tmp_path):
+    db_path = tmp_path / "test.db"
+    with patch.object(storage, "_DB_PATH", db_path):
+        pid = await storage.ensure_project("GeoBrand", "https://geo.test", "saas")
+
+        fake_provider = SimpleNamespace(
+            name="Perplexity",
+            is_enabled=True,
+            check_visibility_multi=AsyncMock(return_value=SimpleNamespace(
+                mentioned=True,
+                total_mention_count=1,
+                best_position_pct=50,
+                per_query_results=[
+                    SimpleNamespace(content_snippet="GeoBrand appears in one result."),
+                ],
+            )),
+        )
+
+        with patch("opencmo.tools.geo_providers.GEO_PROVIDER_REGISTRY", [fake_provider]), \
+             patch("opencmo.tools.text_signals.analyze_geo_sentiment", new_callable=AsyncMock, return_value=SimpleNamespace(score=None, label="unavailable", reasoning="sentiment service offline")), \
+             patch("opencmo.tools.citability._citability_impl", new_callable=AsyncMock, return_value={"avg_score": 80, "top_blocks": [], "bottom_blocks": [], "grade_distribution": {}, "error": False}), \
+             patch("opencmo.tools.brand_presence._brand_presence_impl", new_callable=AsyncMock, return_value={"footprint_score": 60, "platforms": []}), \
+             patch("opencmo.insights.detect_insights", new_callable=AsyncMock, return_value=[]), \
+             patch("opencmo.autopilot.execute_autopilot", new_callable=AsyncMock, return_value=[]):
+            await run_scheduled_scan(pid, "geo")
+
+        history = await storage.get_geo_history(pid, limit=1)
+        assert history[0]["sentiment_score"] is None
+        assert history[0]["geo_score"] == 55
+        payload = json.loads(history[0]["platform_results_json"])
+        assert payload["_sentiment"]["label"] == "unavailable"
+
+
+@pytest.mark.asyncio
+async def test_run_scheduled_scan_community_skips_external_search_snapshots(tmp_path):
+    db_path = tmp_path / "test.db"
+    with patch.object(storage, "_DB_PATH", db_path):
+        pid = await storage.ensure_project("Community", "https://community.test", "saas")
+
+        with patch(
+            "opencmo.tools.community._scan_community_impl",
+            new_callable=AsyncMock,
+            return_value=json.dumps(
+                {
+                    "hits": [
+                        {
+                            "platform": "linkedin",
+                            "detail_id": "https://linkedin.com/posts/example",
+                            "title": "External mention",
+                            "url": "https://linkedin.com/posts/example",
+                            "raw_score": None,
+                            "comments_count": None,
+                            "engagement_score": None,
+                            "source_kind": "external_search",
+                        }
+                    ]
+                }
+            ),
+        ), \
+             patch("opencmo.insights.detect_insights", new_callable=AsyncMock, return_value=[]), \
+             patch("opencmo.autopilot.execute_autopilot", new_callable=AsyncMock, return_value=[]):
+            await run_scheduled_scan(pid, "community")
+
+        discussions = await storage.get_tracked_discussions(pid)
+        assert discussions == []

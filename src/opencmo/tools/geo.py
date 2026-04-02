@@ -68,6 +68,9 @@ async def scan_geo_visibility(brand_name: str, category: str) -> str:
     )
 
     # Sentiment (0-30): LLM-based analysis of how AI platforms talk about the brand
+    sentiment_score: int | None = None
+    sentiment_label = "unavailable"
+    sentiment_reasoning = "Sentiment analysis unavailable."
     try:
         from opencmo.tools.text_signals import analyze_geo_sentiment
 
@@ -85,13 +88,10 @@ async def scan_geo_visibility(brand_name: str, category: str) -> str:
         sentiment_score = signal.score
         sentiment_label = signal.label
         sentiment_reasoning = signal.reasoning
-    except Exception:
-        # Graceful fallback if sentiment analysis fails
-        sentiment_score = 15 if platforms_mentioned > 0 else 0
-        sentiment_label = "neutral" if platforms_mentioned > 0 else "not_mentioned"
-        sentiment_reasoning = "Sentiment analysis unavailable"
+    except Exception as exc:
+        sentiment_reasoning = f"Sentiment analysis unavailable: {exc}"
 
-    geo_score = visibility_score + position_score + sentiment_score
+    geo_score = visibility_score + position_score + (sentiment_score or 0)
 
     # Persist scan (best-effort, do not block on failure)
     try:
@@ -108,6 +108,13 @@ async def scan_geo_visibility(brand_name: str, category: str) -> str:
                 for name, r in flat_results.items()
             }
         )
+        payload = json.loads(platform_results_json)
+        payload["_sentiment"] = {
+            "score": sentiment_score,
+            "label": sentiment_label,
+            "reasoning": sentiment_reasoning,
+        }
+        platform_results_json = json.dumps(payload)
         # save_geo_scan requires a project_id; use project_id=0 as ad-hoc scan
         await storage.save_geo_scan(
             project_id=0,
@@ -129,7 +136,7 @@ async def scan_geo_visibility(brand_name: str, category: str) -> str:
         "|-----------|-------|-----|",
         f"| Visibility | {visibility_score} | 40 |",
         f"| Position | {position_score} | 30 |",
-        f"| Sentiment ({sentiment_label}) | {sentiment_score} | 30 |",
+        f"| Sentiment ({sentiment_label}) | {sentiment_score if sentiment_score is not None else '—'} | 30 |",
         f"| **Total** | **{geo_score}** | **100** |",
         "",
         f"**Sentiment Analysis**: {sentiment_reasoning}",
