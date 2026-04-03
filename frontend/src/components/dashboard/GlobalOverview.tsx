@@ -71,7 +71,7 @@ function geoColor(score: number | null): string {
 }
 
 function communityColor(hits: number): string {
-  if (hits > 0) return "bg-blue-50 text-blue-600";
+  if (hits > 0) return "bg-brand-50 text-brand-600";
   return "bg-slate-50 text-slate-400";
 }
 
@@ -118,7 +118,7 @@ export function GlobalOverview() {
           icon={Rocket}
           label={t("overview.recentCampaigns")}
           value={data.recent_campaigns.length}
-          color="bg-purple-50 text-purple-600"
+          color="bg-brand-50 text-brand-600"
         />
       </div>
     </div>

@@ -29,7 +29,7 @@ export function MonitorList({
         return (
           <div
             key={m.id}
-            className="group relative overflow-hidden rounded-[1.25rem] border border-zinc-200/60 bg-white p-5 shadow-sm ring-1 ring-zinc-950/5 transition-all duration-300 hover:shadow-lg"
+            className="group relative overflow-hidden rounded-xl border border-zinc-200/60 bg-white p-5 shadow-sm ring-1 ring-zinc-950/5 transition-all duration-300 hover:shadow-lg"
           >
             {/* Header: brand + category */}
             <div className="mb-3 flex items-start justify-between">

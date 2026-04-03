@@ -27,9 +27,9 @@ function getSeverityStyles(severity: InsightSeverity) {
       };
     default:
       return {
-        border: "border-l-sky-500",
-        badge: "bg-sky-50 text-sky-700 ring-sky-200/80",
-        button: "bg-sky-500 text-white hover:bg-sky-400 shadow-[0_14px_36px_rgba(14,165,233,0.22)]",
+        border: "border-l-brand-500",
+        badge: "bg-brand-50 text-brand-700 ring-brand-200/80",
+        button: "bg-brand-500 text-white hover:bg-brand-400 shadow-[0_14px_36px_rgba(99,102,241,0.22)]",
       };
   }
 }
@@ -76,10 +76,10 @@ export function InsightBanner() {
   }
 
   return (
-    <section className="mb-8 rounded-[1.75rem] border border-slate-200/70 bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.1),_transparent_35%),linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.94))] p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl ring-1 ring-white/50 sm:p-6">
+    <section className="mb-8 rounded-2xl border border-slate-200/70 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.1),_transparent_35%),linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.94))] p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl ring-1 ring-white/50 sm:p-6">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-sky-600/80">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-600/80">
             {t("insights.proactive")}
           </p>
           <h2 className="mt-1 text-lg font-semibold tracking-tight text-slate-900">
@@ -99,7 +99,7 @@ export function InsightBanner() {
           return (
             <article
               key={insight.id}
-              className={`rounded-[1.5rem] border border-slate-200/70 border-l-4 bg-white/85 p-4 shadow-sm backdrop-blur-sm ${severity.border}`}
+              className={`rounded-2xl border border-slate-200/70 border-l-4 bg-white/85 p-4 shadow-sm backdrop-blur-sm ${severity.border}`}
             >
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div className="min-w-0 flex-1">

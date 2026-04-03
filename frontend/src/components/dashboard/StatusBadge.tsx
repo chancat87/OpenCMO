@@ -1,7 +1,7 @@
 const COLORS = {
   green: "text-emerald-500",
-  blue: "text-blue-500",
-  purple: "text-violet-500",
+  blue: "text-brand-500",
+  purple: "text-brand-500",
   gray: "text-slate-300",
   red: "text-rose-500",
 };

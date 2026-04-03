@@ -9,6 +9,7 @@ import { ScanHistoryTable } from "../components/project/ScanHistoryTable";
 import { NextActions } from "../components/project/NextActions";
 import { CampaignTimeline } from "../components/project/CampaignTimeline";
 import { ActionFeed } from "../components/project/ActionFeed";
+import { InsightBanner } from "../components/dashboard/InsightBanner";
 import { useI18n } from "../i18n";
 
 export function ProjectPage() {
@@ -26,6 +27,7 @@ export function ProjectPage() {
   return (
     <div>
       <ProjectHeader project={project} isPaused={is_paused} />
+      <InsightBanner />
       <ProjectTabs projectId={projectId} />
 
       {/* Action Feed — the primary "what to do" section */}

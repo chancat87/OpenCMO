@@ -7,12 +7,8 @@ import { ErrorAlert } from "../components/common/ErrorAlert";
 import { AnimatedPage } from "../components/common/AnimatedPage";
 import { SkeletonCard } from "../components/common/SkeletonCard";
 import { ProjectCard } from "../components/dashboard/ProjectCard";
-import { GlobalOverview } from "../components/dashboard/GlobalOverview";
-import { InsightBanner } from "../components/dashboard/InsightBanner";
-import { SetupBanner } from "../components/dashboard/SetupBanner";
 import { MonitorForm } from "../components/monitors/MonitorForm";
 import { AnalysisDialog } from "../components/monitors/AnalysisDialog";
-import { SettingsDialog } from "../components/settings/SettingsDialog";
 import { useI18n } from "../i18n";
 import { Eye, Loader2 } from "lucide-react";
 
@@ -35,7 +31,6 @@ export function DashboardPage() {
   const deleteProject = useDeleteProject();
   const createMonitor = useCreateMonitor();
   const { t, locale } = useI18n();
-  const [showSettings, setShowSettings] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [selectedTaskUrl, setSelectedTaskUrl] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -79,8 +74,6 @@ export function DashboardPage() {
         <p className="text-[15px] text-slate-500 mt-1.5">{t("dashboard.subtitle")}</p>
       </div>
 
-      <SetupBanner onOpenSettings={() => setShowSettings(true)} />
-
       <div className="mb-8">
         <MonitorForm
           onSubmit={async (data) => {
@@ -111,8 +104,6 @@ export function DashboardPage() {
       </div>
 
       {deleteError ? <div className="mb-6"><ErrorAlert message={deleteError} /></div> : null}
-      <InsightBanner />
-      <GlobalOverview />
 
       {projects?.length ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -148,7 +139,6 @@ export function DashboardPage() {
           onClose={() => setDialogOpen(false)}
         />
       )}
-      {showSettings && <SettingsDialog onClose={() => setShowSettings(false)} />}
     </AnimatedPage>
   );
 }

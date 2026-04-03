@@ -4,12 +4,15 @@ import {
   LayoutDashboard,
   MessageSquare,
   CheckSquare,
+  Activity,
   FolderOpen,
   Settings,
   X,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { listProjects } from "../../api/projects";
+import { useSettings } from "../../hooks/useSettings";
+import { getEffectiveKeyStatus } from "../../api/userKeys";
 import { useI18n } from "../../i18n";
 import type { TranslationKey } from "../../i18n";
 import { SettingsDialog } from "../settings/SettingsDialog";
@@ -17,6 +20,7 @@ import { SettingsDialog } from "../settings/SettingsDialog";
 const NAV: { to: string; labelKey: TranslationKey; icon: typeof LayoutDashboard }[] = [
   { to: "/", labelKey: "nav.dashboard", icon: LayoutDashboard },
   { to: "/approvals", labelKey: "nav.approvals", icon: CheckSquare },
+  { to: "/monitors", labelKey: "nav.monitors", icon: Activity },
   { to: "/chat", labelKey: "nav.aiChat", icon: MessageSquare },
 ];
 
@@ -30,6 +34,9 @@ export function Sidebar({
   const { pathname } = useLocation();
   const { t } = useI18n();
   const [showSettings, setShowSettings] = useState(false);
+  const settingsQuery = useSettings();
+  const keyStatus = getEffectiveKeyStatus(settingsQuery.data);
+  const needsSetup = !keyStatus.effective.llm;
   const { data: projects } = useQuery({
     queryKey: ["projects"],
     queryFn: listProjects,
@@ -103,7 +110,12 @@ export function Sidebar({
             onClick={() => setShowSettings(true)}
             className="group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[14px] font-medium text-slate-600 transition-all duration-200 hover:bg-black/[0.03] hover:text-slate-900 active:scale-[0.98]"
           >
-            <Settings size={18} className="transition-transform group-hover:rotate-45 text-slate-500 group-hover:text-slate-700" />
+            <span className="relative">
+              <Settings size={18} className="transition-transform group-hover:rotate-45 text-slate-500 group-hover:text-slate-700" />
+              {needsSetup && (
+                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-rose-500" />
+              )}
+            </span>
             {t("settings.title")}
           </button>
         </div>
