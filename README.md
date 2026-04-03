@@ -158,3 +158,7 @@ The dev app runs at `http://localhost:5173` and proxies API traffic to `:8080`.
 - [geo-seo-claude](https://github.com/zubair-trabzada/geo-seo-claude) by [@zubair-trabzada](https://github.com/zubair-trabzada)
 - [last30days-skill](https://github.com/mvanhorn/last30days-skill) by [@mvanhorn](https://github.com/mvanhorn)
 - [Agent-Reach](https://github.com/Panniantong/Agent-Reach) by [@Panniantong](https://github.com/Panniantong) — Chinese platform integration inspiration
+
+## Links
+
+- [LINUX DO](https://linux.do/) — Where enthusiasts gather

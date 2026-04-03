@@ -163,3 +163,7 @@ npm run build
 
 - [geo-seo-claude](https://github.com/zubair-trabzada/geo-seo-claude) by [@zubair-trabzada](https://github.com/zubair-trabzada)
 - [last30days-skill](https://github.com/mvanhorn/last30days-skill) by [@mvanhorn](https://github.com/mvanhorn)
+
+## リンク
+
+- [LINUX DO](https://linux.do/) — 技術愛好家が集まるコミュニティ

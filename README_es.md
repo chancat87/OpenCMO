@@ -163,3 +163,7 @@ La app de desarrollo corre en `http://localhost:5173` y proxya la API a `:8080`.
 
 - [geo-seo-claude](https://github.com/zubair-trabzada/geo-seo-claude) by [@zubair-trabzada](https://github.com/zubair-trabzada)
 - [last30days-skill](https://github.com/mvanhorn/last30days-skill) by [@mvanhorn](https://github.com/mvanhorn)
+
+## Enlaces
+
+- [LINUX DO](https://linux.do/) — Donde se reúnen los entusiastas de la tecnología
