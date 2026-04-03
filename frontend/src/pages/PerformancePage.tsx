@@ -5,8 +5,11 @@ import {
   RefreshCw, Plus, Trash2, ExternalLink, Globe,
 } from "lucide-react";
 import { usePerformance, useRefreshMetrics, useAddManualTracking, useDeleteManualTracking } from "../hooks/usePerformance";
+import { useProjectSummary } from "../hooks/useProject";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { ErrorAlert } from "../components/common/ErrorAlert";
+import { ProjectHeader } from "../components/project/ProjectHeader";
+import { ProjectTabs } from "../components/project/ProjectTabs";
 import { useI18n } from "../i18n";
 
 function StatCard({ icon: Icon, label, value, color }: {
@@ -40,6 +43,7 @@ const PLATFORM_COLORS: Record<string, string> = {
 export function PerformancePage() {
   const { id } = useParams();
   const projectId = Number(id);
+  const { data: projectSummary, isLoading: loadingProject } = useProjectSummary(projectId);
   const { data, isLoading, error } = usePerformance(projectId);
   const refreshMutation = useRefreshMetrics();
   const addManual = useAddManualTracking(projectId);
@@ -49,7 +53,8 @@ export function PerformancePage() {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ platform: "other", url: "", title: "", notes: "" });
 
-  if (isLoading) return <LoadingSpinner />;
+  if (loadingProject || isLoading) return <LoadingSpinner />;
+  if (!projectSummary) return <ErrorAlert message={t("common.projectNotFound")} />;
   if (error) return <ErrorAlert message={error.message} />;
   if (!data) return null;
 
@@ -57,6 +62,8 @@ export function PerformancePage() {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
+      <ProjectHeader project={projectSummary.project} />
+      <ProjectTabs projectId={projectId} />
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
