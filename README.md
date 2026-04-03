@@ -21,9 +21,15 @@
 </p>
 
 <div align="center">
-  <video src="https://github.com/study8677/OpenCMO/raw/main/assets/demo.mp4" width="850" autoplay loop muted playsinline>
-    Your browser does not support the video tag.
-  </video>
+  <h3>
+    <a href="https://www.aidcmo.com/">Live Demo</a> · <a href="https://github.com/study8677/OpenCMO/raw/main/assets/demo.mp4">Watch Video</a>
+  </h3>
+</div>
+
+<div align="center">
+  <a href="https://www.aidcmo.com/">
+    <img src="assets/screenshots/demo-cover.png" alt="OpenCMO in action" width="850" />
+  </a>
   <p><i>Turn visibility signals into growth decisions from one open-source workspace.</i></p>
 </div>
 

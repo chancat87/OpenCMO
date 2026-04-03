@@ -21,9 +21,15 @@
 </p>
 
 <div align="center">
-  <video src="https://github.com/study8677/OpenCMO/raw/main/assets/demo.mp4" width="850" autoplay loop muted playsinline>
-    Your browser does not support the video tag.
-  </video>
+  <h3>
+    <a href="https://www.aidcmo.com/">在线演示</a> · <a href="https://github.com/study8677/OpenCMO/raw/main/assets/demo.mp4">观看视频</a>
+  </h3>
+</div>
+
+<div align="center">
+  <a href="https://www.aidcmo.com/">
+    <img src="assets/screenshots/demo-cover.png" alt="OpenCMO 实战演示" width="850" />
+  </a>
   <p><i>在一个开源工作区里，把可见性信号变成增长决策。</i></p>
 </div>
 

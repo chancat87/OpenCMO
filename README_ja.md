@@ -21,9 +21,15 @@
 </p>
 
 <div align="center">
-  <video src="https://github.com/study8677/OpenCMO/raw/main/assets/demo.mp4" width="850" autoplay loop muted playsinline>
-    Your browser does not support the video tag.
-  </video>
+  <h3>
+    <a href="https://www.aidcmo.com/">ライブデモ</a> · <a href="https://github.com/study8677/OpenCMO/raw/main/assets/demo.mp4">動画を見る</a>
+  </h3>
+</div>
+
+<div align="center">
+  <a href="https://www.aidcmo.com/">
+    <img src="assets/screenshots/demo-cover.png" alt="OpenCMO 実演" width="850" />
+  </a>
   <p><i>監視、レポート、承認、競合文脈を1つの画面で確認できます。</i></p>
 </div>
 

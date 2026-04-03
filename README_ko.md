@@ -21,9 +21,15 @@
 </p>
 
 <div align="center">
-  <video src="https://github.com/study8677/OpenCMO/raw/main/assets/demo.mp4" width="850" autoplay loop muted playsinline>
-    Your browser does not support the video tag.
-  </video>
+  <h3>
+    <a href="https://www.aidcmo.com/">라이브 데모</a> · <a href="https://github.com/study8677/OpenCMO/raw/main/assets/demo.mp4">영상 보기</a>
+  </h3>
+</div>
+
+<div align="center">
+  <a href="https://www.aidcmo.com/">
+    <img src="assets/screenshots/demo-cover.png" alt="OpenCMO 실행 화면" width="850" />
+  </a>
   <p><i>모니터링, 리포트, 승인, 경쟁 맥락을 하나의 화면에서 봅니다.</i></p>
 </div>
 
