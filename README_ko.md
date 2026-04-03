@@ -22,7 +22,7 @@
 
 <div align="center">
   <h3>
-    <a href="https://www.aidcmo.com/">라이브 데모</a> · <a href="https://github.com/study8677/OpenCMO/raw/main/assets/demo.mp4">영상 보기</a>
+    <a href="https://www.aidcmo.com/">라이브 데모</a> · <a href="https://www.aidcmo.com/static/demo.mp4">영상 보기</a>
   </h3>
 </div>
 
