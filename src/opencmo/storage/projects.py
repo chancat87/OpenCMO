@@ -151,6 +151,13 @@ async def delete_project(project_id: int) -> bool:
         await db.execute("DELETE FROM scan_runs WHERE project_id = ?", (project_id,))
         # Delete scheduled jobs
         await db.execute("DELETE FROM scheduled_jobs WHERE project_id = ?", (project_id,))
+        # Delete background tasks and their events
+        await db.execute(
+            """DELETE FROM background_task_events WHERE task_id IN
+               (SELECT task_id FROM background_tasks WHERE project_id = ?)""",
+            (project_id,),
+        )
+        await db.execute("DELETE FROM background_tasks WHERE project_id = ?", (project_id,))
         # Delete the project itself
         cursor = await db.execute("DELETE FROM projects WHERE id = ?", (project_id,))
         await db.commit()
