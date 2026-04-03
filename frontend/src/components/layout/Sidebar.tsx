@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   MessageSquare,
   CheckSquare,
-  Activity,
   FolderOpen,
   Settings,
   X,
@@ -20,7 +19,6 @@ import { SettingsDialog } from "../settings/SettingsDialog";
 const NAV: { to: string; labelKey: TranslationKey; icon: typeof LayoutDashboard }[] = [
   { to: "/", labelKey: "nav.dashboard", icon: LayoutDashboard },
   { to: "/approvals", labelKey: "nav.approvals", icon: CheckSquare },
-  { to: "/monitors", labelKey: "nav.monitors", icon: Activity },
   { to: "/chat", labelKey: "nav.aiChat", icon: MessageSquare },
 ];
 
