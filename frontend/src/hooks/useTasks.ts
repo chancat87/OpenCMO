@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getTask, getTaskFindings, getTaskRecommendations } from "../api/tasks";
 import type { Finding, Recommendation } from "../types";
 
-const STALE_TASK_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes
+const STALE_TASK_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes (matches backend stale threshold)
 
 export function useTaskPoll(taskId: string | null) {
   return useQuery({

@@ -552,6 +552,7 @@ export const en = {
   "analysis.runBackground": "Run in background",
   "analysis.backgroundHint": "Analysis runs in the background — you can close this window anytime.",
   "analysis.closeBackground": "Close — continues in background",
+  "analysis.noApiKey": "No API key configured. AI analysis was skipped.",
   "analysis.taskStale": "Task may have been interrupted. Try running again.",
   "analysis.stageContextBuild": "Context Build",
   "analysis.stageSignalCollect": "Signal Collection",

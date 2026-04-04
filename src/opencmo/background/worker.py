@@ -65,7 +65,7 @@ class BackgroundWorker:
         self,
         *,
         poll_interval: float = 0.5,
-        stale_after_seconds: int = 90,
+        stale_after_seconds: int = 300,
         max_concurrency: int = 4,
         kind_concurrency: dict[str, int] | None = None,
     ):

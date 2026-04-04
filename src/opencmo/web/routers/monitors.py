@@ -125,7 +125,7 @@ async def api_v1_update_monitor(monitor_id: int, request: Request):
 
 
 @router.post("/monitors/{monitor_id}/run")
-async def api_v1_run_monitor(monitor_id: int):
+async def api_v1_run_monitor(monitor_id: int, request: Request):
     from opencmo import service
     from opencmo.background import service as bg_service
 
@@ -133,9 +133,23 @@ async def api_v1_run_monitor(monitor_id: int):
     if not job:
         return JSONResponse({"error": "Monitor not found"}, status_code=404)
 
+    # Support optional force parameter in request body
+    force = False
+    try:
+        body = await request.json()
+        force = bool(body.get("force", False))
+    except Exception:
+        pass
+
     existing = await bg_service.find_active_task_by_dedupe_key(f"scan:monitor:{monitor_id}")
     if existing is not None:
-        return JSONResponse({"error": "Monitor is already running"}, status_code=409)
+        if not force:
+            return JSONResponse({"error": "Monitor is already running"}, status_code=409)
+        # Force: mark the existing task as failed, then enqueue a new one
+        await bg_service.fail_task(
+            existing["task_id"],
+            error={"message": "Superseded by forced re-run"},
+        )
 
     record = await _enqueue_scan_task(
         monitor_id=monitor_id,

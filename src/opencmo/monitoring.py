@@ -127,6 +127,13 @@ async def _build_project_context(
         agent="Project Context Builder",
     ))
 
+    if analyze_url and not llm.get_key("OPENAI_API_KEY"):
+        await _emit(run_id, on_progress, _event(
+            "context_build", "warning",
+            "No LLM API key configured. AI analysis skipped — keywords and competitors will not be extracted automatically.",
+            agent="Project Context Builder",
+        ))
+
     if analyze_url and llm.get_key("OPENAI_API_KEY"):
         def relay(role: str, content: str, round_num: int):
             if on_progress:
@@ -184,7 +191,7 @@ async def _collect_signals(
     job_id: int,
     on_progress: ProgressCallback | None,
 ) -> None:
-    from opencmo.scheduler import run_scheduled_scan
+    from opencmo import storage as _storage
 
     await _emit(run_id, on_progress, _event(
         "signal_collect",
@@ -193,12 +200,196 @@ async def _collect_signals(
         agent="Signal Collector",
     ))
 
-    await run_scheduled_scan(project_id, job_type, job_id, triggered_by="manual")
+    project = await _storage.get_project(project_id)
+    if not project:
+        await _emit(run_id, on_progress, _event(
+            "signal_collect", "warning",
+            f"Project {project_id} not found — skipping signal collection.",
+            agent="Signal Collector",
+        ))
+        return
 
+    brand = project["brand_name"]
+    url = project["url"]
+    category = project["category"]
+    warnings: list[str] = []
+
+    if job_type in ("seo", "full"):
+        try:
+            from crawl4ai import AsyncWebCrawler
+            from opencmo.tools.seo_audit import (
+                _build_report, _check_robots_and_sitemap,
+                _fetch_core_web_vitals, _SEOParser,
+            )
+
+            async with AsyncWebCrawler() as crawler:
+                result = await crawler.arun(url=url)
+            parser = _SEOParser()
+            html = getattr(result, "html", "") or ""
+            parser.feed(html)
+            cwv = await _fetch_core_web_vitals(url)
+            robots_sitemap = await _check_robots_and_sitemap(url)
+            report = _build_report(parser, result, url, cwv=cwv, robots_sitemap=robots_sitemap)
+            await _storage.save_seo_scan(
+                project_id, url, report,
+                score_performance=cwv.get("performance") if cwv else None,
+                score_lcp=cwv.get("lcp") if cwv else None,
+                score_cls=cwv.get("cls") if cwv else None,
+                score_tbt=cwv.get("tbt") if cwv else None,
+                has_robots_txt=robots_sitemap.get("has_robots") if robots_sitemap else None,
+                has_sitemap=robots_sitemap.get("has_sitemap") if robots_sitemap else None,
+                has_schema_org=bool(parser.schema_types),
+            )
+        except Exception as exc:
+            warnings.append(f"SEO scan failed: {exc}")
+            await _emit(run_id, on_progress, _event(
+                "signal_collect", "warning",
+                f"SEO scan failed: {exc}",
+                agent="Signal Collector",
+            ))
+
+        try:
+            from opencmo.tools.serp_tracker import track_project_keywords
+            await track_project_keywords(project_id)
+        except Exception as exc:
+            warnings.append(f"SERP tracking failed: {exc}")
+            await _emit(run_id, on_progress, _event(
+                "signal_collect", "warning",
+                f"SERP tracking failed: {exc}",
+                agent="Signal Collector",
+            ))
+
+    if job_type in ("geo", "full"):
+        try:
+            import json as _json
+            from opencmo.tools.geo_providers import GEO_PROVIDER_REGISTRY
+            from opencmo.tools.text_signals import analyze_geo_sentiment
+
+            enabled = [p for p in GEO_PROVIDER_REGISTRY if p.is_enabled]
+            results = {}
+            for provider in enabled:
+                try:
+                    agg = await provider.check_visibility_multi(brand, category)
+                    results[provider.name] = agg
+                except Exception:
+                    pass
+
+            platforms_mentioned = sum(1 for r in results.values() if r.mentioned)
+            visibility_score = int(platforms_mentioned / len(enabled) * 40) if enabled else 0
+            position_scores = [30 * (1 - r.best_position_pct / 100) for r in results.values() if r.best_position_pct is not None]
+            position_score = int(sum(position_scores) / len(position_scores)) if position_scores else 0
+            sentiment_snippets: dict[str, str] = {}
+            for name, aggregated in results.items():
+                snippets = [
+                    qr.content_snippet
+                    for qr in getattr(aggregated, "per_query_results", [])
+                    if getattr(qr, "content_snippet", "")
+                ]
+                if snippets:
+                    sentiment_snippets[name] = "\n".join(snippets)
+
+            sentiment_signal = await analyze_geo_sentiment(brand, sentiment_snippets)
+            sentiment_score = sentiment_signal.score
+            geo_score = visibility_score + position_score + (sentiment_score or 0)
+
+            payload = {
+                name: {
+                    "mentioned": r.mentioned,
+                    "mention_count": r.total_mention_count,
+                    "position_pct": r.best_position_pct,
+                }
+                for name, r in results.items()
+            }
+            payload["_sentiment"] = {
+                "score": sentiment_score,
+                "label": sentiment_signal.label,
+                "reasoning": sentiment_signal.reasoning,
+            }
+            platform_json = _json.dumps(payload)
+            await _storage.save_geo_scan(
+                project_id, geo_score,
+                visibility_score=visibility_score,
+                position_score=position_score,
+                sentiment_score=sentiment_score,
+                platform_results_json=platform_json,
+            )
+        except Exception as exc:
+            warnings.append(f"GEO scan failed: {exc}")
+            await _emit(run_id, on_progress, _event(
+                "signal_collect", "warning",
+                f"GEO scan failed: {exc}",
+                agent="Signal Collector",
+            ))
+
+    if job_type in ("community", "full"):
+        try:
+            import json as _json
+            from opencmo.tools.community import _scan_community_impl
+            from opencmo.tools.community_scoring import text_relevance
+
+            tracked_keywords = [
+                item["keyword"]
+                for item in await _storage.list_tracked_keywords(project_id)
+            ]
+            competitors = await _storage.list_competitors(project_id)
+            competitor_names = [item["name"] for item in competitors]
+            competitor_keywords: list[str] = []
+            for competitor in competitors:
+                competitor_keywords.extend(
+                    keyword["keyword"]
+                    for keyword in await _storage.list_competitor_keywords(competitor["id"])
+                )
+
+            raw = await _scan_community_impl(
+                brand, category,
+                tracked_keywords=tracked_keywords,
+                competitor_names=competitor_names,
+                competitor_keywords=competitor_keywords,
+                canonical_url=url,
+            )
+            data = _json.loads(raw)
+            total_hits = len(data.get("hits", []))
+            await _storage.save_community_scan(project_id, total_hits, raw)
+
+            for hit in data.get("hits", []):
+                if hit.get("source_kind") == "external_search":
+                    continue
+                title = hit.get("title", "")
+                preview = hit.get("preview", "")
+                relevance = text_relevance(brand, title, preview)
+                if relevance < 0.05 and (hit.get("engagement_score") or 0) < 5:
+                    continue
+                try:
+                    disc_id = await _storage.upsert_tracked_discussion(project_id, hit)
+                    await _storage.save_discussion_snapshot(
+                        disc_id, hit.get("raw_score", 0),
+                        hit.get("comments_count", 0),
+                        hit.get("engagement_score", 0),
+                    )
+                except Exception:
+                    pass
+        except Exception as exc:
+            warnings.append(f"Community scan failed: {exc}")
+            await _emit(run_id, on_progress, _event(
+                "signal_collect", "warning",
+                f"Community scan failed: {exc}",
+                agent="Signal Collector",
+            ))
+
+    # Update job last_run_at
+    if job_id is not None:
+        try:
+            await _storage.update_job_last_run(job_id)
+        except Exception:
+            pass
+
+    summary = "Signal collection finished and raw snapshots were stored."
+    if warnings:
+        summary = f"Signal collection finished with {len(warnings)} warning(s)."
     await _emit(run_id, on_progress, _event(
         "signal_collect",
         "completed",
-        "Signal collection finished and raw snapshots were stored.",
+        summary,
         agent="Signal Collector",
     ))
 
