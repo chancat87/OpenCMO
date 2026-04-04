@@ -1,67 +1,68 @@
-# Repository Guidelines
+# AGENTS.md
 
-## Project Structure & Module Organization
-`src/opencmo/` contains the Python application: `agents/` for specialist agent definitions, `tools/` for crawl/search/SEO/GEO utilities, `web/` for the FastAPI dashboard and legacy templates, and `storage.py`/`service.py` for persistence and orchestration. `tests/` holds the pytest suite. `frontend/src/` contains the React SPA, split into `pages/`, `components/`, `hooks/`, `api/`, and `i18n/`. Static images and screenshots live in `assets/`, and longer design notes live in `docs/`.
+## Architecture at a Glance
 
-## Build, Test, and Development Commands
-Set up the backend with `pip install -e ".[all]"` and initialize crawling support with `crawl4ai-setup`. Copy `.env.example` to `.env` before running anything that needs API keys.
-
-- `opencmo`: start the CLI workflow.
-- `opencmo-web`: run the FastAPI dashboard on `http://127.0.0.1:8080`.
-- `cd frontend && npm install && npm run dev`: run the Vite SPA on `http://127.0.0.1:5173/app/` with API proxying.
-- `cd frontend && npm run build`: produce the SPA bundle that `/app` serves from `frontend/dist`.
-- `pytest`: run the full Python test suite.
-- `pytest tests/test_web.py`: run the web/API regression tests only.
-
-## Coding Style & Naming Conventions
-Use 4-space indentation in Python and keep modules/functions in `snake_case`. React components and page files use `PascalCase`; hooks use `useX`; shared API helpers stay in `frontend/src/api/`. Follow the existing style in the repo: type annotations in Python where useful, strict TypeScript, double quotes and semicolons in frontend files, and small focused modules instead of large mixed-responsibility files.
-
-## Testing Guidelines
-This repo uses `pytest`, including async tests with `@pytest.mark.asyncio`. Add or update tests in `tests/test_<area>.py` alongside every backend change, especially for storage, web routes, and provider integrations. There is no dedicated frontend test runner yet, so at minimum verify `npm run build` after SPA changes and add backend route tests when UI work depends on new API behavior.
-
-## Commit & Pull Request Guidelines
-Recent history follows Conventional Commit prefixes such as `feat:`, `docs:`, and `style:`. Keep commit subjects short and imperative, for example `feat: add GEO provider fallback`. PRs should explain user-visible impact, list verification steps, link related issues, and include screenshots for dashboard or graph changes.
-
-## Configuration & Security Tips
-Keep secrets in `.env` or the settings UI, never in tracked files. Use `OPENCMO_WEB_TOKEN` when exposing the dashboard beyond localhost, and avoid committing populated database or generated frontend build artifacts unless the change explicitly requires them.
-
-For local/default LLM routing, prefer the repository `.env` values for `OPENAI_API_KEY`, `OPENAI_BASE_URL`, and `OPENCMO_MODEL_DEFAULT`. In this repo the default router should be `OPENAI_BASE_URL=https://router.teamolab.com/v1` with `OPENCMO_MODEL_DEFAULT=TeamoRouter-free` unless a request explicitly provides `X-User-Keys` overrides.
-
-## Production Deployment (BWG Server)
-
-| Item | Value |
-|------|-------|
-| Host | `bwg` (SSH alias) |
-| IP | `97.64.16.217` |
-| Project path | `/opt/OpenCMO` |
-| Python env | `/opt/OpenCMO/.venv` (venv) |
-| Entry point | `/opt/OpenCMO/.venv/bin/opencmo-web` |
-| Service port | `8080` |
-
-### Deploy procedure
-
-```bash
-# 1. Pull latest code
-ssh bwg "cd /opt/OpenCMO && git pull origin main"
-
-# 2. Reinstall Python package (in venv)
-ssh bwg "cd /opt/OpenCMO && source .venv/bin/activate && pip install -e ."
-
-# 3. Build frontend LOCALLY (server has insufficient memory for vite build)
-cd frontend && npm run build
-
-# 4. Upload dist to server
-scp -r frontend/dist/ bwg:/opt/OpenCMO/frontend/dist/
-
-# 5. Restart service
-ssh bwg "pkill -f opencmo-web; sleep 1; cd /opt/OpenCMO && source .venv/bin/activate && nohup opencmo-web > /tmp/opencmo.log 2>&1 &"
-
-# 6. Verify
-ssh bwg "curl -s http://127.0.0.1:8080/api/v1/health"
+```
+Frontend (React 19 + Vite)  ←→  FastAPI /api/v1/  ←→  SQLite (WAL)
+                                      ↓
+                              Background Worker
+                                      ↓
+                    ┌─────── 6-Stage Monitoring Pipeline ───────┐
+                    │ 1. Context Build (crawl + 3-role AI debate)│
+                    │ 2. Signal Collect (SEO/GEO/Community/SERP) │
+                    │ 3. Signal Normalize                        │
+                    │ 4. Domain Review (4 AI analysts)           │
+                    │ 5. Strategy Synthesis                      │
+                    │ 6. Persist & Publish                       │
+                    └────────────────────────────────────────────┘
 ```
 
-### Important notes
-- Server memory is limited — **frontend must be built locally** and uploaded via `scp`.
-- The Python package uses a **venv** at `.venv`, not the system Python. Always `source .venv/bin/activate` before pip install or running commands.
-- Use `pip install -e .` (without `[all]`) — some optional deps (`browser-use`) don't have wheels for the server's platform.
-- Logs are written to `/tmp/opencmo.log`.
+## Key Directories
+
+| Path | Role |
+|------|------|
+| `src/opencmo/agents/` | 25+ specialist agents (CMO orchestrator + platform experts). Names must be ASCII — no Chinese. |
+| `src/opencmo/tools/` | Crawl, search, SEO audit, GEO detection, community providers, SERP tracking |
+| `src/opencmo/services/` | Domain services: intelligence (AI debate), approval, monitoring |
+| `src/opencmo/background/` | Worker + executor registry (scan, report, graph expansion) |
+| `src/opencmo/storage/` | Async SQLite, 30+ tables, no ORM |
+| `src/opencmo/web/` | FastAPI app, routers, SSE chat, BYOK middleware |
+| `src/opencmo/llm.py` | Centralized LLM client: ContextVar isolation, retry + backoff, model resolution |
+| `frontend/src/` | React SPA: pages/, components/, hooks/ (TanStack Query), api/, i18n/ (EN/ZH/JA/KO/ES) |
+
+## Critical Patterns
+
+- **LLM calls**: Always use `llm.chat_completion_messages()` for retry. Never call `client.chat.completions.create()` directly.
+- **Agent names**: ASCII only (`Zhihu Expert`, not `知乎专家`). openai-agents generates `transfer_to_{name}` tool names.
+- **Timestamps**: SQLite stores UTC. Frontend must use `utcDate()` from `utils/time.ts` to parse.
+- **Community search**: Tavily → crawl4ai Google scrape fallback. Skip category queries when category is placeholder `"auto"`.
+- **BYOK**: Per-request API keys via `X-User-Keys` header → ContextVar. Background tasks capture and restore keys.
+- **SPA routing**: No `AnimatePresence key={pathname}` in AppShell — causes full remount and breaks query cache.
+
+## Commands
+
+```bash
+# Backend
+pip install -e ".[all]"        # Install
+opencmo-web                    # Run (port 8080)
+pytest tests/                  # Test
+ruff check src/ tests/         # Lint
+
+# Frontend
+cd frontend && npm install
+npm run dev                    # Dev (port 5173, proxies /api → 8080)
+npm run build                  # Prod build
+
+# Deploy to BWG (97.64.16.217, SSH port 2222)
+cd frontend && npm run build   # Build locally (server OOMs)
+rsync -avz --delete frontend/dist/ root@97.64.16.217:/opt/OpenCMO/frontend/dist/ -e "ssh -p 2222"
+ssh -p 2222 root@97.64.16.217 "cd /opt/OpenCMO && git pull && source .venv/bin/activate && pip install -e . -q && pkill -f opencmo-web; sleep 1; nohup opencmo-web > /tmp/opencmo.log 2>&1 &"
+```
+
+## Coding Conventions
+
+- **Python**: snake_case, 4-space indent, type hints where useful, line length 120 (ruff)
+- **TypeScript**: strict mode, PascalCase components, useX hooks, double quotes
+- **Commits**: `feat:` / `fix:` / `docs:` prefix, short imperative subject
+- **i18n**: All user-facing strings via translation keys (EN/ZH/JA/KO/ES). Never hardcode.
+- **Secrets**: `.env` or settings UI only. Never commit API keys or `.db` files.
