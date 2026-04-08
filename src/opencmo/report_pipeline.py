@@ -28,9 +28,9 @@ logger = logging.getLogger(__name__)
 # Maximum retry count for the grader loop (Phase 5)
 _MAX_GRADER_RETRIES = 1  # Phase 1 optimization: reduced from 2 to 1
 # Minimum average score to pass the grader
-_GRADER_PASS_THRESHOLD = 3.5  # Phase 1 optimization: reduced from 3.8 to 3.5
+_GRADER_PASS_THRESHOLD = 3.8  # Phase 1 optimization: raised from 3.5 to 3.8 to reduce low-quality retries
 # Maximum concurrent LLM calls to prevent API rate limiting
-_MAX_CONCURRENT_LLM_CALLS = 5  # Phase 1 optimization: limit concurrent API calls
+_MAX_CONCURRENT_LLM_CALLS = 20  # Phase 1 optimization: increased from 5 to 20 for better throughput
 
 
 def _json_dump(data: object) -> str:
@@ -530,6 +530,12 @@ _WRITE_SECTION_SYSTEM = """\
 8. 语气：专业但不晦涩，像 McKinsey 的行业报告
 9. 必须包含至少一个"反直觉发现"或"深层洞察"
 
+**新增要求（优化版）：**
+10. 如果涉及竞品数据，必须添加对比表格或明确的数字对比
+11. 对于问题诊断，必须进行根因分析（回答"为什么会这样"），列出2-3个可能原因
+12. 如果有历史趋势数据，说明趋势方向和变化速度（如"过去3个月下降30%"）
+13. 每个问题都要关联到商业影响（流量、收入、市场份额等）
+
 输出纯 Markdown 文本（不要 JSON，不要代码块包裹）。
 以 ## 开头写章节标题，然后是正文段落。"""
 
@@ -679,10 +685,12 @@ _WRITE_EXEC_SUMMARY_SYSTEM = """\
 你是一位面向高管的报告编辑。基于以下各章节摘要和核心发现，撰写执行摘要。
 
 要求：
-1. 200-300 字
-2. 3-5 句话概括最关键的发现和建议
-3. 面向高管，30 秒内让人抓住核心
-4. 用一个引人注目的数据点或判断作为开头
+1. 250-350 字
+2. 第一句必须包含最关键的商业影响（如：流量损失、收入机会、市场份额风险）
+3. 量化问题的严重性（如："搜索可见性40/100 → 预计每月损失X流量"）
+4. 明确指出1-3个最高优先级行动，标注预期ROI或时间窗口
+5. 添加紧迫性提示（如："竞品X过去3个月增长Y%，时间窗口正在关闭"）
+6. 面向CMO决策者，30秒内让人理解"为什么现在必须行动"
 
 输出纯 Markdown（以 ## 执行摘要 开头）。"""
 
@@ -698,14 +706,26 @@ _WRITE_INTRO_SYSTEM = """\
 输出纯 Markdown（以 ## 引言 开头）。"""
 
 _WRITE_STRATEGY_SYSTEM = """\
-你是一位 CMO 级战略顾问。基于以下各章节分析摘要，提出战略建议。
+你是一位 CMO 级战略顾问。基于以下各章节分析摘要，提出战略建议与行动路线图。
 
 要求：
-1. 400-600 字
-2. 基于所有章节的发现，提出 3-5 条优先行动建议
-3. 每条建议标注优先级(P0/P1/P2)和预期影响
-4. 建议之间有逻辑关系（先做什么、后做什么）
-5. 标明可由 Agent 自动执行的动作 vs 需要人工决策的动作
+1. 600-900 字，分为三个部分
+
+**第一部分：优先级矩阵（ICE评分）**
+- 列出3-5个关键行动项
+- 每项标注：Impact(影响1-10) × Confidence(信心1-10) × Ease(容易度1-10) = ICE得分
+- 按ICE得分排序，标注优先级(P0/P1/P2)
+- 说明依赖关系（如："必须先完成P0才能评估P1效果"）
+
+**第二部分：30天行动路线图**
+- Week 1-4 的具体任务分解
+- 每周标注：负责团队、所需资源、验收标准
+- 标明哪些可由 Agent 自动执行 vs 需要人工决策
+
+**第三部分：风险与机会**
+- 🚨 高风险警示（如果不行动会发生什么）
+- 💡 机会窗口（市场趋势、竞品弱点）
+- 📊 预期成果（3个月后的关键指标变化）
 
 输出纯 Markdown（以 ## 战略建议与行动路线图 开头）。"""
 
@@ -765,12 +785,16 @@ async def _phase_synthesize(
         f"=== 各章节摘要 ===\n{summaries_text}"
     )
 
-    # Step 2: Run exec summary + intro + strategy writers in parallel
+    # Step 2: Run exec summary + intro + strategy writers in parallel with concurrency limit
     logger.info("[Pipeline Phase 6.2] Running 3 synthesis writers in parallel")
 
-    exec_task = _llm_text_call(_WRITE_EXEC_SUMMARY_SYSTEM, synthesis_context)
-    intro_task = _llm_text_call(_WRITE_INTRO_SYSTEM, synthesis_context)
-    strategy_task = _llm_text_call(_WRITE_STRATEGY_SYSTEM, synthesis_context)
+    async def _bounded_synthesis(coro):
+        async with semaphore:
+            return await coro
+
+    exec_task = _bounded_synthesis(_llm_text_call(_WRITE_EXEC_SUMMARY_SYSTEM, synthesis_context))
+    intro_task = _bounded_synthesis(_llm_text_call(_WRITE_INTRO_SYSTEM, synthesis_context))
+    strategy_task = _bounded_synthesis(_llm_text_call(_WRITE_STRATEGY_SYSTEM, synthesis_context))
 
     exec_summary, intro, strategy = await asyncio.gather(
         exec_task, intro_task, strategy_task,

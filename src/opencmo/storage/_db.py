@@ -175,6 +175,9 @@ CREATE TABLE IF NOT EXISTS competitor_keywords (
     UNIQUE(competitor_id, keyword)
 );
 
+CREATE INDEX IF NOT EXISTS idx_competitor_keywords_competitor_id
+ON competitor_keywords(competitor_id);
+
 CREATE TABLE IF NOT EXISTS scan_runs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     task_id TEXT NOT NULL UNIQUE,
@@ -210,6 +213,9 @@ CREATE TABLE IF NOT EXISTS scan_findings (
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE INDEX IF NOT EXISTS idx_scan_findings_run_id
+ON scan_findings(run_id);
+
 CREATE TABLE IF NOT EXISTS scan_recommendations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     run_id INTEGER NOT NULL REFERENCES scan_runs(id),
@@ -224,6 +230,9 @@ CREATE TABLE IF NOT EXISTS scan_recommendations (
     evidence_json TEXT NOT NULL DEFAULT '[]',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE INDEX IF NOT EXISTS idx_scan_recommendations_run_id
+ON scan_recommendations(run_id);
 
 CREATE TABLE IF NOT EXISTS graph_expansions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

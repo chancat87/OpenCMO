@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from opencmo.storage._db import get_db
-from opencmo.storage.competitors import list_competitor_keywords, list_competitors
+from opencmo.storage.competitors import batch_list_competitor_keywords, list_competitor_keywords, list_competitors
 from opencmo.storage.discussions import get_tracked_discussions
 from opencmo.storage.projects import get_project
 from opencmo.storage.serp import get_all_serp_latest, list_tracked_keywords
@@ -461,8 +461,11 @@ async def get_graph_data(project_id: int) -> dict:
         })
         links.append({"source": brand_id, "target": did, "type": "has_discussion"})
 
-    # 5. Competitor nodes + their keywords
+    # 5. Competitor nodes + their keywords (batch fetch)
     competitors = await list_competitors(project_id)
+    competitor_ids = [comp["id"] for comp in competitors]
+    competitor_keywords_map = await batch_list_competitor_keywords(competitor_ids) if competitor_ids else {}
+
     for comp in competitors:
         cid = f"comp_{comp['id']}"
         nodes.append(_annotate(
@@ -472,7 +475,7 @@ async def get_graph_data(project_id: int) -> dict:
         src, ltype = _link_source("competitor", comp["id"], brand_id)
         links.append({"source": src, "target": cid, "type": ltype or "competitor_of"})
 
-        comp_kws = await list_competitor_keywords(comp["id"])
+        comp_kws = competitor_keywords_map.get(comp["id"], [])
         for ckw in comp_kws:
             ckid = f"ckw_{ckw['id']}"
             nodes.append(_annotate(

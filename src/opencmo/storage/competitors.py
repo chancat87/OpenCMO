@@ -102,3 +102,34 @@ async def list_competitor_keywords(competitor_id: int) -> list[dict]:
         return [{"id": r[0], "keyword": r[1], "created_at": r[2]} for r in rows]
     finally:
         await db.close()
+
+
+async def batch_list_competitor_keywords(competitor_ids: list[int]) -> dict[int, list[dict]]:
+    """Batch fetch keywords for multiple competitors. Returns {competitor_id: [keywords]} dict."""
+    if not competitor_ids:
+        return {}
+
+    db = await get_db()
+    try:
+        # Build placeholders for IN clause
+        placeholders = ",".join("?" * len(competitor_ids))
+        cursor = await db.execute(
+            f"SELECT competitor_id, id, keyword, created_at FROM competitor_keywords "
+            f"WHERE competitor_id IN ({placeholders}) ORDER BY competitor_id, id",
+            competitor_ids,
+        )
+        rows = await cursor.fetchall()
+
+        # Group by competitor_id
+        result: dict[int, list[dict]] = {cid: [] for cid in competitor_ids}
+        for row in rows:
+            comp_id = row[0]
+            result[comp_id].append({
+                "id": row[1],
+                "keyword": row[2],
+                "created_at": row[3],
+            })
+
+        return result
+    finally:
+        await db.close()

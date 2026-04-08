@@ -62,6 +62,7 @@ from opencmo.storage.chat import (
 from opencmo.storage.competitors import (
     add_competitor,
     add_competitor_keyword,
+    batch_list_competitor_keywords,
     get_competitor,
     list_competitor_keywords,
     list_competitors,

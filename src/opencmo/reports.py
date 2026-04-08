@@ -240,17 +240,15 @@ async def _build_strategic_facts(project_id: int) -> tuple[dict, dict]:
         storage.get_all_serp_latest(project_id),
     )
 
-    # Fetch competitor keywords in parallel
+    # Fetch competitor keywords in parallel using batch query
     competitor_cards: list[dict] = []
     if competitors:
-        competitor_keyword_tasks = [
-            storage.list_competitor_keywords(comp["id"]) for comp in competitors
-        ]
-        competitor_keywords_list = await asyncio.gather(*competitor_keyword_tasks)
-        for competitor, keywords_data in zip(competitors, competitor_keywords_list):
+        competitor_ids = [comp["id"] for comp in competitors]
+        competitor_keywords_map = await storage.batch_list_competitor_keywords(competitor_ids)
+        for competitor in competitors:
             competitor_cards.append({
                 **competitor,
-                "keywords": keywords_data,
+                "keywords": competitor_keywords_map.get(competitor["id"], []),
             })
     else:
         competitor_cards = []
@@ -617,13 +615,29 @@ def _prompts(kind: str, audience: str, facts: dict, meta: dict, previous_exists:
     if kind == "strategic" and audience == "agent":
         system = (
             f"{system_common}"
-            "输出 Markdown，保持简短精炼，像给执行团队的行动简报。结构固定为：\n"
-            "1. 战略目标（一句话）\n"
-            "2. 约束条件（不可逾越的底线）\n"
-            "3. 优先方向（按优先级排序的 3-5 个方向）\n"
-            "4. 推荐执行 Agent 分工（哪个Agent负责哪个方向）\n"
-            "5. 禁止事项\n"
-            "6. 关键数据指标当前值（快速参考）"
+            "输出 Markdown，这是给 AI Agent 和执行团队的可执行行动清单。结构固定为：\n\n"
+            "## 1. 🎯 本周必做（P0优先级）\n"
+            "   - 列出2-3个最高优先级任务\n"
+            "   - 每个任务格式：`[ ] Task X.Y: 具体动作 (负责人：@Agent名称 | 截止：日期 | 验收标准：...)`\n"
+            "   - 必须可直接执行，不能是抽象描述\n\n"
+            "## 2. 📅 本月计划（P1-P2优先级）\n"
+            "   - 按周分解的任务清单\n"
+            "   - Week 1-4 每周的关键里程碑\n\n"
+            "## 3. 🔧 技术配置清单\n"
+            "   - 需要配置的工具和服务（如：Google Search Console、Ahrefs）\n"
+            "   - 提供一键执行命令（如：`opencmo seo setup --project=X`）\n"
+            "   - 健康检查命令（如：`opencmo health check --module=seo`）\n\n"
+            "## 4. 📊 成功指标与检查点\n"
+            "   - Day 1/3/7/14 的具体检查点\n"
+            "   - 每个检查点的目标值（如：Day 7 至少1个关键词进入Top 20）\n\n"
+            "## 5. 🚨 风险触发器\n"
+            "   - IF-THEN 规则（如：IF Day 3 AND 关键词数<30 THEN 请求外部支持）\n"
+            "   - 自动化决策规则\n\n"
+            "## 6. 🤖 Agent自动化任务\n"
+            "   - 可以直接执行的定时任务\n"
+            "   - 监控和报警规则\n\n"
+            "## 7. 关键数据指标当前值\n"
+            "   - 快速参考的核心KPI"
         )
         user = f"项目战略事实包：\n{_json_dump({'meta': meta, 'facts': facts})}"
         return system, user

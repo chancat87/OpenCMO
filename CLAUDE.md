@@ -27,6 +27,10 @@ OpenCMO is an open-source AI Chief Marketing Officer — a multi-agent system fo
 - `graph_expansion.py` — Wave-based BFS discovery of competitors and keywords. Heartbeat-tracked (60s stale window), backpressure via `MAX_OPS_PER_WAVE=20`
 - `web/task_registry.py` — In-memory (not persisted) OrderedDict, max 100 tasks. Wraps async scan workflows with progress tracking
 - `web/chat_sessions.py` — SQLite-backed chat history. Auto-titling from first message. Max 20 messages per session (truncated)
+- `reports.py` — Report generation with two audiences: `human` (6-phase pipeline) and `agent` (single LLM call). Data aggregation uses parallel `asyncio.gather()` for 14+ database queries
+- `report_pipeline.py` — Multi-agent deep report pipeline (6 phases): Reflection → Insight Distiller → Outline Planner → Section Writers → Section Grader → Report Synthesizer. Uses `asyncio.Semaphore` to limit concurrent LLM calls (`_MAX_CONCURRENT_LLM_CALLS = 5`)
+- `llm.py` — Centralized LLM client with per-request key isolation via ContextVar. Solves BYOK concurrency bug. Key resolution: ContextVar → os.environ → DB settings. Includes retry logic with exponential backoff
+- `background/` — Background task queue system for long-running operations (scans, reports). Tasks have status tracking and progress events
 
 ### Frontend layers
 
@@ -46,7 +50,9 @@ OpenCMO is an open-source AI Chief Marketing Officer — a multi-agent system fo
 - **Approval-first publishing**: Content queued with exact payload for human review; publish only after explicit approve. `OPENCMO_AUTO_PUBLISH=1` gates actual API calls
 - **Settings table as runtime config**: Web UI settings panel writes to SQLite KV store; `apply_runtime_settings()` loads them into env vars at startup
 - **Custom provider compatibility**: Disables OpenAI tracing for non-OpenAI providers to avoid 401 noise
-- Frontend proxies `/api` to `http://127.0.0.1:8080` in dev (vite.config.ts)
+- **Frontend proxies `/api` to `http://127.0.0.1:8080` in dev (vite.config.ts)
+- **Report generation optimization**: Data aggregation parallelized with `asyncio.gather()`. LLM concurrency limited to 5 simultaneous calls via `asyncio.Semaphore`. Grader threshold at 3.5/5.0 with max 1 retry to balance quality and speed
+- **BYOK (Bring Your Own Key)**: Per-request API keys isolated via ContextVar in `llm.py`. Never use `os.environ` for request-scoped keys to avoid concurrency bugs
 
 ## Commands
 
@@ -98,6 +104,16 @@ Key optional variables — see `.env.example` for full list:
 - `DATAFORSEO_LOGIN/PASSWORD` — SERP tracking
 - `OPENCMO_AUTO_PUBLISH=1` + Reddit/Twitter credentials — auto-publishing
 - `OPENCMO_SMTP_*` + `OPENCMO_REPORT_EMAIL` — email reports
+
+## Performance Optimization Guidelines
+
+When optimizing report generation or other LLM-heavy workflows:
+
+1. **Always parallelize independent operations** — Use `asyncio.gather()` for database queries and LLM calls that don't depend on each other
+2. **Limit concurrent LLM calls** — Use `asyncio.Semaphore` to prevent API rate limiting (current limit: 5 concurrent calls in `report_pipeline.py`)
+3. **Never hardcode API credentials in test scripts** — Use environment variables or `.env` files. Test scripts with hardcoded keys must never be committed
+4. **Benchmark before and after** — Measure timing for each phase to validate optimizations. Track both performance and quality metrics (report length, section count, pass rate)
+5. **Balance quality and speed** — Grader thresholds and retry counts directly impact both. Current settings: `_GRADER_PASS_THRESHOLD = 3.5`, `_MAX_GRADER_RETRIES = 1`
 
 ## BWG Server Deployment (aidcmo.com)
 
