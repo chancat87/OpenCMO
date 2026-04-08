@@ -405,3 +405,25 @@ async def test_agent_brief_skips_pipeline():
     assert result["human"]["meta"]["used_pipeline"] is True
     assert "Agent Brief" in result["agent"]["content"]
     assert result["agent"]["meta"]["used_pipeline"] is False
+
+
+def test_synthesis_prompts_do_not_force_ungrounded_quantification():
+    """Synthesis prompts should stay within the evidence available in section summaries."""
+    from opencmo import report_pipeline
+
+    forbidden_exec_summary_phrases = (
+        "预计每月损失X流量",
+        "预期ROI",
+        "竞品X过去3个月增长Y%",
+    )
+    forbidden_strategy_phrases = (
+        "ICE评分",
+        "Impact(影响1-10) × Confidence(信心1-10) × Ease(容易度1-10)",
+        "预期成果（3个月后的关键指标变化）",
+    )
+
+    for phrase in forbidden_exec_summary_phrases:
+        assert phrase not in report_pipeline._WRITE_EXEC_SUMMARY_SYSTEM
+
+    for phrase in forbidden_strategy_phrases:
+        assert phrase not in report_pipeline._WRITE_STRATEGY_SYSTEM

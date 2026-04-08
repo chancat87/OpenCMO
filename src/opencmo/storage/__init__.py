@@ -258,6 +258,7 @@ __all__ = [
     # competitors
     "add_competitor", "list_competitors", "get_competitor",
     "remove_competitor", "add_competitor_keyword", "list_competitor_keywords",
+    "batch_list_competitor_keywords",
     # graph
     "get_or_create_expansion", "get_expansion", "update_expansion",
     "seed_expansion_nodes", "get_min_unexplored_wave", "get_frontier_nodes",

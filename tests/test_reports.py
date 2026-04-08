@@ -261,3 +261,24 @@ async def test_generate_report_marks_failed_when_all_generation_paths_fail():
 
     assert report["agent"]["generation_status"] == "failed"
     assert report["agent"]["content"] == ""
+
+
+def test_strategic_agent_prompt_avoids_nonexistent_cli_contracts():
+    from opencmo.reports import _prompts
+
+    facts = {
+        "project": {
+            "brand_name": "Acme",
+            "category": "saas",
+            "url": "https://acme.test",
+        }
+    }
+    meta = {"sample_count": 3, "total_data_sources": 8}
+
+    system, user = _prompts("strategic", "agent", facts, meta, previous_exists=False)
+
+    assert "Task X.Y" not in system
+    assert "opencmo seo setup --project=X" not in system
+    assert "opencmo health check --module=seo" not in system
+    assert "Google Search Console、Ahrefs" not in system
+    assert user.startswith("项目战略事实包：")
