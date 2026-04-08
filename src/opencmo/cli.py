@@ -291,12 +291,26 @@ async def run_cli():
 
         print("\nCMO is working...\n")
         result = await Runner.run(cmo_agent, input_items, max_turns=15)
+        from opencmo.marketing_review import review_marketing_output_with_metadata
+
+        review_result = await review_marketing_output_with_metadata(
+            agent_name=result.last_agent.name if result.last_agent else "CMO Agent",
+            user_message=user_input,
+            output_text=result.final_output,
+        )
+        final_output = review_result["final_output"]
 
         print(f"[{result.last_agent.name}]")
-        print(result.final_output)
+        print(final_output)
+        if review_result["review_applied"] and review_result["weak_points"]:
+            print(f"(review: {review_result['profile']} | weak points: {', '.join(review_result['weak_points'])})")
         print()
 
         input_items = result.to_input_list()
+        for item in reversed(input_items):
+            if isinstance(item, dict) and item.get("role") == "assistant":
+                item["content"] = final_output
+                break
         # Truncate history to prevent context explosion with search/SEO/GEO reports
         MAX_HISTORY = 20
         if len(input_items) > MAX_HISTORY:

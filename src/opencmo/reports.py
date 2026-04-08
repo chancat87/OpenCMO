@@ -9,6 +9,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from opencmo import storage
+from opencmo.opportunities import build_project_opportunity_snapshot
 
 logger = logging.getLogger(__name__)
 
@@ -223,6 +224,7 @@ async def _build_strategic_facts(project_id: int) -> tuple[dict, dict]:
         brand_presence_history,
         discussions,
         serp_latest,
+        opportunity_snapshot,
     ) = await asyncio.gather(
         storage.list_tracked_keywords(project_id),
         storage.list_competitors(project_id),
@@ -238,6 +240,7 @@ async def _build_strategic_facts(project_id: int) -> tuple[dict, dict]:
         storage.get_brand_presence_history(project_id, limit=3),
         storage.get_tracked_discussions(project_id),
         storage.get_all_serp_latest(project_id),
+        build_project_opportunity_snapshot(project_id),
     )
 
     # Fetch competitor keywords in parallel using batch query
@@ -360,6 +363,8 @@ async def _build_strategic_facts(project_id: int) -> tuple[dict, dict]:
         "brand_presence": brand_presence_history,
         "discussions": discussions[:12],
         "serp_latest": serp_latest,
+        "opportunities": opportunity_snapshot["opportunities"],
+        "cluster_summary": opportunity_snapshot["cluster_summary"],
         "graph_data": graph_data,
         "recent_approvals": recent_approvals,
         "strengths": strengths,
@@ -422,6 +427,7 @@ async def _build_periodic_facts(
         citability_history,
         ai_crawler_history,
         brand_presence_history,
+        opportunity_snapshot,
     ) = await asyncio.gather(
         storage.get_seo_history(project_id, limit=30),
         storage.get_geo_history(project_id, limit=30),
@@ -435,6 +441,7 @@ async def _build_periodic_facts(
         storage.get_citability_history(project_id, limit=5),
         storage.get_ai_crawler_history(project_id, limit=5),
         storage.get_brand_presence_history(project_id, limit=5),
+        build_project_opportunity_snapshot(project_id),
     )
 
     # Apply time window filtering
@@ -502,6 +509,8 @@ async def _build_periodic_facts(
         "community_history": community_history,
         "discussions": discussions[:12],
         "serp_latest": serp_latest,
+        "opportunities": opportunity_snapshot["opportunities"],
+        "cluster_summary": opportunity_snapshot["cluster_summary"],
         "findings": findings,
         "recommendations": recommendations,
         "insights": insights,

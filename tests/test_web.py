@@ -209,6 +209,241 @@ def test_api_v1_community_discussions_include_match_metadata(client):
     assert payload[0]["source_kind"] == "post"
 
 
+def test_api_v1_task_artifacts_summarize_scan_story(client):
+    from opencmo.background import service as bg_service
+
+    pid = _seed_project("Artifacts", "https://artifacts.test")
+
+    task = asyncio.run(
+        bg_service.enqueue_task(
+            kind="scan",
+            project_id=pid,
+            payload={
+                "monitor_id": 7,
+                "project_id": pid,
+                "job_type": "full",
+                "job_id": 7,
+            },
+            dedupe_key=None,
+        )
+    )
+    run_id = asyncio.run(storage.create_scan_run(task["task_id"], 7, pid, "full"))
+
+    asyncio.run(
+        storage.replace_scan_artifacts(
+            run_id,
+            findings=[
+                {
+                    "domain": "community",
+                    "severity": "critical",
+                    "title": "No direct mentions in high-value communities",
+                    "summary": "The scan found opportunity threads but no direct brand discussion in Reddit or Hacker News.",
+                    "confidence": 0.91,
+                    "evidence_refs": [
+                        {
+                            "domain": "community",
+                            "source": "community_scan",
+                            "key": "total_hits",
+                            "value": "8",
+                            "url": "https://artifacts.test",
+                        }
+                    ],
+                },
+                {
+                    "domain": "seo",
+                    "severity": "warning",
+                    "title": "SEO health is below target",
+                    "summary": "Core Web Vitals and technical SEO checks indicate the site is not ready for stronger discovery.",
+                    "confidence": 0.72,
+                    "evidence_refs": [],
+                },
+            ],
+            recommendations=[
+                {
+                    "domain": "community",
+                    "priority": "high",
+                    "owner_type": "founder",
+                    "action_type": "engage",
+                    "title": "Reply to active comparison threads this week",
+                    "summary": "Join the existing discussions where users are already asking for alternatives.",
+                    "rationale": "Warm demand already exists.",
+                    "confidence": 0.87,
+                    "evidence_refs": [
+                        {
+                            "domain": "community",
+                            "source": "tracked_discussions",
+                            "key": "high_value_count",
+                            "value": "3",
+                            "url": "https://reddit.com/r/saas",
+                        }
+                    ],
+                }
+            ],
+        )
+    )
+
+    asyncio.run(
+        bg_service.append_event(
+            task["task_id"],
+            event_type="progress",
+            phase="context_build",
+            status="completed",
+            summary="Project context refreshed from URL analysis.",
+            payload={
+                "stage": "context_build",
+                "status": "completed",
+                "summary": "Project context refreshed from URL analysis.",
+            },
+        )
+    )
+    asyncio.run(
+        bg_service.append_event(
+            task["task_id"],
+            event_type="progress",
+            phase="signal_collect",
+            status="warning",
+            summary="Tavily unavailable. Used crawl fallback for community search.",
+            payload={
+                "stage": "signal_collect",
+                "status": "warning",
+                "summary": "Tavily unavailable. Used crawl fallback for community search.",
+            },
+        )
+    )
+    asyncio.run(
+        bg_service.append_event(
+            task["task_id"],
+            event_type="progress",
+            phase="strategy_synthesis",
+            status="completed",
+            summary="Created first-pass growth actions.",
+            payload={
+                "stage": "strategy_synthesis",
+                "status": "completed",
+                "summary": "Created first-pass growth actions.",
+            },
+        )
+    )
+    asyncio.run(
+        bg_service.complete_task(
+            task["task_id"],
+            result={
+                "run_id": run_id,
+                "summary": "Initial monitoring pass completed with actionable gaps.",
+                "findings_count": 2,
+                "recommendations_count": 1,
+            },
+        )
+    )
+
+    resp = client.get(f"/api/v1/tasks/{task['task_id']}/artifacts")
+    assert resp.status_code == 200
+    payload = resp.json()
+
+    assert payload["overview"]["findings_count"] == 2
+    assert payload["overview"]["recommendations_count"] == 1
+    assert payload["overview"]["focus_domains"] == ["community", "seo"]
+    assert payload["brief"]["top_findings"][0]["title"] == "No direct mentions in high-value communities"
+    assert payload["brief"]["top_recommendations"][0]["title"] == "Reply to active comparison threads this week"
+    assert payload["stage_cards"][1]["stage"] == "signal_collect"
+    assert payload["issues"][0]["stage"] == "signal_collect"
+    assert "fallback" in payload["issues"][0]["resolution"].lower()
+
+
+def test_api_v1_task_artifacts_include_opportunities_and_cluster_summary(client):
+    from opencmo.background import service as bg_service
+
+    pid = _seed_project("Opportunity Engine", "https://opportunity.test")
+    asyncio.run(storage.add_tracked_keyword(pid, "ai code review"))
+    asyncio.run(storage.add_tracked_keyword(pid, "llm observability"))
+    asyncio.run(
+        storage.save_serp_snapshot(
+            pid,
+            "ai code review",
+            13,
+            "https://opportunity.test/ai-code-review",
+            "mock",
+            None,
+        )
+    )
+    competitor_id = asyncio.run(
+        storage.add_competitor(pid, "ReviewRival", url="https://reviewrival.test")
+    )
+    asyncio.run(storage.add_competitor_keyword(competitor_id, "ai code review tools"))
+    asyncio.run(storage.add_competitor_keyword(competitor_id, "llm observability platform"))
+    asyncio.run(storage.save_community_scan(pid, 0, '{"hits": []}'))
+
+    task = asyncio.run(
+        bg_service.enqueue_task(
+            kind="scan",
+            project_id=pid,
+            payload={
+                "monitor_id": 11,
+                "project_id": pid,
+                "job_type": "full",
+                "job_id": 11,
+            },
+            dedupe_key=None,
+        )
+    )
+    run_id = asyncio.run(storage.create_scan_run(task["task_id"], 11, pid, "full"))
+    asyncio.run(storage.replace_scan_artifacts(run_id, findings=[], recommendations=[]))
+    asyncio.run(
+        bg_service.complete_task(
+            task["task_id"],
+            result={
+                "run_id": run_id,
+                "summary": "Opportunity summary is ready.",
+                "findings_count": 0,
+                "recommendations_count": 0,
+            },
+        )
+    )
+
+    resp = client.get(f"/api/v1/tasks/{task['task_id']}/artifacts")
+    assert resp.status_code == 200
+    payload = resp.json()
+
+    assert payload["opportunities"]["summary"]["quick_win"] == 1
+    assert payload["opportunities"]["summary"]["competitor_gap"] >= 1
+    assert payload["opportunities"]["summary"]["community_activation"] == 1
+    assert any(item["type"] == "quick_win" for item in payload["opportunities"]["top"])
+    assert payload["cluster_summary"]["top_clusters"]
+    assert "ai code review tools" in payload["cluster_summary"]["gap_keywords"]
+    assert payload["cluster_summary"]["top_clusters"][0]["gap_keywords"]
+
+
+def test_api_v1_chat_context_includes_opportunity_and_cluster_brief(client):
+    pid = _seed_project("Context Signals", "https://context-signals.test")
+    asyncio.run(storage.add_tracked_keyword(pid, "ai code review"))
+    asyncio.run(
+        storage.save_serp_snapshot(
+            pid,
+            "ai code review",
+            12,
+            "https://context-signals.test/ai-code-review",
+            "mock",
+            None,
+        )
+    )
+    competitor_id = asyncio.run(
+        storage.add_competitor(pid, "ContextRival", url="https://context-rival.test")
+    )
+    asyncio.run(storage.add_competitor_keyword(competitor_id, "ai code review tools"))
+    asyncio.run(storage.add_competitor_keyword(competitor_id, "llm observability platform"))
+    asyncio.run(storage.save_community_scan(pid, 0, '{"hits": []}'))
+
+    resp = client.get(f"/api/v1/chat/context/{pid}")
+    assert resp.status_code == 200
+    payload = resp.json()
+
+    assert payload["top_opportunities"]
+    assert payload["top_opportunities"][0]["type"] == "quick_win"
+    assert payload["topic_clusters"]
+    assert payload["cluster_gaps"]
+    assert "ai code review tools" in payload["cluster_gaps"]
+
+
 def test_api_v1_delete_project_with_related_records(tmp_path):
     db_path = tmp_path / "test.db"
     with patch.object(storage, "_DB_PATH", db_path):
@@ -892,6 +1127,62 @@ def test_api_v1_chat_uses_session_project_context(client):
     assert input_items[0]["role"] == "system"
     assert "[Project Context]" in input_items[0]["content"]
     assert "# Context" in input_items[0]["content"]
+
+
+def test_api_v1_chat_applies_marketing_review_to_final_output(client):
+    resp = client.post("/api/v1/chat/sessions")
+    session_id = resp.json()["session_id"]
+
+    mock_result = MagicMock()
+    mock_result.last_agent.name = "CMO Agent"
+    mock_result.final_output = "Draft answer"
+    mock_result.to_input_list.return_value = [
+        {"role": "user", "content": "hi"},
+        {"role": "assistant", "content": "Draft answer"},
+    ]
+
+    class MockDelta:
+        type = "response.output_text.delta"
+        delta = "Draft"
+
+    class MockRawEvent:
+        type = "raw_response_event"
+        data = MockDelta()
+
+    async def mock_stream():
+        yield MockRawEvent()
+
+    mock_result.stream_events = mock_stream
+
+    with patch("agents.Runner.run_streamed", return_value=mock_result), \
+         patch("opencmo.marketing_review.review_marketing_output_with_metadata", new_callable=AsyncMock) as mock_review:
+        mock_review.return_value = {
+            "final_output": "Reviewed answer",
+            "review_applied": True,
+            "profile": "strategic_marketing",
+            "weak_points": ["proof", "next_move"],
+        }
+        resp = client.post("/api/v1/chat", json={
+            "session_id": session_id,
+            "message": "hi",
+        })
+
+    assert resp.status_code == 200
+    events = []
+    for line in resp.text.strip().split("\n"):
+        if line.startswith("data: "):
+            events.append(json.loads(line[6:]))
+
+    assert events[-1]["type"] == "done"
+    assert events[-1]["final_output"] == "Reviewed answer"
+    assert events[-1]["review_applied"] is True
+    assert events[-1]["review_profile"] == "strategic_marketing"
+    assert events[-1]["review_weak_points"] == ["proof", "next_move"]
+    mock_review.assert_awaited_once()
+
+    session = asyncio.run(chat_sessions.get_session(session_id))
+    assert session is not None
+    assert session[-1]["content"] == "Reviewed answer"
 
 
 def test_api_v1_chat_invalid_session(client):

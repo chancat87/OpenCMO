@@ -69,6 +69,64 @@ export interface TaskRecord {
   nodes_explored?: number;
 }
 
+export interface TaskArtifactStageCard {
+  stage: string;
+  status: "started" | "running" | "completed" | "failed" | "warning";
+  summary: string;
+  agent: string;
+  event_count: number;
+}
+
+export interface TaskArtifactIssue {
+  stage: string;
+  status: "warning" | "failed";
+  summary: string;
+  resolution: string;
+}
+
+export interface TaskArtifactOpportunity {
+  type: string;
+  domain: string;
+  title: string;
+  summary: string;
+  priority: "high" | "medium" | "low";
+  score: number;
+  recommended_action: string;
+  evidence_refs: Finding["evidence_refs"];
+}
+
+export interface TaskArtifactCluster {
+  name: string;
+  brand_keyword_count: number;
+  competitor_keyword_count: number;
+  gap_keywords: string[];
+  quick_win_keywords: string[];
+  opportunity_score: number;
+}
+
+export interface TaskArtifacts {
+  overview: {
+    headline: string;
+    findings_count: number;
+    recommendations_count: number;
+    focus_domains: string[];
+  };
+  stage_cards: TaskArtifactStageCard[];
+  issues: TaskArtifactIssue[];
+  brief: {
+    top_findings: Finding[];
+    top_recommendations: Recommendation[];
+  };
+  opportunities: {
+    summary: Record<string, number>;
+    top: TaskArtifactOpportunity[];
+  };
+  cluster_summary: {
+    top_clusters: TaskArtifactCluster[];
+    gap_keywords: string[];
+  };
+}
+
 export type ApprovalStatus = "pending" | "approved" | "rejected" | "failed";
 
 export interface ApprovalRecord {
@@ -243,6 +301,9 @@ export interface ChatEvent {
   target?: string;
   agent_name?: string;
   final_output?: string;
+  review_applied?: boolean;
+  review_profile?: string;
+  review_weak_points?: string[];
   message?: string;
 }
 

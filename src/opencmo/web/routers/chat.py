@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from starlette.responses import StreamingResponse
 
 from opencmo import storage
+from opencmo.opportunities import build_project_opportunity_snapshot
 
 router = APIRouter(prefix="/api/v1")
 
@@ -26,6 +27,7 @@ async def api_v1_chat_context(project_id: int):
     # Graph data for competitors, keywords, gaps
     graph = await storage.get_graph_data(project_id)
     nodes = graph.get("nodes", [])
+    snapshot = await build_project_opportunity_snapshot(project_id)
 
 
     competitors = [
@@ -93,6 +95,25 @@ async def api_v1_chat_context(project_id: int):
         "competitors": competitors,
         "keyword_gaps": keyword_gaps,
         "findings": findings,
+        "top_opportunities": [
+            {
+                "type": item["type"],
+                "domain": item["domain"],
+                "title": item["title"],
+                "priority": item["priority"],
+                "score": item["score"],
+            }
+            for item in snapshot["opportunities"]["top"][:3]
+        ],
+        "topic_clusters": [
+            {
+                "name": item["name"],
+                "opportunity_score": item["opportunity_score"],
+                "gap_keywords": item["gap_keywords"][:3],
+            }
+            for item in snapshot["cluster_summary"]["top_clusters"][:3]
+        ],
+        "cluster_gaps": snapshot["cluster_summary"]["gap_keywords"][:5],
     }
     return JSONResponse(ctx)
 
@@ -208,6 +229,7 @@ async def api_v1_chat(request: Request):
             from agents import Runner
 
             from opencmo.agents.cmo import cmo_agent
+            from opencmo.marketing_review import review_marketing_output_with_metadata
 
             result = Runner.run_streamed(cmo_agent, input_items, max_turns=15)
 
@@ -250,9 +272,19 @@ async def api_v1_chat(request: Request):
                 and updated_items[0].get("content") in injected_contents
             ):
                 updated_items = updated_items[1:]
-            await chat_sessions.update_session(session_id, updated_items)
             agent_name = result.last_agent.name if result.last_agent else "CMO Agent"
-            yield f"data: {json.dumps({'type': 'done', 'agent_name': agent_name, 'final_output': result.final_output})}\n\n"
+            review_result = await review_marketing_output_with_metadata(
+                agent_name=agent_name,
+                user_message=message,
+                output_text=result.final_output,
+            )
+            final_output = review_result["final_output"]
+            for item in reversed(updated_items):
+                if isinstance(item, dict) and item.get("role") == "assistant":
+                    item["content"] = final_output
+                    break
+            await chat_sessions.update_session(session_id, updated_items)
+            yield f"data: {json.dumps({'type': 'done', 'agent_name': agent_name, 'final_output': final_output, 'review_applied': review_result['review_applied'], 'review_profile': review_result['profile'], 'review_weak_points': review_result['weak_points']})}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from opencmo import storage
+from opencmo.opportunities import build_project_opportunity_snapshot
 
 
 async def build_project_context(project_id: int, depth: str = "brief") -> str:
@@ -18,6 +19,7 @@ async def build_project_context(project_id: int, depth: str = "brief") -> str:
     project = await storage.get_project(project_id)
     if not project:
         return ""
+    snapshot = await build_project_opportunity_snapshot(project_id)
 
     graph = await storage.get_graph_data(project_id)
     nodes = graph.get("nodes", [])
@@ -56,6 +58,11 @@ async def build_project_context(project_id: int, depth: str = "brief") -> str:
         if gaps:
             gap_labels = [g["label"] for g in gaps[:3]]
             parts.append(f"Keyword gaps: {', '.join(gap_labels)}")
+        if snapshot["opportunities"]["top"]:
+            opportunity_titles = [item["title"] for item in snapshot["opportunities"]["top"][:2]]
+            parts.append(f"Top opportunities: {'; '.join(opportunity_titles)}")
+        if snapshot["cluster_summary"]["gap_keywords"]:
+            parts.append(f"Cluster gaps: {', '.join(snapshot['cluster_summary']['gap_keywords'][:3])}")
         if frontier:
             parts.append(f"Unexplored frontier: {len(frontier)} nodes")
 
@@ -126,6 +133,21 @@ async def build_project_context(project_id: int, depth: str = "brief") -> str:
             parts.append(f"\n## Keyword Gaps ({len(gaps)} uncovered)")
             for g in gaps[:8]:
                 parts.append(f"- {g['label']}")
+
+        if snapshot["opportunities"]["top"]:
+            parts.append("\n## Top Opportunities")
+            for item in snapshot["opportunities"]["top"][:4]:
+                parts.append(
+                    f"- [{item['priority']}] {item['title']} — {item['summary']}"
+                )
+
+        if snapshot["cluster_summary"]["top_clusters"]:
+            parts.append("\n## Topic Clusters")
+            for cluster in snapshot["cluster_summary"]["top_clusters"]:
+                gaps = ", ".join(cluster["gap_keywords"][:3]) or "No obvious gap keywords"
+                parts.append(
+                    f"- **{cluster['name']}** — gaps: {gaps}"
+                )
 
         if serp_nodes:
             parts.append("\n## SERP Rankings")
