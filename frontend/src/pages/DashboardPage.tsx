@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { useProjects, useDeleteProject } from "../hooks/useProjects";
+import { useProjects } from "../hooks/useProjects";
 import { useCreateMonitor } from "../hooks/useMonitors";
 import { useTaskPoll } from "../hooks/useTasks";
 import { ErrorAlert } from "../components/common/ErrorAlert";
@@ -29,7 +29,6 @@ const cardVariants = {
 
 export function DashboardPage() {
   const { data: projects, isLoading, error } = useProjects();
-  const deleteProject = useDeleteProject();
   const createMonitor = useCreateMonitor();
   const { t, locale } = useI18n();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -47,13 +46,6 @@ export function DashboardPage() {
     }, 3000);
     return () => window.clearTimeout(timeoutId);
   }, [dialogOpen, selectedTaskId, taskDone]);
-
-  const deleteError =
-    deleteProject.error instanceof Error
-      ? deleteProject.error.message
-      : deleteProject.isError
-        ? "Failed to delete project."
-        : null;
 
   if (isLoading) {
     return (
@@ -116,8 +108,6 @@ export function DashboardPage() {
         </div>
       )}
 
-      {deleteError ? <div className="mb-6"><ErrorAlert message={deleteError} /></div> : null}
-
       {projects?.length ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((p, i) => (
@@ -132,14 +122,7 @@ export function DashboardPage() {
                 transition: { duration: 0.2, ease: "easeOut" },
               }}
             >
-              <ProjectCard
-                project={p}
-                onDelete={(id) => {
-                  if (window.confirm(t("dashboard.deleteConfirm"))) {
-                    deleteProject.mutate(id);
-                  }
-                }}
-              />
+              <ProjectCard project={p} />
             </motion.div>
           ))}
         </div>

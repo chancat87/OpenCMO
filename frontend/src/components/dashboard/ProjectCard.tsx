@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Activity, Trash2 } from "lucide-react";
+import { Activity } from "lucide-react";
 import type { Project } from "../../types";
 import { useI18n } from "../../i18n";
 
@@ -15,7 +15,7 @@ function formatRelativeTime(dateStr: string): string {
   return `${months}mo ago`;
 }
 
-export function ProjectCard({ project, onDelete }: { project: Project; onDelete?: (id: number) => void }) {
+export function ProjectCard({ project }: { project: Project }) {
   const { latest } = project;
   const { t } = useI18n();
 
@@ -52,20 +52,6 @@ export function ProjectCard({ project, onDelete }: { project: Project; onDelete?
           <span className="rounded-md bg-slate-50 px-2 py-1 text-[10px] font-medium tracking-wider text-slate-500 uppercase">
             {project.category === "auto" ? t("project.categoryAuto") : project.category}
           </span>
-          {onDelete && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onDelete(project.id);
-              }}
-              title="Delete project"
-              className="rounded-lg p-1.5 text-slate-300 opacity-0 transition-all duration-200 group-hover:opacity-100 hover:!bg-rose-50 hover:!text-rose-500 hover:scale-105 active:scale-95"
-            >
-              <Trash2 size={14} strokeWidth={1.5} />
-            </button>
-          )}
         </div>
       </div>
       <p className="mt-3 text-xs text-slate-400">
