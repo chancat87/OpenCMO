@@ -333,11 +333,11 @@ export function AnalysisDialog({
   onClose: () => void;
 }) {
   const { data: task } = useTaskPoll(taskId);
-  const { data: artifacts } = useTaskArtifacts(taskId, !!taskId);
+  const isDone = task?.status === "completed" || task?.status === "failed";
+  const { data: artifacts } = useTaskArtifacts(taskId, !!taskId, !isDone);
   const { t } = useI18n();
 
   const progress: AnalysisProgress[] = task?.progress ?? [];
-  const isDone = task?.status === "completed" || task?.status === "failed";
   const isStale = useTaskStale(task?.status, progress.length);
   const analystEvents = useMemo(() => getAnalystEvents(progress), [progress]);
   const stageCards = artifacts?.stage_cards ?? [];

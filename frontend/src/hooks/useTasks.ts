@@ -55,10 +55,11 @@ export function useTaskRecommendations(taskId: string | null, enabled = true) {
   });
 }
 
-export function useTaskArtifacts(taskId: string | null, enabled = true) {
+export function useTaskArtifacts(taskId: string | null, enabled = true, live = false) {
   return useQuery<TaskArtifacts>({
     queryKey: ["task-artifacts", taskId],
     queryFn: () => getTaskArtifacts(taskId!),
     enabled: !!taskId && enabled,
+    refetchInterval: live ? 2000 : false,
   });
 }

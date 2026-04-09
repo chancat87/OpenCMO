@@ -539,6 +539,33 @@ async def _get_schema_version(db: aiosqlite.Connection) -> int:
         return 0
 
 
+async def _get_table_columns(db: aiosqlite.Connection, table_name: str) -> set[str]:
+    """Return the column names for a table."""
+    cursor = await db.execute(f"PRAGMA table_info({table_name})")
+    rows = await cursor.fetchall()
+    return {row[1] for row in rows}
+
+
+def _is_idempotent_migration_error(exc: Exception) -> bool:
+    """Allow safe re-runs when a column or index already exists."""
+    message = str(exc).lower()
+    return "duplicate column name" in message or "already exists" in message
+
+
+async def _reconcile_required_columns(db: aiosqlite.Connection) -> None:
+    """Repair historical schema drift even when schema_version is already current."""
+    required_columns = {
+        "seo_scans": {"seo_health_score": "ALTER TABLE seo_scans ADD COLUMN seo_health_score REAL"},
+        "geo_scans": {"crawl_success_rate": "ALTER TABLE geo_scans ADD COLUMN crawl_success_rate REAL"},
+    }
+
+    for table_name, columns in required_columns.items():
+        existing_columns = await _get_table_columns(db, table_name)
+        for column_name, statement in columns.items():
+            if column_name not in existing_columns:
+                await db.execute(statement)
+
+
 async def _run_migrations(db: aiosqlite.Connection) -> None:
     """Apply pending migrations, skipping already-applied columns gracefully."""
     current = await _get_schema_version(db)
@@ -551,8 +578,9 @@ async def _run_migrations(db: aiosqlite.Connection) -> None:
         for stmt in statements:
             try:
                 await db.execute(stmt)
-            except Exception:
-                pass  # column/index already exists
+            except Exception as exc:
+                if not _is_idempotent_migration_error(exc):
+                    raise
         await db.execute("INSERT INTO schema_version (version) VALUES (?)", (version,))
         logger.debug("Migration %d applied: %s", version, description)
 
@@ -582,6 +610,9 @@ async def ensure_db() -> None:
             await db.commit()
         else:
             await _run_migrations(db)
+
+        await _reconcile_required_columns(db)
+        await db.commit()
 
         _SCHEMA_READY_FOR = _DB_PATH
     finally:

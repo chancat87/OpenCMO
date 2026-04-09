@@ -221,6 +221,12 @@ async def _collect_signals(
     # --- Define each scan as an independent coroutine ---
 
     async def _run_seo():
+        await _emit(run_id, on_progress, _event(
+            "signal_collect",
+            "running",
+            "Starting SEO crawl and technical audit.",
+            agent="Signal Collector",
+        ))
         try:
             from crawl4ai import AsyncWebCrawler
 
@@ -252,15 +258,33 @@ async def _collect_signals(
                 has_sitemap=robots_sitemap.get("has_sitemap") if robots_sitemap else None,
                 has_schema_org=bool(parser.schema_types),
             )
+            await _emit(run_id, on_progress, _event(
+                "signal_collect",
+                "running",
+                "SEO crawl finished and snapshot stored.",
+                agent="Signal Collector",
+            ))
         except Exception as exc:
             warnings.append(f"SEO scan failed: {exc}")
             await _emit(run_id, on_progress, _event(
                 "signal_collect", "warning", f"SEO scan failed: {exc}", agent="Signal Collector",
             ))
 
+        await _emit(run_id, on_progress, _event(
+            "signal_collect",
+            "running",
+            "Starting SERP tracking for monitored keywords.",
+            agent="Signal Collector",
+        ))
         try:
             from opencmo.tools.serp_tracker import track_project_keywords
             await track_project_keywords(project_id)
+            await _emit(run_id, on_progress, _event(
+                "signal_collect",
+                "running",
+                "SERP tracking finished.",
+                agent="Signal Collector",
+            ))
         except Exception as exc:
             warnings.append(f"SERP tracking failed: {exc}")
             await _emit(run_id, on_progress, _event(
@@ -268,6 +292,12 @@ async def _collect_signals(
             ))
 
     async def _run_geo():
+        await _emit(run_id, on_progress, _event(
+            "signal_collect",
+            "running",
+            "Starting GEO visibility sweep across enabled providers.",
+            agent="Signal Collector",
+        ))
         try:
             import json as _json
 
@@ -322,6 +352,12 @@ async def _collect_signals(
                 sentiment_score=sentiment_score,
                 platform_results_json=platform_json,
             )
+            await _emit(run_id, on_progress, _event(
+                "signal_collect",
+                "running",
+                f"GEO sweep finished with {len(results)} provider result(s).",
+                agent="Signal Collector",
+            ))
         except Exception as exc:
             warnings.append(f"GEO scan failed: {exc}")
             await _emit(run_id, on_progress, _event(
@@ -329,6 +365,12 @@ async def _collect_signals(
             ))
 
     async def _run_community():
+        await _emit(run_id, on_progress, _event(
+            "signal_collect",
+            "running",
+            "Starting community discovery and discussion capture.",
+            agent="Signal Collector",
+        ))
         try:
             import json as _json
 
@@ -376,6 +418,12 @@ async def _collect_signals(
                     )
                 except Exception:
                     pass
+            await _emit(run_id, on_progress, _event(
+                "signal_collect",
+                "running",
+                f"Community discovery finished with {total_hits} captured hit(s).",
+                agent="Signal Collector",
+            ))
         except Exception as exc:
             warnings.append(f"Community scan failed: {exc}")
             await _emit(run_id, on_progress, _event(

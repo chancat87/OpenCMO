@@ -11,10 +11,12 @@ import { useI18n } from "../../i18n";
 export function MonitorList({
   monitors,
   onDelete,
+  onTaskCreated,
   onSelectRun,
 }: {
   monitors: Monitor[];
   onDelete: (id: number) => void;
+  onTaskCreated?: (taskId: string, url: string) => void;
   onSelectRun?: (taskId: string, url: string) => void;
 }) {
   const { t, locale } = useI18n();
@@ -110,6 +112,7 @@ export function MonitorList({
               <RunScanButton
                 monitorId={m.id}
                 projectId={m.project_id}
+                onTaskCreated={(taskId) => onTaskCreated?.(taskId, m.url)}
                 onViewResults={(taskId) => onSelectRun?.(taskId, m.url)}
               />
               <button

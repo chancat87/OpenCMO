@@ -50,6 +50,17 @@ def _progress_from_events(events: list[dict]) -> list[dict]:
     return progress
 
 
+def _latest_progress_summary(events: list[dict]) -> str:
+    for event in reversed(events):
+        if event["event_type"] != "progress":
+            continue
+        payload = event["payload"] or {}
+        summary = payload.get("summary") or payload.get("detail") or event["summary"] or ""
+        if summary:
+            return summary
+    return ""
+
+
 def _latest_stage_cards(events: list[dict]) -> list[dict]:
     cards: dict[str, dict] = {}
     for event in events:
@@ -194,7 +205,7 @@ async def _serialize_scan_task(task: dict) -> dict:
         "error": error.get("message"),
         "progress": _progress_from_events(events),
         "run_id": result.get("run_id"),
-        "summary": result.get("summary") or error.get("message") or "",
+        "summary": result.get("summary") or error.get("message") or _latest_progress_summary(events),
         "findings_count": result.get("findings_count", 0),
         "recommendations_count": result.get("recommendations_count", 0),
     }

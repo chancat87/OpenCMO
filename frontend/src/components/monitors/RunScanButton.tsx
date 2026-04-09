@@ -8,10 +8,12 @@ import { useI18n } from "../../i18n";
 export function RunScanButton({
   monitorId,
   projectId,
+  onTaskCreated,
   onViewResults,
 }: {
   monitorId: number;
   projectId: number;
+  onTaskCreated?: (taskId: string) => void;
   onViewResults?: (taskId: string) => void;
 }) {
   const [taskId, setTaskId] = useState<string | null>(null);
@@ -38,6 +40,7 @@ export function RunScanButton({
     try {
       const record = await runMonitor.mutateAsync(monitorId);
       setTaskId(record.task_id);
+      onTaskCreated?.(record.task_id);
     } catch {
       // 409 or other error handled by mutation
     }
