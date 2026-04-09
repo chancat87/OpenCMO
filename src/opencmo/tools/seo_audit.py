@@ -113,6 +113,16 @@ def _warn(label: str, detail: str) -> str:
     return f"[WARNING] {label}: {detail}"
 
 
+def _flatten_schema_types(values: list) -> list[str]:
+    flattened: list[str] = []
+    for value in values:
+        if isinstance(value, str):
+            flattened.append(value)
+        elif isinstance(value, list):
+            flattened.extend(_flatten_schema_types(value))
+    return flattened
+
+
 def _cwv_status(value: float, good: float, poor: float) -> str:
     """Return severity tag for a Core Web Vitals metric."""
     if value < good:
@@ -404,7 +414,7 @@ def _build_report(parser: _SEOParser, result, url: str, *, cwv: dict | None = No
     lines.append("")
     lines.append("## Structured Data (Schema.org)")
     if parser.schema_types:
-        types_str = ", ".join(parser.schema_types)
+        types_str = ", ".join(_flatten_schema_types(parser.schema_types))
         lines.append(_check("Schema.org", True, f"Found types: {types_str}"))
     else:
         lines.append(_warn("Schema.org", "No JSON-LD structured data found — add schema markup for rich results"))

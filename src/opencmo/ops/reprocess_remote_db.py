@@ -117,22 +117,23 @@ async def _set_local_defaults(api_key: str, base_url: str, model: str) -> None:
 
 async def _run_local_reprocess(*, scan_concurrency: int, report_concurrency: int, retry_policy: RetryPolicy) -> None:
     from opencmo import service, storage
+    from opencmo.scheduler import run_scheduled_scan
 
     await storage.ensure_db()
-    monitors = await storage.list_scheduled_jobs()
     projects = await storage.list_projects()
 
-    print(f"[info] local monitors={len(monitors)} projects={len(projects)}", flush=True)
+    print(f"[info] local projects={len(projects)}", flush=True)
 
     scan_sem = asyncio.Semaphore(max(1, scan_concurrency))
     report_sem = asyncio.Semaphore(max(1, report_concurrency))
 
-    async def rerun_monitor(monitor: dict) -> None:
+    async def rerun_project_scan(project: dict) -> None:
         async with scan_sem:
-            label = f"monitor#{monitor['id']}:{monitor['brand_name']}"
+            label = f"scan:{project['id']}:{project['brand_name']}"
 
             async def _call():
-                return await service.run_monitor(monitor["id"])
+                await run_scheduled_scan(project["id"], "full", triggered_by="manual")
+                return {"ok": True}
 
             result = await retry_async(label, _call, policy=retry_policy)
             print(f"[scan] {label} -> {result.get('ok')}", flush=True)
@@ -155,7 +156,7 @@ async def _run_local_reprocess(*, scan_concurrency: int, report_concurrency: int
             status = result.get("human", {}).get("generation_status")
             print(f"[report] {label} -> {status}", flush=True)
 
-    await asyncio.gather(*(rerun_monitor(monitor) for monitor in monitors))
+    await asyncio.gather(*(rerun_project_scan(project) for project in projects))
 
     async def rerun_project_reports(project: dict) -> None:
         await rerun_report(project, "strategic")

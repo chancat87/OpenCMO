@@ -222,6 +222,16 @@ def test_report_includes_all_sections():
     assert "LCP" in report
 
 
+def test_build_report_flattens_nested_schema_type_values():
+    parser = _SEOParser()
+    parser.schema_types = ["Organization", ["WebSite", "FAQPage"]]
+    mock_result = type("R", (), {"media": None, "links": None, "markdown": " ".join(["word"] * 400)})()
+
+    report = _build_report(parser, mock_result, "https://example.com")
+
+    assert "Found types: Organization, WebSite, FAQPage" in report
+
+
 def test_report_omits_backlink_placeholder_without_real_backlink_data():
     html = '<html><head><title>Test Page</title></head><body><h1>Hello</h1></body></html>'
     parser = _SEOParser()
