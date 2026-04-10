@@ -70,7 +70,7 @@ One URL triggers a 6-stage AI pipeline that builds a complete growth picture:
 | Stage | Name | What it does |
 |:-----:|------|-------------|
 | 1/6 | **Context Build** | Crawl your URL. Three AI specialists (Product Analyst, SEO Strategist, Community Strategist) run a 3-round debate to extract brand name, category, keywords, and competitors. |
-| 2/6 | **Signal Collect** | Run SEO audit, GEO visibility check, community search (Reddit, HN, Dev.to, ...), and SERP keyword tracking — all in parallel. |
+| 2/6 | **Signal Collect** | Run SEO audit, GEO visibility check, community search (Reddit, HN, Dev.to, ...), SERP keyword tracking, and **GitHub potential-user discovery** — all in parallel. |
 | 3/6 | **Signal Normalize** | Clean and standardize raw data: deduplicate discussions, normalize scores, align keyword and competitor records. |
 | 4/6 | **Domain Review** | Four AI analysts independently review the signals: SEO Analyst, GEO Analyst, Community Analyst, Competitor Analyst. |
 | 5/6 | **Strategy Synthesis** | An AI Strategy Director synthesizes all reviews into prioritized findings and actionable recommendations. |
@@ -86,6 +86,7 @@ One URL triggers a 6-stage AI pipeline that builds a complete growth picture:
 - **Community Monitoring**: watch Reddit, Hacker News, Dev.to, YouTube, Bluesky, Twitter/X, plus Chinese platforms such as V2EX, Weibo, Bilibili, and XueQiu.
 - **Knowledge Graph**: explore competitors, keywords, and community connections in one visual map.
 - **Reports**: generate versioned strategic and weekly reports, with human readouts, agent briefs, PDF export, and email delivery.
+- **Potential Users**: automatically discover contactable GitHub developers from your product's keywords, competitors, and related repositories. Score leads by tech-stack match and reachability, then generate personalized outreach (email, Twitter DM, GitHub Issue) through the approval queue.
 - **Approvals and AI Chat**: keep humans in the loop while using project-aware AI agents to reason, summarize, and draft.
 
 ## Deep Reports

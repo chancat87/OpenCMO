@@ -70,7 +70,7 @@
 | 阶段 | 名称 | 做什么 |
 |:----:|------|--------|
 | 1/6 | **Context Build** | 爬取你的 URL。三位 AI 专家（产品分析师、SEO 策略师、社区策略师）进行 3 轮辩论，提取品牌名、分类、关键词和竞品。 |
-| 2/6 | **Signal Collect** | 并行执行 SEO 审计、GEO 可见度检测、社区搜索（Reddit、HN、Dev.to 等）和 SERP 关键词追踪。 |
+| 2/6 | **Signal Collect** | 并行执行 SEO 审计、GEO 可见度检测、社区搜索（Reddit、HN、Dev.to 等）、SERP 关键词追踪和 **GitHub 潜在用户发现**。 |
 | 3/6 | **Signal Normalize** | 清洗和标准化原始数据：去重讨论、归一化评分、对齐关键词和竞品记录。 |
 | 4/6 | **Domain Review** | 四位 AI 分析师独立审查信号：SEO 分析师、GEO 分析师、社区分析师、竞品分��师。 |
 | 5/6 | **Strategy Synthesis** | AI 策略总监综合所有审查，生成按优先级排序的发现和可执行建议。 |
@@ -86,6 +86,7 @@
 - **社区监控**：覆盖 Reddit、Hacker News、Dev.to、YouTube、Bluesky、Twitter/X，以及 V2EX、微博、B 站、雪球等中文平台。
 - **知识图谱**：在一个可视化界面里探索竞品、关键词和社区连接关系。
 - **报告系统**：生成版本化战略报告和周报，支持 Human Readout、Agent Brief、PDF 导出和邮件发送。
+- **潜在用户发现**：根据产品关键词、竞品和相关仓库，自动从 GitHub 发现有联系方式的开发者。按技术栈匹配度和可触达性评分，支持生成个性化触达内容（邮件、Twitter 私信、GitHub Issue），通过审批队列人工确认后发送。
 - **审批与 AI 对话**：在保持人工审核的前提下，使用项目上下文驱动的 AI agent 做分析、总结和起草。
 
 ## 深度报告
