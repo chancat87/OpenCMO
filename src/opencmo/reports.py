@@ -145,9 +145,6 @@ def _simple_markdown_to_html(markdown_text: str) -> str:
     return "\n".join(html_lines)
 
 
-_EMPTY_REPORT_FALLBACK_MODEL = "gemini-3-flash"
-
-
 async def _generate_llm_markdown(system_prompt: str, user_prompt: str, *, model_override: str | None = None) -> str:
     """Generate markdown with the configured LLM."""
     from opencmo import llm
@@ -171,21 +168,18 @@ async def _generate_llm_markdown_with_empty_retry(
     *,
     primary_model: str,
 ) -> tuple[str, str | None]:
-    """Generate markdown and retry with a fallback model when the content is empty."""
+    """Generate markdown and retry once on the same model when the content is empty."""
     content = await _generate_llm_markdown(system_prompt, user_prompt, model_override=primary_model)
     if content.strip():
         return content, None
 
-    if primary_model == _EMPTY_REPORT_FALLBACK_MODEL:
-        raise RuntimeError("LLM returned empty report content.")
-
-    fallback_content = await _generate_llm_markdown(
+    retry_content = await _generate_llm_markdown(
         system_prompt,
         user_prompt,
-        model_override=_EMPTY_REPORT_FALLBACK_MODEL,
+        model_override=primary_model,
     )
-    if fallback_content.strip():
-        return fallback_content, _EMPTY_REPORT_FALLBACK_MODEL
+    if retry_content.strip():
+        return retry_content, primary_model
     raise RuntimeError("LLM returned empty report content.")
 
 

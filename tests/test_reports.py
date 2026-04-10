@@ -264,20 +264,21 @@ async def test_generate_report_marks_failed_when_all_generation_paths_fail():
 
 
 @pytest.mark.asyncio
-async def test_generate_report_retries_empty_content_with_gemini_flash():
+async def test_generate_report_retries_empty_content_on_same_model():
     project_id = await _seed_project()
 
     with patch("opencmo.report_pipeline.run_deep_report_pipeline", new_callable=AsyncMock) as mock_pipeline, \
+         patch("opencmo.reports._get_report_model", new_callable=AsyncMock, return_value="gpt-5.4"), \
          patch("opencmo.reports._generate_llm_markdown", new_callable=AsyncMock) as mock_llm:
         mock_pipeline.side_effect = RuntimeError("Pipeline exploded")
-        mock_llm.side_effect = ["", "# Gemini fallback report", "# Agent brief"]
+        mock_llm.side_effect = ["", "# Same-model retry report", "# Agent brief"]
 
         report = await service.regenerate_project_report(project_id, "strategic")
 
     assert report["human"]["generation_status"] == "completed"
-    assert "Gemini fallback report" in report["human"]["content"]
+    assert "Same-model retry report" in report["human"]["content"]
     assert report["human"]["meta"]["used_fallback"] is True
-    assert report["human"]["meta"]["model"] == "gemini-3-flash"
+    assert report["human"]["meta"]["model"] == "gpt-5.4"
     assert mock_llm.await_count == 3
 
 
