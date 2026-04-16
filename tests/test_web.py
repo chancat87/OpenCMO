@@ -1188,8 +1188,10 @@ def test_api_v1_chat_applies_marketing_review_to_final_output(client):
 def test_resolve_direct_platform_agent_detects_single_platform_content_request():
     from opencmo.web.routers.chat import _resolve_direct_platform_agent
 
+    assert _resolve_direct_platform_agent("帮我写 3 条 Twitter/X 推文和 1 条 thread").name == "Twitter Expert"
     assert _resolve_direct_platform_agent("帮我写一篇知乎回答，主题是 AI 搜索品牌监控").name == "Zhihu Expert"
     assert _resolve_direct_platform_agent("Draft a Reddit post for OpenCMO and keep it humble").name == "Reddit Expert"
+    assert _resolve_direct_platform_agent("Draft a Reddit post for r/SideProject and ask for feedback").name == "Reddit Expert"
     assert _resolve_direct_platform_agent("给我做一个全平台分发策略，包含知乎和小红书") is None
     assert _resolve_direct_platform_agent("帮我监控 Reddit 上关于 OpenCMO 的讨论") is None
 

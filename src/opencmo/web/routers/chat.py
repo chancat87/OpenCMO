@@ -237,7 +237,7 @@ _MULTI_PLATFORM_MARKERS = (
 _PLATFORM_SPECS = (
     {
         "agent_attr": "twitter_expert",
-        "platform_markers": ("twitter", "x ", "x/", "x平台", "推特", "tweet", "thread", "推文", "线程"),
+        "platform_markers": ("twitter", "twitter/x", "x ", "x/", "x平台", "推特", "tweet", "thread", "推文", "线程"),
         "content_markers": ("tweet", "thread", "推文", "线程"),
     },
     {
@@ -247,7 +247,8 @@ _PLATFORM_SPECS = (
     },
     {
         "agent_attr": "reddit_expert",
-        "platform_markers": ("reddit", "subreddit", "r/"),
+        "platform_markers": ("reddit", "subreddit"),
+        "platform_regexes": (r"(?<![a-z0-9])r/[a-z0-9_]+",),
         "content_markers": ("post", "title", "body", "帖子", "发帖", "标题", "正文"),
         "exclude_markers": ("monitor", "scan", "discussion", "comment", "reply", "社区", "监控", "评论", "回复", "讨论"),
     },
@@ -298,6 +299,12 @@ def _contains_any(text: str, markers: tuple[str, ...]) -> bool:
     return any(marker in text for marker in markers)
 
 
+def _matches_platform(text: str, spec: dict) -> bool:
+    if _contains_any(text, tuple(spec.get("platform_markers", ()))):
+        return True
+    return any(re.search(pattern, text) for pattern in spec.get("platform_regexes", ()))
+
+
 def _normalize_message_for_routing(message: str) -> str:
     lowered = message.lower()
     lowered = re.sub(r"\s+", " ", lowered)
@@ -311,7 +318,7 @@ def _resolve_direct_platform_agent(message: str):
 
     matches = []
     for spec in _PLATFORM_SPECS:
-        if _contains_any(normalized, spec["platform_markers"]):
+        if _matches_platform(normalized, spec):
             matches.append(spec)
     if len(matches) != 1:
         return None
