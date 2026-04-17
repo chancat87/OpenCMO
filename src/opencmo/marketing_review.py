@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 from opencmo import llm
 
@@ -113,6 +114,11 @@ def _unwrap_nested_revised_output(value: object) -> str | None:
     cleaned = value.strip()
     if not cleaned or cleaned[0] not in "{[":
         return None
+
+    extracted = _extract_revised_output_field(cleaned)
+    if extracted:
+        return extracted
+
     try:
         nested = json.loads(cleaned)
     except json.JSONDecodeError:
@@ -122,6 +128,17 @@ def _unwrap_nested_revised_output(value: object) -> str | None:
         if isinstance(nested_output, str) and nested_output.strip():
             return nested_output.strip()
     return None
+
+
+def _extract_revised_output_field(value: str) -> str | None:
+    match = re.search(r'"revised_output"\s*:\s*"(?P<content>.*?)"\s*,\s*"weak_points"', value, re.DOTALL)
+    if not match:
+        return None
+    content = match.group("content")
+    try:
+        return json.loads(f'"{content}"').strip()
+    except json.JSONDecodeError:
+        return None
 
 
 def get_marketing_review_profile(agent_name: str | None) -> str:

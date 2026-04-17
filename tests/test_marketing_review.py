@@ -97,3 +97,25 @@ async def test_review_marketing_output_unwraps_nested_json_string():
     assert result["final_output"] == "动态文案\n这是即刻正文"
     assert result["review_applied"] is True
     assert result["profile"] == "maker_feed"
+
+
+@pytest.mark.asyncio
+async def test_review_marketing_output_unwraps_malformed_nested_json_string():
+    from opencmo.marketing_review import review_marketing_output_with_metadata
+
+    malformed_nested = '{"revised_output":"节点\\n/go/openai\\n\\n标题\\n[开源] OpenCMO","weak_points":["priority","next_"}'
+    llm_payload = {
+        "revised_output": malformed_nested,
+        "weak_points": ["clarity"],
+    }
+    with patch("opencmo.marketing_review.llm.get_key_async", AsyncMock(return_value="sk-test")), \
+         patch("opencmo.marketing_review.llm.chat_completion", AsyncMock(return_value=json.dumps(llm_payload, ensure_ascii=False))):
+        result = await review_marketing_output_with_metadata(
+            agent_name="V2EX Expert",
+            user_message="帮我写一篇 V2EX 帖子",
+            output_text="原始草稿，长度足够触发 review。这里补一段额外说明，确保超过 review 的最小长度阈值。",
+        )
+
+    assert result["final_output"] == "节点\n/go/openai\n\n标题\n[开源] OpenCMO"
+    assert result["review_applied"] is True
+    assert result["profile"] == "developer_forum"
