@@ -293,6 +293,36 @@ _PLATFORM_SPECS = (
         "platform_markers": ("微信公众号", "微信公众", "wechat"),
         "content_markers": ("文章", "标题", "正文", "推文"),
     },
+    {
+        "agent_attr": "oschina_expert",
+        "platform_markers": ("oschina", "开源中国"),
+        "content_markers": ("文章", "项目介绍", "帖子", "标题", "正文"),
+    },
+    {
+        "agent_attr": "gitcode_expert",
+        "platform_markers": ("gitcode", "csdn"),
+        "content_markers": ("文章", "项目介绍", "仓库介绍", "标题", "正文"),
+    },
+    {
+        "agent_attr": "sspai_expert",
+        "platform_markers": ("少数派", "sspai"),
+        "content_markers": ("文章", "标题", "正文", "评测"),
+    },
+    {
+        "agent_attr": "infoq_expert",
+        "platform_markers": ("infoq",),
+        "content_markers": ("文章", "标题", "正文", "投稿"),
+    },
+    {
+        "agent_attr": "devto_expert",
+        "platform_markers": ("dev.to", "devto"),
+        "content_markers": ("article", "post", "title", "body", "文章", "标题", "正文"),
+    },
+    {
+        "agent_attr": "ruanyifeng_expert",
+        "platform_markers": ("阮一峰", "周刊投稿", "ruanyifeng"),
+        "content_markers": ("投稿", "title", "body", "标题", "正文"),
+    },
 )
 
 
@@ -336,12 +366,18 @@ def _resolve_direct_platform_agent(message: str):
         return None
 
     from opencmo.agents import (
+        devto_expert,
+        gitcode_expert,
         hackernews_expert,
+        infoq_expert,
         jike_expert,
         juejin_expert,
         linkedin_expert,
+        oschina_expert,
         producthunt_expert,
         reddit_expert,
+        ruanyifeng_expert,
+        sspai_expert,
         twitter_expert,
         v2ex_expert,
         wechat_expert,
@@ -361,6 +397,12 @@ def _resolve_direct_platform_agent(message: str):
         "juejin_expert": juejin_expert,
         "jike_expert": jike_expert,
         "wechat_expert": wechat_expert,
+        "oschina_expert": oschina_expert,
+        "gitcode_expert": gitcode_expert,
+        "sspai_expert": sspai_expert,
+        "infoq_expert": infoq_expert,
+        "devto_expert": devto_expert,
+        "ruanyifeng_expert": ruanyifeng_expert,
     }
     return agent_map[spec["agent_attr"]]
 

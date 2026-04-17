@@ -1194,6 +1194,12 @@ def test_resolve_direct_platform_agent_detects_single_platform_content_request()
     assert _resolve_direct_platform_agent("Draft a Reddit post for OpenCMO and keep it humble").name == "Reddit Expert"
     assert _resolve_direct_platform_agent("Draft a Reddit post for r/SideProject and ask for feedback").name == "Reddit Expert"
     assert _resolve_direct_platform_agent("帮我写一篇 V2EX 帖子，介绍 OpenCMO 做 AI 搜索品牌监控").name == "V2EX Expert"
+    assert _resolve_direct_platform_agent("帮我写一篇 OSChina 项目介绍，主题是 OpenCMO").name == "OSChina Expert"
+    assert _resolve_direct_platform_agent("帮我写一篇 GitCode/CSDN 风格的项目介绍，介绍 OpenCMO").name == "GitCode Expert"
+    assert _resolve_direct_platform_agent("帮我写一篇少数派文章，主题是 AI 搜索时代为什么要做品牌监控").name == "Sspai Expert"
+    assert _resolve_direct_platform_agent("帮我写一篇 InfoQ 风格的文章，主题是 AI 搜索品牌监控").name == "InfoQ Expert"
+    assert _resolve_direct_platform_agent("Write a Dev.to article about AI search brand monitoring").name == "Devto Expert"
+    assert _resolve_direct_platform_agent("帮我写一条阮一峰周刊投稿，主题是 OpenCMO").name == "Ruanyifeng Weekly Expert"
     assert _resolve_direct_platform_agent("给我做一个全平台分发策略，包含知乎和小红书") is None
     assert _resolve_direct_platform_agent("帮我监控 Reddit 上关于 OpenCMO 的讨论") is None
 
