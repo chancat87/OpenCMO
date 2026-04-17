@@ -107,6 +107,23 @@ Return valid JSON with this shape only:
 }"""
 
 
+def _unwrap_nested_revised_output(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    cleaned = value.strip()
+    if not cleaned or cleaned[0] not in "{[":
+        return None
+    try:
+        nested = json.loads(cleaned)
+    except json.JSONDecodeError:
+        return None
+    if isinstance(nested, dict):
+        nested_output = nested.get("revised_output")
+        if isinstance(nested_output, str) and nested_output.strip():
+            return nested_output.strip()
+    return None
+
+
 def get_marketing_review_profile(agent_name: str | None) -> str:
     return _PROFILE_MAP.get(agent_name or "", "general_marketing")
 
@@ -172,6 +189,14 @@ async def review_marketing_output_with_metadata(
         parsed = json.loads(revised)
     except json.JSONDecodeError:
         cleaned = revised.strip()
+        nested_output = _unwrap_nested_revised_output(cleaned)
+        if nested_output:
+            return {
+                "final_output": nested_output,
+                "review_applied": True,
+                "profile": profile,
+                "weak_points": [],
+            }
         if cleaned:
             return {
                 "final_output": cleaned,
@@ -186,7 +211,34 @@ async def review_marketing_output_with_metadata(
             "weak_points": [],
         }
 
+    if isinstance(parsed, str):
+        nested_output = _unwrap_nested_revised_output(parsed)
+        if nested_output:
+            return {
+                "final_output": nested_output,
+                "review_applied": True,
+                "profile": profile,
+                "weak_points": [],
+            }
+        return {
+            "final_output": parsed.strip() or output_text,
+            "review_applied": True,
+            "profile": profile,
+            "weak_points": [],
+        }
+
+    if not isinstance(parsed, dict):
+        return {
+            "final_output": output_text,
+            "review_applied": False,
+            "profile": profile,
+            "weak_points": [],
+        }
+
     final_output = str(parsed.get("revised_output", "")).strip() or output_text
+    nested_output = _unwrap_nested_revised_output(final_output)
+    if nested_output:
+        final_output = nested_output
     weak_points = parsed.get("weak_points", [])
     if not isinstance(weak_points, list):
         weak_points = []

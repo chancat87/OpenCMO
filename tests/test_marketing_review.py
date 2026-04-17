@@ -70,3 +70,30 @@ async def test_review_marketing_output_with_metadata_returns_tags():
     assert result["review_applied"] is True
     assert result["profile"] == "professional_social"
     assert result["weak_points"] == ["proof", "next_move"]
+
+
+@pytest.mark.asyncio
+async def test_review_marketing_output_unwraps_nested_json_string():
+    from opencmo.marketing_review import review_marketing_output_with_metadata
+
+    llm_payload = {
+        "revised_output": json.dumps(
+            {
+                "revised_output": "动态文案\n这是即刻正文",
+                "weak_points": ["proof"],
+            },
+            ensure_ascii=False,
+        ),
+        "weak_points": ["clarity"],
+    }
+    with patch("opencmo.marketing_review.llm.get_key_async", AsyncMock(return_value="sk-test")), \
+         patch("opencmo.marketing_review.llm.chat_completion", AsyncMock(return_value=json.dumps(llm_payload, ensure_ascii=False))):
+        result = await review_marketing_output_with_metadata(
+            agent_name="Jike Expert",
+            user_message="帮我写一条即刻动态",
+            output_text="原始草稿，长度足够触发 review。这里补一段额外说明，确保超过 review 的最小长度阈值。",
+        )
+
+    assert result["final_output"] == "动态文案\n这是即刻正文"
+    assert result["review_applied"] is True
+    assert result["profile"] == "maker_feed"
