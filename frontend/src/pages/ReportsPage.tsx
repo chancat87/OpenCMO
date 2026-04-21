@@ -1,7 +1,7 @@
 import { useState, useMemo, type ElementType, type ReactNode } from "react";
 import { useParams } from "react-router";
 import ReactMarkdown from "react-markdown";
-import { Bot, FileText, History, Info, Mail, RefreshCcw, User, Download } from "lucide-react";
+import { Bot, ChevronDown, ChevronRight, FileText, History, Info, Mail, RefreshCcw, User, Download } from "lucide-react";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { ProjectHeader } from "../components/project/ProjectHeader";
@@ -41,6 +41,7 @@ function ReportCard({
 }) {
   const Icon = icon;
   const { t } = useI18n();
+  const [expanded, setExpanded] = useState(false);
   const isCompleted = Boolean(report && report.generation_status === "completed" && report.content.trim());
   const failureReason =
     typeof report?.meta?.llm_error === "string"
@@ -48,18 +49,30 @@ function ReportCard({
       : typeof report?.meta?.pipeline_error === "string"
         ? report.meta.pipeline_error
         : null;
+
+  // Preview: first 200 chars of content
+  const preview = isCompleted && report ? report.content.slice(0, 200).replace(/\n+/g, " ") : "";
+
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="mb-4 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <div className="rounded-full bg-slate-100 p-2 text-slate-600">
+    <div className={`rounded-3xl border bg-white shadow-sm transition-all duration-200 ${
+      isCompleted
+        ? "border-slate-200 hover:border-slate-300 hover:shadow-md cursor-pointer"
+        : "border-slate-200"
+    }`}>
+      {/* Clickable header */}
+      <div
+        className={`flex items-center justify-between gap-4 p-6 ${isCompleted ? "select-none" : ""}`}
+        onClick={isCompleted ? () => setExpanded(!expanded) : undefined}
+      >
+        <div className="flex items-center gap-3">
+          <div className={`rounded-full p-2.5 ${isCompleted ? "bg-indigo-50 text-indigo-600" : "bg-slate-100 text-slate-400"}`}>
             <Icon className="h-4 w-4" />
           </div>
           <div>
             <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
               {label}
               {tooltip && (
-                <span className="group relative">
+                <span className="group relative" onClick={(e) => e.stopPropagation()}>
                   <Info className="h-3.5 w-3.5 text-slate-400 cursor-help" />
                   <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-56 -translate-x-1/2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-normal leading-relaxed text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
                     {tooltip}
@@ -74,7 +87,7 @@ function ReportCard({
             ) : null}
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {isCompleted && report?.meta?.low_sample ? (
             <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-700">
               {lowSampleText}
@@ -83,38 +96,68 @@ function ReportCard({
           {allowDownload && isCompleted && report ? (
             <button
               type="button"
-              onClick={() =>
+              onClick={(e) => {
+                e.stopPropagation();
                 downloadAsPDF({
                   elementId: `report-content-${report.id}`,
                   filename: `OpenCMO-${label.replace(/\s+/g, "-")}-v${report.version}.pdf`,
                   title: `${label} (v${report.version})`
-                })
-              }
+                });
+              }}
               className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus:outline-none"
               title={t("reports.downloadPdf")}
             >
               <Download className="h-4 w-4" />
             </button>
           ) : null}
+          {isCompleted ? (
+            <div className={`rounded-full p-1.5 transition-colors ${expanded ? "bg-indigo-100 text-indigo-600" : "bg-slate-100 text-slate-400"}`}>
+              <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
+            </div>
+          ) : null}
         </div>
       </div>
 
-      {isCompleted && report ? (
-        <div id={`report-content-${report.id}`} className="premium-report">
-           <ReactMarkdown>{report.content}</ReactMarkdown>
+      {/* Collapsed preview */}
+      {isCompleted && !expanded && preview ? (
+        <div
+          className="border-t border-slate-100 px-6 py-3 text-sm text-slate-500 cursor-pointer"
+          onClick={() => setExpanded(true)}
+        >
+          <p className="line-clamp-2">{preview}...</p>
+          <span className="mt-1 inline-block text-xs font-medium text-indigo-500">{t("reports.clickToExpand")}</span>
         </div>
-      ) : report ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-5 text-sm text-rose-700">
-          <div className="font-semibold">{failedReportText}</div>
-          {failureReason ? (
-            <p className="mt-2 text-xs leading-relaxed text-rose-600">{failureReason}</p>
-          ) : null}
+      ) : null}
+
+      {/* Expanded content */}
+      {isCompleted && expanded && report ? (
+        <div className="border-t border-slate-100 px-6 pb-6 pt-4">
+          <div id={`report-content-${report.id}`} className="premium-report">
+            <ReactMarkdown>{report.content}</ReactMarkdown>
+          </div>
         </div>
-      ) : (
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-          {noReportText}
+      ) : null}
+
+      {/* Error state */}
+      {report && !isCompleted ? (
+        <div className="px-6 pb-6">
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-5 text-sm text-rose-700">
+            <div className="font-semibold">{failedReportText}</div>
+            {failureReason ? (
+              <p className="mt-2 text-xs leading-relaxed text-rose-600">{failureReason}</p>
+            ) : null}
+          </div>
         </div>
-      )}
+      ) : null}
+
+      {/* Empty state */}
+      {!report ? (
+        <div className="px-6 pb-6">
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
+            {noReportText}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -130,6 +173,8 @@ function ReportHistory({
   latestLabel: string;
   failedLabel: string;
 }) {
+  const [openId, setOpenId] = useState<number | null>(null);
+
   if (!reports.length) return null;
 
   return (
@@ -138,41 +183,57 @@ function ReportHistory({
         <History className="h-4 w-4 text-slate-500" />
         {title}
       </div>
-      <div className="space-y-3">
-        {reports.map((report) => (
-          <details
-            key={report.id}
-            className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3"
-          >
-            <summary className="cursor-pointer list-none">
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="font-semibold text-slate-900">
-                  v{report.version} · {report.audience}
-                </span>
-                {report.is_latest ? (
-                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                    {latestLabel}
+      <div className="space-y-2">
+        {reports.map((report) => {
+          const isOpen = openId === report.id;
+          return (
+            <div
+              key={report.id}
+              className={`rounded-2xl border transition-all duration-200 ${
+                isOpen
+                  ? "border-indigo-200 bg-white shadow-sm"
+                  : "border-slate-200 bg-slate-50/80 hover:border-slate-300 hover:bg-white hover:shadow-sm"
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => setOpenId(isOpen ? null : report.id)}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left cursor-pointer"
+              >
+                <ChevronRight className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 ${isOpen ? "rotate-90 text-indigo-500" : ""}`} />
+                <div className="flex flex-1 flex-wrap items-center gap-2 text-sm">
+                  <span className="font-semibold text-slate-900">
+                    v{report.version} · {report.audience}
                   </span>
-                ) : null}
-                {report.generation_status !== "completed" ? (
-                  <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-rose-700">
-                    {failedLabel}
-                  </span>
-                ) : null}
-                <span className="text-slate-500">{formatStamp(report.created_at)}</span>
-              </div>
-            </summary>
-            {report.generation_status === "completed" && report.content.trim() ? (
-              <div className="premium-report mt-4">
-                <ReactMarkdown>{report.content}</ReactMarkdown>
-              </div>
-            ) : (
-              <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
-                {report.meta?.llm_error || report.meta?.pipeline_error || failedLabel}
-              </div>
-            )}
-          </details>
-        ))}
+                  {report.is_latest ? (
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                      {latestLabel}
+                    </span>
+                  ) : null}
+                  {report.generation_status !== "completed" ? (
+                    <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-rose-700">
+                      {failedLabel}
+                    </span>
+                  ) : null}
+                  <span className="text-slate-500">{formatStamp(report.created_at)}</span>
+                </div>
+              </button>
+              {isOpen ? (
+                <div className="border-t border-slate-100 px-4 pb-4 pt-3">
+                  {report.generation_status === "completed" && report.content.trim() ? (
+                    <div className="premium-report">
+                      <ReactMarkdown>{report.content}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+                      {report.meta?.llm_error || report.meta?.pipeline_error || failedLabel}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
