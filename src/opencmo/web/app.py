@@ -41,34 +41,49 @@ _HOME_STATIC_SITE_COPY_BY_LOCALE = {
 <main id="static-site-copy">
   <header>
     <p>OpenCMO</p>
-    <h1>One system for how your brand appears in search, AI answers, and public conversation</h1>
+    <h1>Open-source visibility operating system for search, AI answers, and public narrative</h1>
     <p>
-      OpenCMO helps teams monitor search visibility, AI visibility, SERP movement,
-      and public community narrative in one place, then turns that context into
-      decisions, approvals, reports, and follow-through.
+      OpenCMO is an open-source project for teams that need SEO, AI visibility,
+      SERP movement, community monitoring, and execution in one workflow. The
+      public site exists so buyers, search engines, and AI agents can understand
+      the product without entering the private workspace routes.
     </p>
   </header>
   <section>
-    <h2>What OpenCMO does</h2>
+    <h2>Open-source proof points</h2>
     <ul>
-      <li>Audit the public surface with technical SEO, performance, and crawlability checks.</li>
-      <li>Track GEO visibility across AI assistants and generative search workflows.</li>
-      <li>Monitor SERP movement and public community narrative in one place.</li>
-      <li>Turn findings into reports, approvals, and execution workflows.</li>
+      <li>GitHub repository: https://github.com/study8677/OpenCMO</li>
+      <li>License: Apache 2.0 — https://github.com/study8677/OpenCMO/blob/main/LICENSE</li>
+      <li>Quick start and self-host path: https://github.com/study8677/OpenCMO#quick-start</li>
+      <li>Architecture walkthrough: https://www.aidcmo.com/en/blog/inside-opencmo-workspace</li>
+    </ul>
+  </section>
+  <section>
+    <h2>What problem OpenCMO solves</h2>
+    <ul>
+      <li>Audit the public surface with technical SEO, performance, metadata, and crawlability checks.</li>
+      <li>Track how AI assistants and generative search workflows describe the product and where citations are weak.</li>
+      <li>Monitor SERP movement, community threads, and competitor framing in one operator workflow.</li>
+      <li>Review recommendations, approvals, reports, and next actions without losing the evidence chain.</li>
+      <li>Mautic is strongest for lifecycle automation; PostHog is strongest for product analytics; OpenCMO is strongest for discoverability and public narrative before the click.</li>
     </ul>
   </section>
   <section>
     <h2>Public product resources</h2>
     <p>
-      Public routes explain the product for humans and machines. Search engines
-      and AI crawlers can use the homepage, public blog, robots.txt, sitemap.xml,
-      and llms.txt to understand what OpenCMO is and which pages matter.
+      Public routes explain the product for humans and machines. Search engines,
+      AI crawlers, and buyers can use the homepage, product blog, robots.txt,
+      sitemap.xml, and llms.txt to understand what OpenCMO is and which pages matter.
     </p>
     <ul>
       <li>English homepage: https://www.aidcmo.com/en</li>
       <li>Chinese homepage: https://www.aidcmo.com/zh</li>
       <li>English blog: https://www.aidcmo.com/en/blog</li>
       <li>Chinese blog: https://www.aidcmo.com/zh/blog</li>
+      <li>Comparison note: https://www.aidcmo.com/en/blog/opencmo-vs-mautic-posthog</li>
+      <li>Who should use OpenCMO: https://www.aidcmo.com/en/blog/who-should-use-opencmo</li>
+      <li>First 30 days with OpenCMO: https://www.aidcmo.com/en/blog/first-30-days-with-opencmo</li>
+      <li>Machine-readable summary: https://www.aidcmo.com/llms.txt</li>
     </ul>
   </section>
 </main>
@@ -77,33 +92,48 @@ _HOME_STATIC_SITE_COPY_BY_LOCALE = {
 <main id="static-site-copy">
   <header>
     <p>OpenCMO</p>
-    <h1>把品牌在搜索、AI 回答和公开讨论中的表现放回同一个系统</h1>
+    <h1>面向搜索、AI 回答与公开叙事的开源可见度操作系统</h1>
     <p>
-      OpenCMO 帮助团队在同一个工作面里观察搜索可见度、AI 可见度、SERP 变化
-      和公开社区叙事，再把这些上下文推进成判断、审批、报告和后续动作。
+      OpenCMO 是一个开源项目，帮助团队把 SEO、AI 可见度、SERP 变化、
+      社区监控与执行动作放到一套工作流里。这个公开站点的目的，是让买家、
+      搜索引擎和 AI agent 不进入私有 workspace 也能理解产品定位。
     </p>
   </header>
   <section>
-    <h2>OpenCMO 做什么</h2>
+    <h2>开源证明</h2>
     <ul>
-      <li>用技术 SEO、性能和可抓取性检查审视公开 surface。</li>
-      <li>追踪 AI 助手和生成式搜索工作流里的 GEO 可见度。</li>
-      <li>把 SERP 变化和公开社区叙事放进同一套观察面。</li>
-      <li>把发现转成报告、审批和可执行工作流。</li>
+      <li>GitHub 仓库: https://github.com/study8677/OpenCMO</li>
+      <li>许可证: Apache 2.0 — https://github.com/study8677/OpenCMO/blob/main/LICENSE</li>
+      <li>Quick start / 自部署入口: https://github.com/study8677/OpenCMO#quick-start</li>
+      <li>架构导览: https://www.aidcmo.com/zh/blog/inside-opencmo-workspace</li>
+    </ul>
+  </section>
+  <section>
+    <h2>OpenCMO 解决的是什么问题</h2>
+    <ul>
+      <li>用技术 SEO、性能、元数据和可抓取性检查复核公开 surface。</li>
+      <li>追踪 AI 助手和生成式搜索工作流怎样描述产品，以及引用薄弱在哪里。</li>
+      <li>把 SERP 变化、社区讨论和竞品 framing 放进同一套操盘工作流。</li>
+      <li>把发现推进成建议、审批、报告和下一步动作，而不是丢失证据链。</li>
+      <li>Mautic 更强在生命周期自动化，PostHog 更强在产品分析，OpenCMO 更强在点击之前的可发现性和公开叙事。</li>
     </ul>
   </section>
   <section>
     <h2>公开产品资源</h2>
     <p>
-      公开路由负责同时向人和机器解释产品。搜索引擎和 AI crawler 可以直接
-      读取首页、公开 blog、robots.txt、sitemap.xml 和 llms.txt 来理解
-      OpenCMO 是什么，以及哪些页面最重要。
+      公开路由负责同时向人和机器解释产品。搜索引擎、AI crawler 和潜在买家
+      可以直接读取首页、公开 blog、robots.txt、sitemap.xml 和 llms.txt，
+      理解 OpenCMO 是什么，以及哪些页面最重要。
     </p>
     <ul>
       <li>英文首页: https://www.aidcmo.com/en</li>
       <li>中文首页: https://www.aidcmo.com/zh</li>
       <li>英文 blog: https://www.aidcmo.com/en/blog</li>
       <li>中文 blog: https://www.aidcmo.com/zh/blog</li>
+      <li>对比文章: https://www.aidcmo.com/zh/blog/opencmo-vs-mautic-posthog</li>
+      <li>适用场景: https://www.aidcmo.com/zh/blog/who-should-use-opencmo</li>
+      <li>前 30 天上手: https://www.aidcmo.com/zh/blog/first-30-days-with-opencmo</li>
+      <li>机器可读摘要: https://www.aidcmo.com/llms.txt</li>
     </ul>
   </section>
 </main>
@@ -115,29 +145,30 @@ _BLOG_STATIC_SITE_COPY_BY_LOCALE = {
 <main id="static-site-copy">
   <header>
     <p>OpenCMO Blog</p>
-    <h1>A public field guide to what OpenCMO is, who it is for, and how the system should be used</h1>
+    <h1>A public field guide to what OpenCMO is, how it fits the stack, and how teams should use it</h1>
     <p>
-      The OpenCMO blog explains what a modern CMO role covers, why an AI CMO operating
-      layer is emerging, when the workspace becomes worth adopting, and which technical
-      choices make the public site readable to both people and machines.
+      The OpenCMO blog explains product fit, self-hosted adoption, architecture,
+      comparisons with adjacent tools, and the technical choices that make the
+      public site readable to both people and machines.
     </p>
   </header>
   <section>
     <h2>Start with these notes</h2>
     <ul>
+      <li><a href="https://www.aidcmo.com/en/blog/opencmo-vs-mautic-posthog">OpenCMO vs Mautic and PostHog: which visibility problem each tool actually solves</a></li>
+      <li><a href="https://www.aidcmo.com/en/blog/who-should-use-opencmo">Who should use OpenCMO, and when it starts paying for itself</a></li>
+      <li><a href="https://www.aidcmo.com/en/blog/first-30-days-with-opencmo">Your first 30 days with OpenCMO: a practical rollout plan</a></li>
+      <li><a href="https://www.aidcmo.com/en/blog/inside-opencmo-workspace">Inside OpenCMO: what the workspace actually contains</a></li>
       <li><a href="https://www.aidcmo.com/en/blog/what-is-a-cmo">What does a CMO do? Responsibilities, metrics, and why AI changes the role</a></li>
       <li><a href="https://www.aidcmo.com/en/blog/what-is-product-marketing">What is product marketing? Responsibilities, examples, and where it fits</a></li>
-      <li><a href="https://www.aidcmo.com/en/blog/what-is-go-to-market-strategy">What is go-to-market strategy? GTM, marketing strategy, and execution explained</a></li>
-      <li><a href="https://www.aidcmo.com/en/blog/what-is-brand-positioning">What is brand positioning? How teams define the story the market remembers</a></li>
-      <li><a href="https://www.aidcmo.com/en/blog/demand-generation-vs-lead-generation">Demand generation vs lead generation: what B2B teams should actually optimize</a></li>
     </ul>
   </section>
   <section>
     <h2>Why this page exists</h2>
     <p>
-      The blog is part of the public product surface. It helps buyers, operators,
-      search engines, and AI agents understand what OpenCMO does without entering
-      the private workspace routes.
+      The blog is part of the public product surface. It gives buyers, operators,
+      search engines, and AI agents long-form pages about positioning, adoption,
+      and product comparisons without requiring the private workspace routes.
     </p>
   </section>
 </main>
@@ -146,27 +177,29 @@ _BLOG_STATIC_SITE_COPY_BY_LOCALE = {
 <main id="static-site-copy">
   <header>
     <p>OpenCMO Blog</p>
-    <h1>一组公开文章：解释 CMO、营销运营和 OpenCMO 到底在做什么</h1>
+    <h1>一组公开文章：解释 OpenCMO 是什么、适合谁，以及它和相邻工具的边界</h1>
     <p>
-      OpenCMO 的 blog 会持续解释 CMO 角色、产品营销、GTM、品牌定位、需求生成、
-      AI CMO 工作方式，以及这套工作台为什么值得被当作公开可见度系统来理解。
+      OpenCMO 的 blog 会持续解释适用场景、自部署落地、架构导览、
+      和相邻工具的对比，以及这套站点为什么必须同时对人和机器可读。
     </p>
   </header>
   <section>
     <h2>先从这些文章开始</h2>
     <ul>
+      <li><a href="https://www.aidcmo.com/zh/blog/opencmo-vs-mautic-posthog">OpenCMO vs Mautic vs PostHog：它们分别解决哪一层可见度问题</a></li>
+      <li><a href="https://www.aidcmo.com/zh/blog/who-should-use-opencmo">谁应该用 OpenCMO，以及它从什么时候开始值得</a></li>
+      <li><a href="https://www.aidcmo.com/zh/blog/first-30-days-with-opencmo">前 30 天怎么用 OpenCMO：一份可执行的上手路线</a></li>
+      <li><a href="https://www.aidcmo.com/zh/blog/inside-opencmo-workspace">OpenCMO 里到底有什么：从监控、报告到增长执行的完整链路</a></li>
       <li><a href="https://www.aidcmo.com/zh/blog/what-is-a-cmo">CMO 是做什么的？职责、核心指标，以及 AI 为什么会改变这个角色</a></li>
       <li><a href="https://www.aidcmo.com/zh/blog/what-is-product-marketing">什么是产品营销？职责、典型工作，以及它到底放在哪一层</a></li>
-      <li><a href="https://www.aidcmo.com/zh/blog/what-is-go-to-market-strategy">什么是 Go-to-Market Strategy？GTM、营销战略和执行到底怎么区分</a></li>
-      <li><a href="https://www.aidcmo.com/zh/blog/what-is-brand-positioning">什么是品牌定位？团队如何定义市场真正记住的那句话</a></li>
-      <li><a href="https://www.aidcmo.com/zh/blog/demand-generation-vs-lead-generation">Demand Generation 和 Lead Generation 有什么区别？B2B 团队到底该优化什么</a></li>
     </ul>
   </section>
   <section>
     <h2>为什么这个页面需要公开存在</h2>
     <p>
       Blog 是公开产品 surface 的一部分。它帮助买家、操盘手、搜索引擎和 AI agent
-      在不进入私有 workspace 的情况下理解 OpenCMO 的定位、能力和工作方式。
+      在不进入私有 workspace 的情况下，直接理解 OpenCMO 的定位、适用场景、
+      对比对象和工作方式。
     </p>
   </section>
 </main>
@@ -344,6 +377,31 @@ _BLOG_ARTICLE_METADATA = [
         "thesis_zh": "OpenCMO 的价值不在单个页面有多新奇，而在于这些模块能一起闭环。",
     },
     {
+        "slug": "opencmo-vs-mautic-posthog",
+        "path": "/blog/opencmo-vs-mautic-posthog",
+        "title": "OpenCMO vs Mautic and PostHog: which visibility problem each tool actually solves",
+        "title_zh": "OpenCMO vs Mautic vs PostHog：它们分别解决哪一层可见度问题",
+        "summary": (
+            "Mautic automates lifecycle messaging. PostHog explains product behavior. "
+            "OpenCMO monitors how the market discovers and narrates the product across "
+            "search, AI answers, and community threads."
+        ),
+        "summary_zh": (
+            "Mautic 负责生命周期自动化，PostHog 负责产品行为分析，OpenCMO "
+            "负责搜索、AI 回答和社区里的公开可见度与叙事监控。"
+        ),
+        "thesis": (
+            "Use OpenCMO when the problem is discoverability and narrative drift before "
+            "the click, Mautic when the problem is lifecycle orchestration after capture, "
+            "and PostHog when the problem is product understanding after activation."
+        ),
+        "thesis_zh": (
+            "如果问题发生在点击之前的可发现性和叙事偏移，用 OpenCMO；如果问题"
+            "发生在获客之后的生命周期编排，用 Mautic；如果问题发生在激活之后"
+            "的产品理解，用 PostHog。"
+        ),
+    },
+    {
         "slug": "who-should-use-opencmo",
         "path": "/blog/who-should-use-opencmo",
         "title": "Who should use OpenCMO, and when it starts paying for itself",
@@ -406,10 +464,10 @@ def _build_blog_json_ld(locale: str | None = None) -> str:
             "@type": "Blog",
             "name": "OpenCMO Blog" if localized == "en" else "OpenCMO 博客",
             "description": (
-                "A public field guide to what a modern CMO role covers, product marketing, GTM, "
-                "positioning, demand generation, and how OpenCMO should be used."
+                "A public field guide to OpenCMO positioning, adoption, architecture, "
+                "comparisons, and the technical foundations that make the site machine-readable."
                 if localized == "en"
-                else "一组公开文章，解释 CMO、产品营销、GTM、品牌定位、需求生成，以及 OpenCMO 应该怎样被使用。"
+                else "一组公开文章，解释 OpenCMO 的定位、适用场景、架构导览、工具对比，以及站点机器可读性的技术基础。"
             ),
             "url": _public_url("/blog", locale),
             "publisher": {
@@ -562,6 +620,16 @@ def _build_home_json_ld(locale: str | None = None) -> str:
                 if localized == "en"
                 else "OpenCMO 是一个开源可见度操作系统，把搜索、AI 可见度、公开叙事与执行动作放进同一个工作台。"
             ),
+            "featureList": [
+                "Technical SEO and site-health audits",
+                "AI visibility and citation review",
+                "SERP and community narrative monitoring",
+                "Reports, approvals, and operator workflows",
+            ],
+            "isAccessibleForFree": True,
+            "license": "https://github.com/study8677/OpenCMO/blob/main/LICENSE",
+            "codeRepository": "https://github.com/study8677/OpenCMO",
+            "softwareHelp": "https://github.com/study8677/OpenCMO#quick-start",
             "offers": {
                 "@type": "Offer",
                 "price": "0",

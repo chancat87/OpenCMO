@@ -39,6 +39,7 @@ export type BlogArticle = {
 };
 
 export const PUBLIC_HOME_NAV: PublicNavItem[] = [
+  { href: "#open-source", label: "landing.navOpenSource" },
   { href: "#sample-audit", label: "landing.navPlatform" },
   { href: "#workflow", label: "landing.navWorkflow" },
   { href: "#trust", label: "landing.navTrust" },
@@ -210,11 +211,11 @@ export const BLOG_READER_PATHS: MarketingItem[] = [
 ];
 
 export const BLOG_DECISION_ARTICLE_SLUGS = [
+  "opencmo-vs-mautic-posthog",
   "who-should-use-opencmo",
-  "first-30-days-with-opencmo",
 ] as const;
 
-export const BLOG_FEATURED_ARTICLE_SLUG = "what-is-a-cmo" as const;
+export const BLOG_FEATURED_ARTICLE_SLUG = "opencmo-vs-mautic-posthog" as const;
 
 export const BLOG_ARTICLES: BlogArticle[] = [
   {
@@ -506,8 +507,40 @@ export const BLOG_ARTICLES: BlogArticle[] = [
       "from-[#f3dcc9]/55 via-[#f7ecde] to-[#86c8bc]/18",
   },
   {
-    slug: "who-should-use-opencmo",
+    slug: "opencmo-vs-mautic-posthog",
     index: "10",
+    category: "blog.post12.category",
+    title: "blog.post12.title",
+    summary: "blog.post12.summary",
+    readTime: "blog.post12.readTime",
+    highlight: "blog.post12.highlight",
+    audience: "blog.post12.audience",
+    thesis: "blog.post12.thesis",
+    takeawayKeys: ["blog.post12.point1", "blog.post12.point2", "blog.post12.point3"],
+    sections: [
+      {
+        title: "blog.post12.section1Title",
+        body: "blog.post12.section1Body",
+      },
+      {
+        title: "blog.post12.section2Title",
+        body: "blog.post12.section2Body",
+      },
+      {
+        title: "blog.post12.section3Title",
+        body: "blog.post12.section3Body",
+      },
+      {
+        title: "blog.post12.section4Title",
+        body: "blog.post12.section4Body",
+      },
+    ],
+    accentClass:
+      "from-[#c9e6df]/28 via-[#f5f1ea] to-[#d7e5ff]/26",
+  },
+  {
+    slug: "who-should-use-opencmo",
+    index: "11",
     category: "blog.post5.category",
     title: "blog.post5.title",
     summary: "blog.post5.summary",
@@ -539,7 +572,7 @@ export const BLOG_ARTICLES: BlogArticle[] = [
   },
   {
     slug: "first-30-days-with-opencmo",
-    index: "11",
+    index: "12",
     category: "blog.post6.category",
     title: "blog.post6.title",
     summary: "blog.post6.summary",
