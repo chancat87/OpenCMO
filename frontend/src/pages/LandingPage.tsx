@@ -22,6 +22,7 @@ import {
   BLOG_FEATURED_ARTICLE_SLUG,
   LANDING_CRAWLER_BULLETS,
   LANDING_FAQS,
+  LANDING_MENTION_ITEMS,
   LANDING_PLATFORM_ITEMS,
   LANDING_PROOF_ITEMS,
   LANDING_TRUST_ITEMS,
@@ -44,6 +45,11 @@ export function LandingPage() {
   const { t, locale } = useI18n();
   const { data: siteStats } = useSiteStats();
   const numberFormatter = new Intl.NumberFormat(locale);
+  const mentionDateFormatter = new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
   const seoLocale = getSeoLocaleFromLocale(locale);
   const featuredBlogArticle =
     BLOG_ARTICLES.find((article) => article.slug === BLOG_FEATURED_ARTICLE_SLUG)
@@ -397,6 +403,81 @@ export function LandingPage() {
                       </p>
                     </div>
                   </div>
+                </div>
+              </div>
+            </SectionReveal>
+          </div>
+        </section>
+
+        <section id="mentions" className="mx-auto max-w-7xl px-4 pt-16 lg:px-8">
+          <SectionReveal>
+            <div className="max-w-3xl">
+              <p className="text-sm font-semibold uppercase tracking-[0.26em] text-[#c96f45]">
+                {t("landing.mentionsEyebrow")}
+              </p>
+              <h2 className="font-display mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
+                {t("landing.mentionsTitle")}
+              </h2>
+              <p className="mt-4 text-base leading-8 text-slate-700">
+                {t("landing.mentionsSubtitle")}
+              </p>
+            </div>
+          </SectionReveal>
+
+          <div className="mt-10 grid gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)]">
+            <div className="grid gap-5">
+              {LANDING_MENTION_ITEMS.map((item, index) => (
+                <SectionReveal key={item.href} delay={index * 0.06}>
+                  <article className="rounded-[2rem] border border-black/8 bg-white/78 p-6 shadow-[0_18px_60px_rgba(8,32,50,0.05)]">
+                    <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      <span>{t(item.source)}</span>
+                      <span>{mentionDateFormatter.format(new Date(item.publishedAt))}</span>
+                    </div>
+                    <h3 className="font-display mt-4 text-2xl font-semibold tracking-tight text-slate-950">
+                      {t(item.title)}
+                    </h3>
+                    <p className="mt-3 text-base leading-8 text-slate-700">
+                      {t(item.description)}
+                    </p>
+                    <a
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-900 transition-colors hover:text-[#c96f45]"
+                    >
+                      {t("landing.mentionReadCta")}
+                      <ArrowUpRight size={15} />
+                    </a>
+                  </article>
+                </SectionReveal>
+              ))}
+            </div>
+
+            <SectionReveal delay={0.14}>
+              <div className="rounded-[2rem] border border-black/8 bg-[#082032] p-6 text-white shadow-[0_18px_60px_rgba(8,32,50,0.12)]">
+                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#f3dcc9]">
+                  {t("landing.mentionsPanelEyebrow")}
+                </p>
+                <h3 className="mt-3 text-2xl font-semibold tracking-tight">
+                  {t("landing.mentionsPanelTitle")}
+                </h3>
+                <p className="mt-4 text-sm leading-7 text-white/72">
+                  {t("landing.mentionsPanelBody")}
+                </p>
+                <div className="mt-5 space-y-3">
+                  {([
+                    "landing.mentionsPoint1",
+                    "landing.mentionsPoint2",
+                    "landing.mentionsPoint3",
+                  ] as TranslationKey[]).map((key) => (
+                    <div
+                      key={key}
+                      className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm leading-6 text-white/82"
+                    >
+                      <CheckCircle2 size={16} className="mt-1 shrink-0 text-emerald-300" />
+                      <span>{t(key)}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </SectionReveal>

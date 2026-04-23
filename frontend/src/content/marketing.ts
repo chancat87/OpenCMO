@@ -12,6 +12,14 @@ export type MarketingItem = {
   description: TranslationKey;
 };
 
+export type MarketingMention = {
+  source: TranslationKey;
+  title: TranslationKey;
+  description: TranslationKey;
+  href: string;
+  publishedAt: string;
+};
+
 export type BlogArticle = {
   slug: string;
   index: string;
@@ -34,6 +42,7 @@ export const PUBLIC_HOME_NAV: PublicNavItem[] = [
   { href: "#sample-audit", label: "landing.navPlatform" },
   { href: "#workflow", label: "landing.navWorkflow" },
   { href: "#trust", label: "landing.navTrust" },
+  { href: "#mentions", label: "landing.navMentions" },
   { href: "#faq", label: "landing.navFaq" },
 ];
 
@@ -150,6 +159,23 @@ export const LANDING_TRUST_ITEMS: MarketingItem[] = [
   {
     title: "landing.trust4Title",
     description: "landing.trust4Desc",
+  },
+];
+
+export const LANDING_MENTION_ITEMS: MarketingMention[] = [
+  {
+    source: "landing.mention1Source",
+    title: "landing.mention1Title",
+    description: "landing.mention1Desc",
+    href: "https://x.com/chuanliang/status/2035869753978519764",
+    publishedAt: "2026-03-23",
+  },
+  {
+    source: "landing.mention2Source",
+    title: "landing.mention2Title",
+    description: "landing.mention2Desc",
+    href: "https://www.80aj.com/2026/04/05/openai-marketing-tools-update/",
+    publishedAt: "2026-04-05",
   },
 ];
 
