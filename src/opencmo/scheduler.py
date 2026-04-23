@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 
 from opencmo import storage
 from opencmo.tools.browser_pool import browser_slot
@@ -20,6 +21,7 @@ except ImportError:
     _HAS_APSCHEDULER = False
 
 _scheduler: "AsyncIOScheduler | None" = None
+_FALSEY_VALUES = {"0", "false", "no", "off"}
 
 
 def _require_apscheduler():
@@ -32,6 +34,12 @@ def _require_apscheduler():
 def is_scheduler_available() -> bool:
     """Return whether APScheduler is installed in this environment."""
     return _HAS_APSCHEDULER
+
+
+def is_scheduler_enabled() -> bool:
+    """Return whether runtime scheduling is enabled."""
+    raw = os.environ.get("OPENCMO_ENABLE_SCHEDULER", "1")
+    return raw.strip().lower() not in _FALSEY_VALUES
 
 
 def _job_key(job_id: int) -> str:
@@ -360,14 +368,16 @@ def get_scheduler() -> "AsyncIOScheduler":
 
 def scheduler_status() -> dict:
     """Return scheduler runtime state for health checks."""
+    enabled = is_scheduler_enabled()
     if not _HAS_APSCHEDULER:
-        return {"installed": False, "running": False, "job_count": 0}
+        return {"installed": False, "enabled": enabled, "running": False, "job_count": 0}
 
-    if _scheduler is None:
-        return {"installed": True, "running": False, "job_count": 0}
+    if not enabled or _scheduler is None:
+        return {"installed": True, "enabled": enabled, "running": False, "job_count": 0}
 
     return {
         "installed": True,
+        "enabled": enabled,
         "running": _scheduler.running,
         "job_count": len(_scheduler.get_jobs()),
     }
@@ -375,7 +385,7 @@ def scheduler_status() -> dict:
 
 def sync_job_record(job: dict) -> bool:
     """Reconcile one scheduled job into APScheduler memory state."""
-    if not _HAS_APSCHEDULER:
+    if not _HAS_APSCHEDULER or not is_scheduler_enabled():
         return False
 
     scheduler = get_scheduler()
@@ -411,6 +421,8 @@ def unschedule_job(job_id: int) -> bool:
 
 async def load_jobs_from_db():
     """Load all enabled scheduled jobs from DB and add them to the scheduler."""
+    if not is_scheduler_enabled():
+        return 0
     _require_apscheduler()
     scheduler = get_scheduler()
     scheduler.remove_all_jobs()
@@ -426,6 +438,8 @@ async def load_jobs_from_db():
 
 def start_scheduler():
     """Start the scheduler (call after load_jobs_from_db)."""
+    if not is_scheduler_enabled():
+        return
     _require_apscheduler()
     scheduler = get_scheduler()
     if not scheduler.running:

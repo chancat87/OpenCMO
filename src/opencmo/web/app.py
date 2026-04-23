@@ -937,6 +937,10 @@ async def _startup_runtime_services():
     worker.register_executor("github_enrich", run_github_enrich_executor)
     await worker.start()
 
+    if not scheduler.is_scheduler_enabled():
+        logger.info("Scheduler disabled by OPENCMO_ENABLE_SCHEDULER; timed monitors will remain inactive.")
+        return
+
     if not scheduler.is_scheduler_available():
         logger.info("APScheduler not installed; scheduled monitors will remain inactive.")
         return

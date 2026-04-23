@@ -667,6 +667,7 @@ def test_api_v1_monitors_create_url_only(client):
 def test_web_lifecycle_starts_and_stops_scheduler(tmp_path):
     db_path = tmp_path / "test.db"
     with patch.object(storage, "_DB_PATH", db_path), \
+         patch("opencmo.scheduler.is_scheduler_enabled", return_value=True), \
          patch("opencmo.scheduler.is_scheduler_available", return_value=True), \
          patch("opencmo.scheduler.load_jobs_from_db", new_callable=AsyncMock, return_value=0) as mock_load, \
          patch("opencmo.scheduler.start_scheduler") as mock_start, \
@@ -677,6 +678,23 @@ def test_web_lifecycle_starts_and_stops_scheduler(tmp_path):
 
         mock_load.assert_awaited_once()
         mock_start.assert_called_once()
+        mock_stop.assert_called_once()
+
+
+def test_web_lifecycle_skips_scheduler_when_disabled(tmp_path):
+    db_path = tmp_path / "test.db"
+    with patch.object(storage, "_DB_PATH", db_path), \
+         patch("opencmo.scheduler.is_scheduler_enabled", return_value=False), \
+         patch("opencmo.scheduler.is_scheduler_available", return_value=True), \
+         patch("opencmo.scheduler.load_jobs_from_db", new_callable=AsyncMock) as mock_load, \
+         patch("opencmo.scheduler.start_scheduler") as mock_start, \
+         patch("opencmo.scheduler.stop_scheduler") as mock_stop:
+        with TestClient(app) as test_client:
+            resp = test_client.get("/api/v1/health")
+            assert resp.status_code == 200
+
+        mock_load.assert_not_called()
+        mock_start.assert_not_called()
         mock_stop.assert_called_once()
 
 

@@ -137,6 +137,18 @@ def test_stop_scheduler_clears_global_state():
         assert scheduler_module._scheduler is None
 
 
+def test_sync_job_record_returns_false_when_scheduler_disabled(monkeypatch):
+    monkeypatch.setenv("OPENCMO_ENABLE_SCHEDULER", "0")
+    job = {
+        "id": 1,
+        "enabled": True,
+        "cron_expr": "0 9 * * *",
+        "project_id": 1,
+        "job_type": "full",
+    }
+    assert scheduler_module.sync_job_record(job) is False
+
+
 @pytest.mark.asyncio
 async def test_run_scheduled_scan_generates_periodic_report_on_cron_full(tmp_path):
     db_path = tmp_path / "test.db"
