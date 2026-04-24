@@ -3,6 +3,7 @@ import { Activity } from "lucide-react";
 import type { Project } from "../../types";
 import { useI18n } from "../../i18n";
 import { utcDate } from "../../utils/time";
+import { BlogGenerateButton } from "../project/BlogGenerateButton";
 
 function getLatestActivity(project: Project) {
   const timestamps = [
@@ -63,51 +64,57 @@ export function ProjectCard({ project }: { project: Project }) {
           : t("projectCard.noScans");
 
   return (
-    <Link
-      to={`/projects/${project.id}`}
-      className="group block overflow-hidden rounded-3xl bg-white p-5 ring-1 ring-slate-200/70 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgb(15,23,42,0.06)] hover:ring-slate-300"
-    >
-      <div className="flex items-start justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition-colors group-hover:bg-slate-100 group-hover:text-slate-800">
-              <Activity size={16} strokeWidth={2} />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-semibold text-slate-800 tracking-tight leading-tight truncate">{project.brand_name}</h3>
-                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotColor}`} />
+    <div className="group overflow-hidden rounded-3xl bg-white ring-1 ring-slate-200/70 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgb(15,23,42,0.06)] hover:ring-slate-300">
+      <Link
+        to={`/projects/${project.id}`}
+        className="block p-5 pb-3"
+      >
+        <div className="flex items-start justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition-colors group-hover:bg-slate-100 group-hover:text-slate-800">
+                <Activity size={16} strokeWidth={2} />
               </div>
-              <p className="mt-0.5 text-xs text-slate-400 truncate">{project.url}</p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-semibold text-slate-800 tracking-tight leading-tight truncate">{project.brand_name}</h3>
+                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotColor}`} />
+                </div>
+                <p className="mt-0.5 text-xs text-slate-400 truncate">{project.url}</p>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="ml-3 flex items-center gap-2 shrink-0">
-          <span className="rounded-md bg-slate-50 px-2 py-1 text-[10px] font-medium tracking-wider text-slate-500 uppercase">
-            {project.category === "auto" ? t("project.categoryAuto") : project.category}
-          </span>
-        </div>
-      </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        {[
-          { label: t("projectCard.freshness"), value: freshnessValue },
-          { label: t("dashboard.pendingReviews"), value: reviewValue },
-          { label: t("score.findings"), value: findingsValue },
-          { label: t("project.reports"), value: reportValue },
-        ].map((item) => (
-          <div key={item.label} className="rounded-2xl bg-slate-50 px-3 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-              {item.label}
-            </p>
-            <p className="mt-1 text-sm font-semibold text-slate-900">{item.value}</p>
+          <div className="ml-3 flex items-center gap-2 shrink-0">
+            <span className="rounded-md bg-slate-50 px-2 py-1 text-[10px] font-medium tracking-wider text-slate-500 uppercase">
+              {project.category === "auto" ? t("project.categoryAuto") : project.category}
+            </span>
           </div>
-        ))}
-      </div>
+        </div>
 
-      <p className="mt-4 text-xs leading-6 text-slate-500">
-        {projectStatus}
-      </p>
-    </Link>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {[
+            { label: t("projectCard.freshness"), value: freshnessValue },
+            { label: t("dashboard.pendingReviews"), value: reviewValue },
+            { label: t("score.findings"), value: findingsValue },
+            { label: t("project.reports"), value: reportValue },
+          ].map((item) => (
+            <div key={item.label} className="rounded-2xl bg-slate-50 px-3 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                {item.label}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">{item.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <p className="mt-4 text-xs leading-6 text-slate-500">
+          {projectStatus}
+        </p>
+      </Link>
+
+      <div className="border-t border-slate-100 px-5 py-3">
+        <BlogGenerateButton projectId={project.id} />
+      </div>
+    </div>
   );
 }
