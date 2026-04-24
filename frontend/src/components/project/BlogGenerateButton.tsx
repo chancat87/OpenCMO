@@ -5,8 +5,9 @@ import { useTaskPoll } from "../../hooks/useTasks";
 import { useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "../../i18n";
 import type { BlogStyle } from "../../types";
+import type { TranslationKey } from "../../i18n";
 
-const STYLES: { value: BlogStyle; labelKey: string; descKey: string }[] = [
+const STYLES: { value: BlogStyle; labelKey: TranslationKey; descKey: TranslationKey }[] = [
   { value: "launch", labelKey: "blogGen.style.launch", descKey: "blogGen.style.launchDesc" },
   { value: "case_study", labelKey: "blogGen.style.case_study", descKey: "blogGen.style.case_studyDesc" },
   { value: "comparison", labelKey: "blogGen.style.comparison", descKey: "blogGen.style.comparisonDesc" },
@@ -31,9 +32,7 @@ export function BlogGenerateButton({
   const { t } = useI18n();
 
   const status = task?.status;
-  const progress = (task as Record<string, unknown>)?.progress as
-    | Array<{ phase?: string; summary?: string }>
-    | undefined;
+  const progress = task?.progress;
   const latestPhase = progress?.length ? progress[progress.length - 1] : null;
 
   useEffect(() => {
