@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+from typing import Any, Optional
 
 import httpx
 
@@ -259,3 +260,80 @@ async def fetch_stargazers(
 def get_rate_remaining() -> int:
     """Return current known rate limit remaining."""
     return _rate_remaining
+
+
+# ---------------------------------------------------------------------------
+# Public wrappers used by the marketing site (web/github_stats.py).
+#
+# Contract differs from `_github_get`:
+#   - `_github_get` (private) raises on HTTP/network failure (existing
+#     internal callers depend on this exception path)
+#   - `github_get_with_headers` (public) swallows failure and returns
+#     (None, headers_or_{}) so the marketing-site Built-in-open block
+#     can degrade gracefully when GitHub is flaky.
+# ---------------------------------------------------------------------------
+
+
+async def get_github_token() -> Optional[str]:
+    """Public wrapper for token resolution. Reads DB settings then env."""
+    return await _get_github_token()
+
+
+async def github_get_with_headers(
+    path: str,
+    params: Optional[dict] = None,
+) -> tuple[Optional[Any], dict[str, str]]:
+    """Like ``_github_get`` but also returns response headers and
+    swallows failures.
+
+    Reuses ``_SEM`` + ``_rate_remaining`` tracking. Return type is
+    ``Optional[Any]`` not ``Optional[dict]`` because GitHub endpoints
+    return both objects (e.g. ``/repos/X``) and arrays (e.g.
+    ``/repos/X/contributors``). Caller must type-narrow.
+
+    Returns:
+        (parsed_json, headers_dict) on success
+        (None, headers_dict_or_{}) on any failure (4xx / 5xx / network / parse)
+    """
+    global _rate_remaining
+
+    token = await _get_github_token()
+    headers: dict[str, str] = {"Accept": "application/vnd.github+json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    async with _SEM:
+        if _rate_remaining < 500:
+            logger.info("GitHub rate limit low (%d), throttling", _rate_remaining)
+            await asyncio.sleep(2)
+
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                resp = await client.get(
+                    f"{_API_BASE}{path}",
+                    headers=headers,
+                    params=params,
+                )
+        except Exception as exc:
+            logger.warning("github_get_with_headers network failure for %s: %s", path, exc)
+            return (None, {})
+
+        # Track rate limits regardless of status
+        remaining = resp.headers.get("X-RateLimit-Remaining")
+        if remaining is not None:
+            try:
+                _rate_remaining = int(remaining)
+            except ValueError:
+                pass
+
+        resp_headers = dict(resp.headers)
+        if resp.status_code >= 400:
+            logger.warning(
+                "github_get_with_headers %s returned %d", path, resp.status_code,
+            )
+            return (None, resp_headers)
+        try:
+            return (resp.json(), resp_headers)
+        except Exception as exc:
+            logger.warning("github_get_with_headers parse failure for %s: %s", path, exc)
+            return (None, resp_headers)

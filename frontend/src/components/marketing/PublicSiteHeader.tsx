@@ -162,7 +162,7 @@ export function PublicSiteHeader({
             <ExternalLink size={14} />
           </a>
           <Link
-            to={publicHref("/sample-data")}
+            to={publicHref("/services")}
             className={`inline-flex items-center rounded-full px-4 py-2.5 text-sm font-semibold transition-colors ${workspaceClass}`}
           >
             {t("landing.primaryCta")}

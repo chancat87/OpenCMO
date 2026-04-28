@@ -224,6 +224,19 @@ from opencmo.storage.site_stats import (
     increment_site_counter,
 )
 
+# --- Waitlist (hosted version signups) ---
+from opencmo.storage.waitlist import (
+    add_to_waitlist,
+    count_waitlist,
+    is_valid_email,
+)
+
+# --- GitHub stats cache (Built-in-open block) ---
+from opencmo.storage.github_stats_cache import (
+    get_cached_github_stats,
+    set_cached_github_stats,
+)
+
 
 def __getattr__(name: str):
     if name == "_DB_PATH":
@@ -288,6 +301,10 @@ __all__ = [
     "get_setting", "set_setting", "delete_setting",
     # site stats
     "get_site_counter", "increment_site_counter",
+    # waitlist
+    "add_to_waitlist", "count_waitlist", "is_valid_email",
+    # github stats cache
+    "get_cached_github_stats", "set_cached_github_stats",
     # approvals
     "create_approval", "get_approval", "list_approvals",
     "update_approval_status", "create_approval_with_source",

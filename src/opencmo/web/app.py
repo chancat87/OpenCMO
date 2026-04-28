@@ -41,29 +41,27 @@ _HOME_STATIC_SITE_COPY_BY_LOCALE = {
 <main id="static-site-copy">
   <header>
     <p>aidCMO</p>
-    <h1>Overseas B2B lead data and SEO/GEO growth services</h1>
+    <h1>Open-source growth tools. Audits delivered by humans.</h1>
     <p>
-      aidCMO helps exporters, SaaS teams, manufacturers, and service companies
-      find target overseas B2B customers by country, industry, role, and company
-      type, then improves acquisition efficiency through SEO and GEO AI search
-      visibility work.
+      OpenCMO scans your SEO, AI visibility across 5 AI search engines
+      (Perplexity, ChatGPT, Gemini, Claude, You.com), and 6 community platforms.
+      We set it up, run it, and turn the output into a growth plan.
     </p>
   </header>
   <section>
-    <h2>Commercial services</h2>
+    <h2>What we deliver</h2>
     <ul>
-      <li>Overseas B2B email leads filtered by country, region, industry, role, company size, website, and company domain.</li>
-      <li>Email verification, deduplication, invalid-email cleanup, domain matching, risky-mailbox labels, and bounce-risk grading.</li>
-      <li>SEO services for technical checks, keywords, landing pages, comparison pages, and overseas acquisition content.</li>
-      <li>GEO and AI search visibility optimization for brand entity, citations, assistant summaries, competitors, and SERP analysis.</li>
+      <li>Multi-agent SEO / GEO / community audits powered by OpenCMO.</li>
+      <li>AI visibility scores across 5 AI search engines with a fix list.</li>
+      <li>A 30-day backlog of content, links, and technical changes you can ship.</li>
+      <li>One human walks you through the report. No SaaS dashboard handoff.</li>
     </ul>
   </section>
   <section>
-    <h2>OpenCMO technical support</h2>
+    <h2>OpenCMO — open-source on GitHub</h2>
     <p>
-      OpenCMO remains the open-source growth system behind the method. It analyzes
-      SEO, GEO, SERP, community discussion, and AI visibility signals, and is kept
-      as technical support for the operating approach.
+      OpenCMO is the open-source engine behind every audit. The same code we use
+      to deliver the service is public, Apache 2.0 licensed, and self-hostable.
     </p>
     <ul>
       <li>GitHub repository: https://github.com/study8677/OpenCMO</li>
@@ -72,19 +70,17 @@ _HOME_STATIC_SITE_COPY_BY_LOCALE = {
     </ul>
   </section>
   <section>
-    <h2>Data and compliance boundaries</h2>
+    <h2>How to engage</h2>
     <p>
-      aidCMO provides B2B commercial leads based on public business information,
-      company websites, public directories, and public professional profiles. It
-      does not support spam, fraud, phishing, illegal use, unlimited sending, or
-      aggressive blast campaigns. Validation status, cleaning notes, and risk
-      labels are used to keep data quality visible.
+      Two paths: run OpenCMO yourself, or have us deliver the audit and growth
+      plan. A managed hosted version of OpenCMO is on the way — join the waitlist.
     </p>
     <ul>
-      <li>B2B leads: https://www.aidcmo.com/en/b2b-leads</li>
-      <li>SEO/GEO services: https://www.aidcmo.com/en/seo-geo</li>
-      <li>Sample data request: https://www.aidcmo.com/en/sample-data</li>
-      <li>Data policy: https://www.aidcmo.com/en/data-policy</li>
+      <li>Growth audit: https://www.aidcmo.com/en/services</li>
+      <li>Audit example: https://www.aidcmo.com/en/sample-audit</li>
+      <li>Open-source project: https://www.aidcmo.com/en/open-source</li>
+      <li>Hosted version waitlist: https://www.aidcmo.com/en/hosted</li>
+      <li>Contact: hello@aidcmo.com</li>
     </ul>
   </section>
 </main>
@@ -93,26 +89,26 @@ _HOME_STATIC_SITE_COPY_BY_LOCALE = {
 <main id="static-site-copy">
   <header>
     <p>aidCMO</p>
-    <h1>海外 B2B 线索数据与 SEO/GEO 增长服务</h1>
+    <h1>开源的增长工具,审计由我们交付。</h1>
     <p>
-      aidCMO 帮助外贸、SaaS、制造业和服务型企业按国家、行业、职位和公司类型
-      找到目标海外客户，并通过搜索和 AI 可见度提升获客效率。
+      OpenCMO 扫描你的 SEO、5 个 AI 搜索引擎(Perplexity、ChatGPT、Gemini、Claude、
+      You.com)的可见度,以及 6 个社区平台。我们替你跑工具,把结果变成增长计划。
     </p>
   </header>
   <section>
-    <h2>商业服务</h2>
+    <h2>我们交付的东西</h2>
     <ul>
-      <li>海外 B2B 邮箱线索，可按国家、地区、行业、职位、公司规模、官网和企业域名筛选。</li>
-      <li>邮箱验证、去重、无效邮箱清理、企业域名匹配、风险邮箱标记和退信风险分级。</li>
-      <li>SEO 服务，覆盖技术检查、关键词、落地页、竞品对比页和海外获客内容。</li>
-      <li>GEO / AI 搜索可见度优化，覆盖品牌实体、引用、AI 摘要、竞品和 SERP 分析。</li>
+      <li>由 OpenCMO 驱动的多 agent SEO / GEO / 社区审计报告。</li>
+      <li>5 个 AI 搜索引擎的可见度评分 + 改进项清单。</li>
+      <li>30 天可执行的内容、外链、技术改动 backlog。</li>
+      <li>由人解读报告并讨论。不只是把仪表盘丢给你。</li>
     </ul>
   </section>
   <section>
-    <h2>OpenCMO 技术支持</h2>
+    <h2>OpenCMO — 在 GitHub 上开源</h2>
     <p>
-      OpenCMO 保留为背后的开源增长系统，用于分析 SEO、GEO、SERP、社区讨论和
-      AI 可见度，并作为方法论的技术支持。
+      OpenCMO 是每份审计背后的开源引擎。我们用来交付服务的同一套代码,
+      Apache 2.0 协议公开发布,可自部署。
     </p>
     <ul>
       <li>GitHub 仓库: https://github.com/study8677/OpenCMO</li>
@@ -121,17 +117,17 @@ _HOME_STATIC_SITE_COPY_BY_LOCALE = {
     </ul>
   </section>
   <section>
-    <h2>数据来源与合规边界</h2>
+    <h2>如何合作</h2>
     <p>
-      aidCMO 只提供 B2B 商业线索，数据来源于公开商业信息、企业官网、公开目录和
-      公开职业资料等。不支持垃圾邮件、欺诈、钓鱼、违法用途、无限群发或轰炸式活动。
-      通过验证状态、清洗说明和风险标签让数据质量保持可见。
+      两条路径:自己跑 OpenCMO,或让我们交付审计和增长计划。
+      OpenCMO 托管版正在做 —— 可加入 waitlist。
     </p>
     <ul>
-      <li>B2B 线索: https://www.aidcmo.com/zh/b2b-leads</li>
-      <li>SEO/GEO 服务: https://www.aidcmo.com/zh/seo-geo</li>
-      <li>样例数据申请: https://www.aidcmo.com/zh/sample-data</li>
-      <li>数据合规说明: https://www.aidcmo.com/zh/data-policy</li>
+      <li>增长审计: https://www.aidcmo.com/zh/services</li>
+      <li>审计样例: https://www.aidcmo.com/zh/sample-audit</li>
+      <li>开源项目: https://www.aidcmo.com/zh/open-source</li>
+      <li>托管版 waitlist: https://www.aidcmo.com/zh/hosted</li>
+      <li>联系: hello@aidcmo.com</li>
     </ul>
   </section>
 </main>
@@ -602,50 +598,50 @@ _SAMPLE_AUDIT_STATIC_SITE_COPY_BY_LOCALE = {
 
 
 _SERVICE_PAGE_METADATA_BY_PATH = {
-    "b2b-leads": {
-        "title": "Overseas B2B Lead Data | aidCMO",
-        "title_zh": "海外 B2B 线索数据 | aidCMO",
+    # Phase 1 repositioning: b2b-leads / seo-geo / sample-data / data-policy
+    # entries removed. Old paths are 301'd to /services or / via _REDIRECTS_301.
+    "services": {
+        "title": "Growth audits delivered by humans | aidCMO",
+        "title_zh": "由我们交付的增长审计 | aidCMO",
         "description": (
-            "Request overseas B2B lead data filtered by country, industry, role, "
-            "company size, website, domain, and validation status."
+            "Run by us, powered by OpenCMO. Get a multi-agent SEO/GEO/community "
+            "audit with a 30-day action backlog."
         ),
-        "description_zh": "按国家、行业、职位、公司规模、官网、域名和验证状态筛选海外 B2B 线索数据。",
-        "heading": "Overseas B2B lead data",
-        "heading_zh": "海外 B2B 线索数据",
+        "description_zh": "我们用 OpenCMO 替你跑,交付一份多 agent 的 SEO / GEO / 社区审计 + 30 天可执行的 backlog。",
+        "heading": "Growth audit",
+        "heading_zh": "增长审计",
         "bullets": [
-            "Country, region, industry, role, company-size, website, and company-domain filters.",
-            "Delivery fields can include company, website, contact, role, business email, LinkedIn, region, and validation status.",
-            "Email verification, deduplication, risky-mailbox labels, bounce-risk grading, and replacement rules can be included.",
-            "Built for legitimate B2B business development and market research, not indiscriminate bulk sending.",
+            "Multi-agent SEO / GEO / community audit powered by OpenCMO.",
+            "AI visibility scores across 5 AI search engines with a fix list.",
+            "30-day backlog of content, links, and technical changes you can ship.",
+            "One human reads the report and walks you through it.",
         ],
         "bullets_zh": [
-            "支持国家、地区、行业、职位、公司规模、官网和企业域名筛选。",
-            "交付字段可包含公司、官网、联系人、职位、企业邮箱、LinkedIn、地区和验证状态。",
-            "可包含邮箱验证、去重、风险邮箱标记、退信风险分级和替换规则。",
-            "面向合法 B2B 商业开发和市场研究，不是无差别群发服务。",
+            "由 OpenCMO 驱动的多 agent SEO / GEO / 社区审计。",
+            "5 个 AI 搜索引擎的可见度评分 + 改进项清单。",
+            "30 天可执行的内容、外链、技术改动 backlog。",
+            "由人解读报告并讨论。",
         ],
     },
-    "seo-geo": {
-        "title": "SEO and GEO AI Search Optimization | aidCMO",
-        "title_zh": "SEO 与 GEO/AI 搜索优化 | aidCMO",
+    "hosted": {
+        "title": "Hosted OpenCMO — waitlist | aidCMO",
+        "title_zh": "OpenCMO 托管版 — waitlist | aidCMO",
         "description": (
-            "SEO, GEO, AI search visibility, brand entity optimization, SERP analysis, "
-            "content strategy, and monthly execution recommendations."
+            "We're working on a hosted version of OpenCMO. No date yet — "
+            "we'll only email when it's ready."
         ),
-        "description_zh": "提供 SEO、GEO、AI 搜索可见度、品牌实体优化、SERP 分析、内容策略和月度执行建议。",
-        "heading": "SEO and GEO growth services",
-        "heading_zh": "SEO/GEO 增长服务",
+        "description_zh": "OpenCMO 托管版正在做,还没有发布日期 —— ready 之后只发一封通知邮件。",
+        "heading": "Hosted OpenCMO waitlist",
+        "heading_zh": "OpenCMO 托管版 waitlist",
         "bullets": [
-            "Technical SEO checks for crawlability, metadata, structure, performance, and page quality.",
-            "Keyword and content strategy for overseas acquisition pages, industry terms, and comparison pages.",
-            "AI search and GEO review for assistant summaries, citations, brand entities, and answer quality.",
-            "Competitor and SERP analysis with monthly reports and execution recommendations.",
+            "No drip sequences. One email when it ships.",
+            "No date promised — we'll only email when ready.",
+            "Run by the same team that builds OpenCMO.",
         ],
         "bullets_zh": [
-            "技术 SEO 检查，覆盖抓取、元数据、结构、性能和页面质量。",
-            "面向海外获客页、行业关键词和竞品对比页的关键词与内容策略。",
-            "AI 搜索与 GEO 复核，覆盖助手摘要、引用、品牌实体和回答质量。",
-            "竞品与 SERP 分析，并提供月度报告和执行建议。",
+            "不会有营销邮件。发布时只发一封。",
+            "暂不承诺时间 —— ready 之后才会通知。",
+            "由 OpenCMO 团队亲自运营。",
         ],
     },
     "open-source": {
@@ -671,67 +667,27 @@ _SERVICE_PAGE_METADATA_BY_PATH = {
             "首页优先销售商业服务，同时保留 OpenCMO 作为技术支持。",
         ],
     },
-    "sample-data": {
-        "title": "Request Sample B2B Lead Data | aidCMO",
-        "title_zh": "申请 B2B 线索样例数据 | aidCMO",
-        "description": "Request a sample B2B lead-data structure with fields, validation status, cleaning notes, and risk labels.",
-        "description_zh": "申请包含字段、验证状态、清洗说明和风险标记的 B2B 线索样例数据。",
-        "heading": "Sample data request",
-        "heading_zh": "样例数据申请",
-        "bullets": [
-            "Provide target countries, industries, company types, roles, and preferred delivery format.",
-            "Review fields, validation labels, risky-email notes, and replacement assumptions before scaling.",
-            "Use the sample to evaluate fit, field structure, validation labels, and risk notes before scaling.",
-        ],
-        "bullets_zh": [
-            "提供目标国家、行业、公司类型、职位和偏好交付格式。",
-            "放大规模前先复核字段、验证标签、风险邮箱说明和替换假设。",
-            "样例用于评估匹配度，不代表无限供应或完美送达。",
-        ],
-    },
     "contact": {
-        "title": "Contact aidCMO | B2B Leads and SEO/GEO Services",
-        "title_zh": "联系 aidCMO | B2B 线索与 SEO/GEO 服务",
-        "description": "Contact aidCMO for overseas B2B lead data, sample data, email verification, SEO services, and GEO AI search optimization.",
-        "description_zh": "联系 aidCMO 咨询海外 B2B 线索、样例数据、邮箱验证、SEO 服务和 GEO/AI 搜索优化。",
+        "title": "Contact aidCMO | Open-source AI growth tools and audits",
+        "title_zh": "联系 aidCMO | 开源 AI 增长工具与审计",
+        "description": (
+            "Contact aidCMO for a growth audit, OpenCMO self-host help, "
+            "or to discuss the hosted version."
+        ),
+        "description_zh": "联系 aidCMO 咨询增长审计、OpenCMO 自部署支持,或了解托管版。",
         "heading": "Contact aidCMO",
         "heading_zh": "联系 aidCMO",
         "bullets": [
             "Email: hello@aidcmo.com",
-            "For lead data, prepare country, industry, role, company type, volume, and delivery format.",
-            "For SEO/GEO, share the website, target market, competitors, and current content problem.",
-            "aidCMO does not support spam, fraud, phishing, illegal use, or high-risk blast campaigns.",
+            "For an audit, share your website, target market, and current growth concern.",
+            "For self-host help, mention which deployment target (Docker, bare metal, etc.).",
+            "For the hosted version, join the waitlist at /hosted.",
         ],
         "bullets_zh": [
             "邮箱: hello@aidcmo.com",
-            "线索需求请准备国家、行业、职位、公司类型、数量和交付格式。",
-            "SEO/GEO 需求请提供网站、目标市场、竞品和当前内容问题。",
-            "aidCMO 不支持垃圾邮件、欺诈、钓鱼、违法用途或高风险群发活动。",
-        ],
-    },
-    "data-policy": {
-        "title": "Data Sources and Compliance Notes | aidCMO",
-        "title_zh": "数据来源与合规说明 | aidCMO",
-        "description": (
-            "aidCMO data policy: B2B commercial leads, public business sources, "
-            "email validation, removal support, and acceptable-use boundaries."
-        ),
-        "description_zh": "aidCMO 数据政策：B2B 商业线索、公开商业来源、邮箱验证、移除支持、可接受用途边界和数据质量说明。",
-        "heading": "Data sources and compliance notes",
-        "heading_zh": "数据来源与合规说明",
-        "bullets": [
-            "Only B2B commercial leads are provided.",
-            "Sources can include public business information, company websites, public directories, and public professional profiles.",
-            "Removal, suppression, or deletion requests can be supported where applicable.",
-            "Validation status, cleaning notes, and risk labels should remain visible.",
-            "Spam, fraud, phishing, illegal use, unlimited sending, and blast campaigns are not supported.",
-        ],
-        "bullets_zh": [
-            "只提供 B2B 商业线索。",
-            "来源可包括公开商业信息、企业官网、公开目录和公开职业资料。",
-            "在适用情况下支持移除、抑制或删除请求。",
-            "验证状态、清洗说明和风险标签应保持可见。",
-            "不支持垃圾邮件、欺诈、钓鱼、违法用途、无限群发和轰炸式活动。",
+            "增长审计:请提供网站、目标市场和当前关心的增长问题。",
+            "自部署支持:请告知部署目标(Docker、裸机等)。",
+            "托管版:请在 /hosted 加入 waitlist。",
         ],
     },
 }
@@ -815,16 +771,16 @@ def _build_home_json_ld(locale: str | None = None) -> str:
             "url": _public_url("/", locale),
             "image": "https://www.aidcmo.com/logo.png",
             "description": (
-                "aidCMO provides compliant overseas B2B lead data, email verification, "
-                "data cleaning, SEO services, and GEO AI search visibility optimization."
+                "aidCMO delivers growth audits powered by OpenCMO — "
+                "an open-source SEO / GEO / community visibility engine."
                 if localized == "en"
-                else "aidCMO 提供合规的海外 B2B 邮箱线索、邮箱验证、数据清洗、SEO 服务与 GEO/AI 搜索可见度优化。"
+                else "aidCMO 用 OpenCMO 替你交付增长审计 —— 一套开源的 SEO / GEO / 社区可见度引擎。"
             ),
             "serviceType": [
-                "Overseas B2B lead data",
-                "Email verification and data cleaning",
-                "SEO services",
-                "GEO and AI search visibility optimization",
+                "Growth audit",
+                "SEO audit",
+                "GEO and AI search visibility audit",
+                "Community visibility audit",
             ],
             "areaServed": "International",
             "sameAs": [
@@ -832,10 +788,10 @@ def _build_home_json_ld(locale: str | None = None) -> str:
             ],
             "hasOfferCatalog": {
                 "@type": "OfferCatalog",
-                "name": "aidCMO B2B growth services",
+                "name": "aidCMO growth services",
                 "itemListElement": [
-                    {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Overseas B2B lead data"}},
-                    {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "SEO and GEO optimization"}},
+                    {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Growth audit"}},
+                    {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "OpenCMO self-host support"}},
                 ],
             },
         },
@@ -1100,14 +1056,16 @@ def _apply_public_route_metadata(html: str, full_path: str) -> str:
 
     if normalized == "":
         title = (
-            "aidCMO | Overseas B2B Leads and SEO/GEO Growth Services"
+            "aidCMO — Open-source AI CMO with growth audits delivered by humans"
             if locale_key == "en"
-            else "aidCMO | 海外 B2B 线索数据与 SEO/GEO 增长服务"
+            else "aidCMO — 开源 AI CMO,代为交付的增长审计"
         )
         description = (
-            "aidCMO provides compliant overseas B2B lead data, email verification, data cleaning, SEO services, and GEO AI search visibility optimization with OpenCMO technical support."
+            "OpenCMO is the open-source SEO/GEO/community audit engine. "
+            "aidCMO uses it to deliver growth audits for founders who need answers, "
+            "not another dashboard."
             if locale_key == "en"
-            else "aidCMO 提供合规的海外 B2B 邮箱线索、邮箱验证、数据清洗、SEO 服务与 GEO/AI 搜索可见度优化，并由 OpenCMO 方法论技术支持。"
+            else "OpenCMO 是开源的 SEO / GEO / 社区审计引擎。aidCMO 用它替创始人交付增长审计 —— 给需要结论而不是又一块仪表盘的人。"
         )
         canonical_url = _public_url("/", route_locale)
         replacements = [
@@ -1367,6 +1325,85 @@ app.include_router(performance_router)
 app.include_router(quick_actions_router)
 app.include_router(github_router)
 app.include_router(blog_gen_router)
+
+
+# ---------------------------------------------------------------------------
+# Public marketing endpoints — registered inline (no router) since they're
+# small, public, and tightly coupled to the marketing site copy. Keep these
+# BEFORE the SPA catch-all below or they'll be swallowed.
+# ---------------------------------------------------------------------------
+
+from typing import Literal, Optional as _Optional  # noqa: E402
+
+from pydantic import BaseModel, Field  # noqa: E402
+
+
+class _WaitlistSubmit(BaseModel):
+    """Hosted-version waitlist signup payload."""
+    email: str = Field(..., min_length=5, max_length=254)
+    source: _Optional[Literal["home_inline", "hosted_page"]] = None
+
+
+@app.post("/api/v1/waitlist")
+async def api_v1_waitlist(payload: _WaitlistSubmit):
+    if not storage.is_valid_email(payload.email):
+        return JSONResponse({"ok": False, "error": "invalid_email"}, status_code=400)
+    accepted = await storage.add_to_waitlist(payload.email, source=payload.source or "")
+    if not accepted:
+        return JSONResponse({"ok": False, "error": "rejected"}, status_code=400)
+    return JSONResponse({"ok": True})
+
+
+@app.get("/api/v1/github-stats")
+async def api_v1_github_stats():
+    from opencmo.web.github_stats import get_github_stats
+    return JSONResponse(await get_github_stats())
+
+
+# ---------------------------------------------------------------------------
+# Legacy → new positioning 301 redirects (locale-preserving, GET + HEAD)
+# Keep at least 6 months for inbound links from blogs/SERPs.
+# ---------------------------------------------------------------------------
+
+_REDIRECTS_301 = {
+    "b2b-leads":   "/services",
+    "sample-data": "/services",
+    "data-policy": "/",
+    "seo-geo":     "/services",
+}
+
+
+def _make_redirect(target: str):
+    """Factory captures `target` in closure — no late-binding bug."""
+    async def _redirect(request: Request) -> RedirectResponse:  # noqa: ARG001
+        return RedirectResponse(url=target, status_code=301)
+    return _redirect
+
+
+def _build_redirect_target(prefix: str, new: str) -> str:
+    """Preserve the locale prefix on redirect targets.
+
+    Examples:
+      ("",     "/services") -> "/services"
+      ("en/",  "/services") -> "/en/services"
+      ("zh/",  "/")          -> "/zh"
+      ("",     "/")          -> "/"
+    """
+    locale = prefix.rstrip("/")  # "" | "en" | "zh"
+    if new == "/":
+        return f"/{locale}" if locale else "/"
+    return f"/{locale}{new}" if locale else new
+
+
+for _old, _new in _REDIRECTS_301.items():
+    for _prefix in ("", "en/", "zh/"):
+        _path = f"/{_prefix}{_old}"
+        _target = _build_redirect_target(_prefix, _new)
+        app.add_api_route(
+            _path,
+            _make_redirect(_target),
+            methods=["GET", "HEAD"],
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -3,15 +3,10 @@ import {
   ArrowUpRight,
   Bot,
   CheckCircle2,
-  Database,
-  FileText,
-  Filter,
   GitBranch,
   Globe,
-  MailCheck,
   Search,
   ShieldCheck,
-  Sparkles,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -28,13 +23,10 @@ import { getLocalizedPublicPath, getSeoLocaleFromLocale } from "../utils/publicR
 
 const GITHUB_REPO_URL = "https://github.com/study8677/OpenCMO";
 
-export type PublicServicePageKind =
-  | "b2b-leads"
-  | "seo-geo"
-  | "open-source"
-  | "sample-data"
-  | "contact"
-  | "data-policy";
+// Reduced from 6 kinds to 2 in Phase 1 repositioning. The legacy kinds
+// (b2b-leads / seo-geo / sample-data / data-policy) are gone; users
+// hitting their old URLs are 301'd server-side (web/app.py).
+export type PublicServicePageKind = "open-source" | "contact";
 
 type PageSection = {
   icon: LucideIcon;
@@ -72,100 +64,8 @@ type ServicePageContent = {
 const CONTACT_EMAIL = "hello@aidcmo.com";
 
 const PAGE_CONTENT: Record<PublicServicePageKind, ServicePageContent> = {
-  "b2b-leads": {
-    path: "/b2b-leads",
-    metaTitle: "service.b2b.metaTitle",
-    metaDescription: "service.b2b.metaDescription",
-    eyebrow: "service.b2b.eyebrow",
-    title: "service.b2b.title",
-    subtitle: "service.b2b.subtitle",
-    primaryCta: "landing.sampleDataCta",
-    primaryHref: "/sample-data",
-    secondaryCta: "landing.contactCta",
-    secondaryHref: "/contact",
-    highlights: ["service.b2b.highlight1", "service.b2b.highlight2", "service.b2b.highlight3"],
-    sectionEyebrow: "service.b2b.sectionEyebrow",
-    sectionTitle: "service.b2b.sectionTitle",
-    sectionSubtitle: "service.b2b.sectionSubtitle",
-    sections: [
-      { icon: Globe, title: "service.b2b.countryTitle", description: "service.b2b.countryDesc" },
-      { icon: Filter, title: "service.b2b.industryTitle", description: "service.b2b.industryDesc" },
-      { icon: Users, title: "service.b2b.roleTitle", description: "service.b2b.roleDesc" },
-      { icon: Database, title: "service.b2b.scaleTitle", description: "service.b2b.scaleDesc" },
-      { icon: MailCheck, title: "service.b2b.validationTitle", description: "service.b2b.validationDesc" },
-      { icon: ShieldCheck, title: "service.b2b.riskTitle", description: "service.b2b.riskDesc" },
-    ],
-    detailTitle: "service.b2b.detailTitle",
-    detailSubtitle: "service.b2b.detailSubtitle",
-    details: [
-      "service.b2b.detail1",
-      "service.b2b.detail2",
-      "service.b2b.detail3",
-      "service.b2b.detail4",
-      "service.b2b.detail5",
-    ],
-    fieldTitle: "service.b2b.fieldTitle",
-    fields: [
-      "service.b2b.field1",
-      "service.b2b.field2",
-      "service.b2b.field3",
-      "service.b2b.field4",
-      "service.b2b.field5",
-      "service.b2b.field6",
-      "service.b2b.field7",
-      "service.b2b.field8",
-    ],
-    noteTitle: "service.b2b.noteTitle",
-    noteBody: "service.b2b.noteBody",
-    finalTitle: "service.b2b.finalTitle",
-    finalSubtitle: "service.b2b.finalSubtitle",
-  },
-  "seo-geo": {
-    path: "/seo-geo",
-    metaTitle: "service.seoGeo.metaTitle",
-    metaDescription: "service.seoGeo.metaDescription",
-    eyebrow: "service.seoGeo.eyebrow",
-    title: "service.seoGeo.title",
-    subtitle: "service.seoGeo.subtitle",
-    primaryCta: "landing.seoConsultCta",
-    primaryHref: "/contact",
-    secondaryCta: "landing.openSourceCta",
-    secondaryHref: "/open-source",
-    highlights: ["service.seoGeo.highlight1", "service.seoGeo.highlight2", "service.seoGeo.highlight3"],
-    sectionEyebrow: "service.seoGeo.sectionEyebrow",
-    sectionTitle: "service.seoGeo.sectionTitle",
-    sectionSubtitle: "service.seoGeo.sectionSubtitle",
-    sections: [
-      { icon: Search, title: "service.seoGeo.technicalTitle", description: "service.seoGeo.technicalDesc" },
-      { icon: FileText, title: "service.seoGeo.contentTitle", description: "service.seoGeo.contentDesc" },
-      { icon: Bot, title: "service.seoGeo.geoTitle", description: "service.seoGeo.geoDesc" },
-      { icon: Sparkles, title: "service.seoGeo.entityTitle", description: "service.seoGeo.entityDesc" },
-      { icon: Globe, title: "service.seoGeo.serpTitle", description: "service.seoGeo.serpDesc" },
-      { icon: CheckCircle2, title: "service.seoGeo.reportTitle", description: "service.seoGeo.reportDesc" },
-    ],
-    detailTitle: "service.seoGeo.detailTitle",
-    detailSubtitle: "service.seoGeo.detailSubtitle",
-    details: [
-      "service.seoGeo.detail1",
-      "service.seoGeo.detail2",
-      "service.seoGeo.detail3",
-      "service.seoGeo.detail4",
-      "service.seoGeo.detail5",
-    ],
-    fieldTitle: "service.seoGeo.fieldTitle",
-    fields: [
-      "service.seoGeo.field1",
-      "service.seoGeo.field2",
-      "service.seoGeo.field3",
-      "service.seoGeo.field4",
-      "service.seoGeo.field5",
-      "service.seoGeo.field6",
-    ],
-    noteTitle: "service.seoGeo.noteTitle",
-    noteBody: "service.seoGeo.noteBody",
-    finalTitle: "service.seoGeo.finalTitle",
-    finalSubtitle: "service.seoGeo.finalSubtitle",
-  },
+  // b2b-leads + seo-geo blocks deleted in Phase 1 repositioning.
+  // Old URLs are 301'd server-side via _REDIRECTS_301 in web/app.py.
   "open-source": {
     path: "/open-source",
     metaTitle: "service.openSource.metaTitle",
@@ -175,8 +75,8 @@ const PAGE_CONTENT: Record<PublicServicePageKind, ServicePageContent> = {
     subtitle: "service.openSource.subtitle",
     primaryCta: "service.openSource.repoCta",
     primaryHref: GITHUB_REPO_URL,
-    secondaryCta: "landing.seoConsultCta",
-    secondaryHref: "/seo-geo",
+    secondaryCta: "landing.heroPrimaryCta",
+    secondaryHref: "/services",
     highlights: ["service.openSource.highlight1", "service.openSource.highlight2", "service.openSource.highlight3"],
     sectionEyebrow: "service.openSource.sectionEyebrow",
     sectionTitle: "service.openSource.sectionTitle",
@@ -209,49 +109,7 @@ const PAGE_CONTENT: Record<PublicServicePageKind, ServicePageContent> = {
     finalTitle: "service.openSource.finalTitle",
     finalSubtitle: "service.openSource.finalSubtitle",
   },
-  "sample-data": {
-    path: "/sample-data",
-    metaTitle: "service.sample.metaTitle",
-    metaDescription: "service.sample.metaDescription",
-    eyebrow: "service.sample.eyebrow",
-    title: "service.sample.title",
-    subtitle: "service.sample.subtitle",
-    primaryCta: "landing.contactCta",
-    primaryHref: "/contact",
-    secondaryCta: "landing.dataPolicyCta",
-    secondaryHref: "/data-policy",
-    highlights: ["service.sample.highlight1", "service.sample.highlight2", "service.sample.highlight3"],
-    sectionEyebrow: "service.sample.sectionEyebrow",
-    sectionTitle: "service.sample.sectionTitle",
-    sectionSubtitle: "service.sample.sectionSubtitle",
-    sections: [
-      { icon: Globe, title: "service.sample.countryTitle", description: "service.sample.countryDesc" },
-      { icon: Filter, title: "service.sample.segmentTitle", description: "service.sample.segmentDesc" },
-      { icon: Users, title: "service.sample.personaTitle", description: "service.sample.personaDesc" },
-      { icon: Database, title: "service.sample.volumeTitle", description: "service.sample.volumeDesc" },
-      { icon: MailCheck, title: "service.sample.validationTitle", description: "service.sample.validationDesc" },
-      { icon: ShieldCheck, title: "service.sample.useTitle", description: "service.sample.useDesc" },
-    ],
-    detailTitle: "service.sample.detailTitle",
-    detailSubtitle: "service.sample.detailSubtitle",
-    details: [
-      "service.sample.detail1",
-      "service.sample.detail2",
-      "service.sample.detail3",
-      "service.sample.detail4",
-    ],
-    fieldTitle: "service.sample.fieldTitle",
-    fields: [
-      "service.sample.field1",
-      "service.sample.field2",
-      "service.sample.field3",
-      "service.sample.field4",
-    ],
-    noteTitle: "service.sample.noteTitle",
-    noteBody: "service.sample.noteBody",
-    finalTitle: "service.sample.finalTitle",
-    finalSubtitle: "service.sample.finalSubtitle",
-  },
+  // sample-data block deleted in Phase 1 repositioning.
   contact: {
     path: "/contact",
     metaTitle: "service.contact.metaTitle",
@@ -261,17 +119,16 @@ const PAGE_CONTENT: Record<PublicServicePageKind, ServicePageContent> = {
     subtitle: "service.contact.subtitle",
     primaryCta: "landing.emailCta",
     primaryHref: `mailto:${CONTACT_EMAIL}`,
-    secondaryCta: "landing.seoConsultCta",
-    secondaryHref: "/seo-geo",
+    secondaryCta: "landing.heroPrimaryCta",
+    secondaryHref: "/services",
     highlights: ["service.contact.highlight1", "service.contact.highlight2", "service.contact.highlight3"],
     sectionEyebrow: "service.contact.sectionEyebrow",
     sectionTitle: "service.contact.sectionTitle",
     sectionSubtitle: "service.contact.sectionSubtitle",
     sections: [
-      { icon: Database, title: "service.contact.leadsTitle", description: "service.contact.leadsDesc" },
+      // B2B inquiry types (leads / geo / policy) deleted in repositioning.
+      // The remaining "seo" inquiry stands in for "growth audit" inquiries.
       { icon: Search, title: "service.contact.seoTitle", description: "service.contact.seoDesc" },
-      { icon: Bot, title: "service.contact.geoTitle", description: "service.contact.geoDesc" },
-      { icon: ShieldCheck, title: "service.contact.policyTitle", description: "service.contact.policyDesc" },
     ],
     detailTitle: "service.contact.detailTitle",
     detailSubtitle: "service.contact.detailSubtitle",
@@ -293,51 +150,7 @@ const PAGE_CONTENT: Record<PublicServicePageKind, ServicePageContent> = {
     finalTitle: "service.contact.finalTitle",
     finalSubtitle: "service.contact.finalSubtitle",
   },
-  "data-policy": {
-    path: "/data-policy",
-    metaTitle: "service.policy.metaTitle",
-    metaDescription: "service.policy.metaDescription",
-    eyebrow: "service.policy.eyebrow",
-    title: "service.policy.title",
-    subtitle: "service.policy.subtitle",
-    primaryCta: "landing.sampleDataCta",
-    primaryHref: "/sample-data",
-    secondaryCta: "landing.contactCta",
-    secondaryHref: "/contact",
-    highlights: ["service.policy.highlight1", "service.policy.highlight2", "service.policy.highlight3"],
-    sectionEyebrow: "service.policy.sectionEyebrow",
-    sectionTitle: "service.policy.sectionTitle",
-    sectionSubtitle: "service.policy.sectionSubtitle",
-    sections: [
-      { icon: ShieldCheck, title: "service.policy.b2bTitle", description: "service.policy.b2bDesc" },
-      { icon: Globe, title: "service.policy.sourceTitle", description: "service.policy.sourceDesc" },
-      { icon: MailCheck, title: "service.policy.validationTitle", description: "service.policy.validationDesc" },
-      { icon: CheckCircle2, title: "service.policy.removalTitle", description: "service.policy.removalDesc" },
-      { icon: FileText, title: "service.policy.useTitle", description: "service.policy.useDesc" },
-      { icon: Sparkles, title: "service.policy.limitTitle", description: "service.policy.limitDesc" },
-    ],
-    detailTitle: "service.policy.detailTitle",
-    detailSubtitle: "service.policy.detailSubtitle",
-    details: [
-      "service.policy.detail1",
-      "service.policy.detail2",
-      "service.policy.detail3",
-      "service.policy.detail4",
-      "service.policy.detail5",
-    ],
-    fieldTitle: "service.policy.fieldTitle",
-    fields: [
-      "service.policy.field1",
-      "service.policy.field2",
-      "service.policy.field3",
-      "service.policy.field4",
-      "service.policy.field5",
-    ],
-    noteTitle: "service.policy.noteTitle",
-    noteBody: "service.policy.noteBody",
-    finalTitle: "service.policy.finalTitle",
-    finalSubtitle: "service.policy.finalSubtitle",
-  },
+  // data-policy block deleted in Phase 1 repositioning.
 };
 
 function ActionLink({

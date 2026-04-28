@@ -53,12 +53,10 @@ export function isPublicRoutePath(pathname: string) {
     barePath === "/"
     || barePath === "/blog"
     || barePath === "/sample-audit"
-    || barePath === "/b2b-leads"
-    || barePath === "/seo-geo"
+    || barePath === "/services"
+    || barePath === "/hosted"
     || barePath === "/open-source"
-    || barePath === "/sample-data"
     || barePath === "/contact"
-    || barePath === "/data-policy"
   ) {
     return true;
   }

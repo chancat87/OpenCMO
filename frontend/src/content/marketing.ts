@@ -39,12 +39,11 @@ export type BlogArticle = {
 };
 
 export const PUBLIC_HOME_NAV: PublicNavItem[] = [
-  { href: "/b2b-leads", label: "landing.navLeads" },
-  { href: "/seo-geo", label: "landing.navSeoGeo" },
-  { href: "/workspace", label: "landing.navOpenSource" },
-  { href: "/data-policy", label: "landing.navDataPolicy" },
-  { href: "/contact", label: "landing.navContact" },
+  { href: "/services", label: "landing.navServices" },
+  { href: "/open-source", label: "landing.navOpenSource" },
+  { href: "/sample-audit", label: "landing.navAuditExample" },
   { href: "/blog", label: "landing.navBlog" },
+  { href: "/contact", label: "landing.navContact" },
 ];
 
 export const PUBLIC_BLOG_NAV: PublicNavItem[] = [
@@ -644,28 +643,49 @@ export function getSampleAuditPath(locale?: SeoLocale | null) {
   return locale ? getLocalizedPublicPath("/sample-audit", locale) : "/sample-audit";
 }
 
-export function getB2BLeadsPath(locale?: SeoLocale | null) {
-  return locale ? getLocalizedPublicPath("/b2b-leads", locale) : "/b2b-leads";
-}
-
-export function getSeoGeoPath(locale?: SeoLocale | null) {
-  return locale ? getLocalizedPublicPath("/seo-geo", locale) : "/seo-geo";
-}
-
 export function getOpenSourcePath(locale?: SeoLocale | null) {
   return locale ? getLocalizedPublicPath("/open-source", locale) : "/open-source";
-}
-
-export function getSampleDataPath(locale?: SeoLocale | null) {
-  return locale ? getLocalizedPublicPath("/sample-data", locale) : "/sample-data";
 }
 
 export function getContactPath(locale?: SeoLocale | null) {
   return locale ? getLocalizedPublicPath("/contact", locale) : "/contact";
 }
 
+export function getServicesPath(locale?: SeoLocale | null) {
+  return locale ? getLocalizedPublicPath("/services", locale) : "/services";
+}
+
+export function getHostedPath(locale?: SeoLocale | null) {
+  return locale ? getLocalizedPublicPath("/hosted", locale) : "/hosted";
+}
+
+// --- Deprecated wrappers --------------------------------------------------
+// Kept temporarily so legacy call sites in LandingPage.tsx etc. still build
+// during the transition. All resolve to the new positioning paths. Will be
+// removed once §B.8 rewrites LandingPage to call the new helpers directly.
+//
+// Server-side 301 redirects in `web/app.py` handle the old URLs for
+// inbound links from the public web. The deprecated paths returned here
+// also bounce to /services or / via those 301s.
+
+/** @deprecated B2B leads page deleted — points to /services */
+export function getB2BLeadsPath(locale?: SeoLocale | null) {
+  return getServicesPath(locale);
+}
+
+/** @deprecated old SEO/GEO page renamed to /services */
+export function getSeoGeoPath(locale?: SeoLocale | null) {
+  return getServicesPath(locale);
+}
+
+/** @deprecated sample-data page deleted — points to /services */
+export function getSampleDataPath(locale?: SeoLocale | null) {
+  return getServicesPath(locale);
+}
+
+/** @deprecated data-policy page deleted — points to landing root */
 export function getDataPolicyPath(locale?: SeoLocale | null) {
-  return locale ? getLocalizedPublicPath("/data-policy", locale) : "/data-policy";
+  return locale ? getLocalizedPublicPath("/", locale) : "/";
 }
 
 export function findBlogArticleBySlug(slug: string) {
