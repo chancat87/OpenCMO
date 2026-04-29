@@ -5,7 +5,10 @@ import {
   CheckCircle2,
   GitBranch,
   Globe,
+  LayoutDashboard,
+  Mail,
   Search,
+  ServerCog,
   ShieldCheck,
   Users,
   type LucideIcon,
@@ -32,6 +35,14 @@ type PageSection = {
   icon: LucideIcon;
   title: TranslationKey;
   description: TranslationKey;
+};
+
+type ContactRoute = {
+  icon: LucideIcon;
+  title: TranslationKey;
+  body: TranslationKey;
+  cta: TranslationKey;
+  href: string;
 };
 
 type ServicePageContent = {
@@ -62,6 +73,36 @@ type ServicePageContent = {
 };
 
 const CONTACT_EMAIL = "hello@aidcmo.com";
+
+const CONTACT_PROOFS = [
+  "service.contact.heroProofEmail",
+  "service.contact.heroProofPrivate",
+  "service.contact.heroProofWorkspace",
+] as const;
+
+const CONTACT_ROUTES: ContactRoute[] = [
+  {
+    icon: Mail,
+    title: "service.contact.routeEmailTitle",
+    body: "service.contact.routeEmailBody",
+    cta: "service.contact.routeEmailCta",
+    href: `mailto:${CONTACT_EMAIL}`,
+  },
+  {
+    icon: ServerCog,
+    title: "service.contact.routePrivateTitle",
+    body: "service.contact.routePrivateBody",
+    cta: "service.contact.routePrivateCta",
+    href: "/services",
+  },
+  {
+    icon: LayoutDashboard,
+    title: "service.contact.routeWorkspaceTitle",
+    body: "service.contact.routeWorkspaceBody",
+    cta: "service.contact.routeWorkspaceCta",
+    href: "/workspace",
+  },
+];
 
 const PAGE_CONTENT: Record<PublicServicePageKind, ServicePageContent> = {
   // b2b-leads + seo-geo blocks deleted in Phase 1 repositioning.
@@ -186,6 +227,227 @@ function ActionLink({
   );
 }
 
+function ContactPage({ content }: { content: ServicePageContent }) {
+  const { t, locale } = useI18n();
+  const seoLocale = getSeoLocaleFromLocale(locale);
+  const servicesPath = getLocalizedPublicPath("/services", seoLocale);
+
+  return (
+    <div className="min-h-screen bg-[#08141f] text-white">
+      <PublicSiteHeader items={PUBLIC_HOME_NAV} theme="dark" />
+
+      <main>
+        <section className="border-b border-white/10">
+          <div className="mx-auto grid max-w-7xl gap-10 px-4 py-20 lg:grid-cols-[minmax(0,1fr)_420px] lg:px-8 lg:py-28">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wider text-white/55">
+                {t(content.eyebrow)}
+              </p>
+              <h1 className="font-display mt-5 max-w-4xl text-5xl font-semibold tracking-tight text-white sm:text-6xl lg:text-7xl">
+                {t(content.title)}
+              </h1>
+              <p className="mt-6 max-w-2xl text-lg leading-8 text-white/72 sm:text-xl sm:leading-9">
+                {t(content.subtitle)}
+              </p>
+
+              <div className="mt-9 flex flex-wrap gap-3">
+                <a
+                  href={`mailto:${CONTACT_EMAIL}`}
+                  className="inline-flex items-center gap-2 rounded-full bg-[#f7ecde] px-7 py-4 text-sm font-semibold text-[#082032] transition-colors hover:bg-white"
+                >
+                  <Mail size={16} />
+                  {t(content.primaryCta)}
+                </a>
+                <Link
+                  to={servicesPath}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/6 px-7 py-4 text-sm font-semibold text-white/90 transition-colors hover:border-white/25 hover:text-white"
+                >
+                  <ServerCog size={16} />
+                  {t(content.secondaryCta)}
+                  <ArrowRight size={14} />
+                </Link>
+                <Link
+                  to="/workspace"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/6 px-7 py-4 text-sm font-semibold text-white/90 transition-colors hover:border-white/25 hover:text-white"
+                >
+                  <LayoutDashboard size={16} />
+                  {t("service.contact.workspaceCta")}
+                  <ArrowRight size={14} />
+                </Link>
+              </div>
+
+              <div className="mt-8 flex flex-wrap gap-2">
+                {CONTACT_PROOFS.map((key) => (
+                  <span
+                    key={key}
+                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/68"
+                  >
+                    {t(key)}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <aside className="self-end rounded-lg border border-white/10 bg-white/6 p-6">
+              <p className="text-sm font-semibold uppercase tracking-wider text-white/50">
+                {t(content.fieldTitle)}
+              </p>
+              <p className="mt-3 text-base leading-7 text-white/75">
+                {t("service.contact.fieldSubtitle")}
+              </p>
+              <div className="mt-6 grid gap-3">
+                {content.fields.map((key) => (
+                  <div key={key} className="flex items-start gap-3 rounded-lg bg-white/7 px-4 py-3">
+                    <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-[#86c8bc]" />
+                    <p className="text-sm leading-6 text-white/78">{t(key)}</p>
+                  </div>
+                ))}
+              </div>
+              <a
+                href={`mailto:${CONTACT_EMAIL}`}
+                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-[#082032] transition-colors hover:bg-[#f7ecde]"
+              >
+                {CONTACT_EMAIL}
+                <ArrowRight size={14} />
+              </a>
+            </aside>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-4 py-20 lg:px-8 lg:py-24">
+          <SectionReveal>
+            <div className="max-w-3xl">
+              <p className="text-sm font-semibold uppercase tracking-wider text-white/55">
+                {t(content.sectionEyebrow)}
+              </p>
+              <h2 className="font-display mt-4 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                {t(content.sectionTitle)}
+              </h2>
+              <p className="mt-4 text-base leading-7 text-white/68">
+                {t(content.sectionSubtitle)}
+              </p>
+            </div>
+          </SectionReveal>
+
+          <div className="mt-10 grid gap-4 lg:grid-cols-3">
+            {CONTACT_ROUTES.map((item, index) => {
+              const Icon = item.icon;
+              const routeHref = item.href === "/services" ? servicesPath : item.href;
+              const isExternal = routeHref.startsWith("http") || routeHref.startsWith("mailto:");
+
+              const cardContent = (
+                <>
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f7ecde] text-[#082032]">
+                    <Icon size={18} />
+                  </div>
+                  <h3 className="mt-5 text-xl font-semibold text-white">{t(item.title)}</h3>
+                  <p className="mt-3 text-sm leading-7 text-white/66">{t(item.body)}</p>
+                  <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[#f7ecde]">
+                    {t(item.cta)}
+                    <ArrowRight size={14} />
+                  </span>
+                </>
+              );
+
+              return (
+                <SectionReveal key={item.title} delay={index * 0.04}>
+                  {isExternal ? (
+                    <a
+                      href={routeHref}
+                      className="block h-full rounded-lg border border-white/10 bg-white/5 p-6 transition-colors hover:border-white/20 hover:bg-white/8"
+                    >
+                      {cardContent}
+                    </a>
+                  ) : (
+                    <Link
+                      to={routeHref}
+                      className="block h-full rounded-lg border border-white/10 bg-white/5 p-6 transition-colors hover:border-white/20 hover:bg-white/8"
+                    >
+                      {cardContent}
+                    </Link>
+                  )}
+                </SectionReveal>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="border-y border-white/10 bg-[#06121d]">
+          <div className="mx-auto grid max-w-7xl gap-10 px-4 py-20 lg:grid-cols-[360px_minmax(0,1fr)] lg:px-8 lg:py-24">
+            <SectionReveal>
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-wider text-white/55">
+                  {t(content.noteTitle)}
+                </p>
+                <h2 className="font-display mt-4 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                  {t(content.detailTitle)}
+                </h2>
+                <p className="mt-4 text-base leading-7 text-white/68">
+                  {t(content.detailSubtitle)}
+                </p>
+              </div>
+            </SectionReveal>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {content.details.map((key, index) => (
+                <SectionReveal key={key} delay={index * 0.04}>
+                  <div className="h-full rounded-lg border border-white/10 bg-white/5 px-5 py-4">
+                    <p className="text-xs font-semibold text-white/45">0{index + 1}</p>
+                    <p className="mt-3 text-sm leading-7 text-white/78">{t(key)}</p>
+                  </div>
+                </SectionReveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-4 py-20 lg:px-8 lg:py-24">
+          <SectionReveal>
+            <div className="grid gap-8 rounded-lg border border-white/10 bg-white/6 p-6 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:p-8">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-wider text-white/55">
+                  {t("service.contact.emailLabel")}
+                </p>
+                <h2 className="font-display mt-4 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                  {t(content.finalTitle)}
+                </h2>
+                <p className="mt-4 text-base leading-8 text-white/68">
+                  {t(content.noteBody)}
+                </p>
+              </div>
+              <div className="border-t border-white/10 pt-6 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+                <p className="text-base leading-8 text-white/72">
+                  {t(content.finalSubtitle)}
+                </p>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <a
+                    href={`mailto:${CONTACT_EMAIL}`}
+                    className="inline-flex items-center gap-2 rounded-full bg-[#f7ecde] px-7 py-4 text-sm font-semibold text-[#082032] transition-colors hover:bg-white"
+                  >
+                    <Mail size={16} />
+                    {t(content.primaryCta)}
+                  </a>
+                  <Link
+                    to={servicesPath}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/6 px-7 py-4 text-sm font-semibold text-white/90 transition-colors hover:border-white/25 hover:text-white"
+                  >
+                    {t(content.secondaryCta)}
+                    <ArrowRight size={14} />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </SectionReveal>
+        </section>
+      </main>
+
+      <div className="mx-auto max-w-7xl px-4 pb-8 lg:px-8">
+        <SiteFooter variant="public" />
+      </div>
+    </div>
+  );
+}
+
 export function PublicServicePage({ kind }: { kind: PublicServicePageKind }) {
   const { t } = useI18n();
   const content = PAGE_CONTENT[kind];
@@ -195,6 +457,10 @@ export function PublicServicePage({ kind }: { kind: PublicServicePageKind }) {
     description: t(content.metaDescription),
     basePath: content.path,
   });
+
+  if (kind === "contact") {
+    return <ContactPage content={content} />;
+  }
 
   return (
     <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f]">
@@ -209,22 +475,6 @@ export function PublicServicePage({ kind }: { kind: PublicServicePageKind }) {
                 {t(content.title)}
               </h1>
               <p className="mt-6 max-w-3xl text-xl leading-9 text-[#6e6e73]">{t(content.subtitle)}</p>
-              {kind === "contact" && (
-                <a
-                  href={`mailto:${CONTACT_EMAIL}`}
-                  className="mt-8 block rounded-[1.8rem] bg-white px-6 py-8 shadow-[0_24px_80px_rgba(0,0,0,0.08)] transition-transform duration-300 hover:-translate-y-1"
-                >
-                  <p className="text-sm font-semibold uppercase text-[#6e6e73]">
-                    {t("service.contact.emailLabel")}
-                  </p>
-                  <p className="mt-3 break-words text-4xl font-semibold tracking-tight text-[#0071e3] sm:text-6xl">
-                    {CONTACT_EMAIL}
-                  </p>
-                  <p className="mt-4 text-base leading-7 text-[#6e6e73]">
-                    {t("service.contact.emailHint")}
-                  </p>
-                </a>
-              )}
               <div className="mt-8 flex flex-wrap gap-3">
                 <ActionLink href={content.primaryHref}>{t(content.primaryCta)}</ActionLink>
                 <ActionLink href={content.secondaryHref} variant="secondary">
@@ -234,22 +484,6 @@ export function PublicServicePage({ kind }: { kind: PublicServicePageKind }) {
             </div>
 
             <div className="grid gap-3 self-end">
-              {kind === "contact" && (
-                <a
-                  href={`mailto:${CONTACT_EMAIL}`}
-                  className="rounded-[1.4rem] bg-[#0071e3] px-6 py-7 text-white transition-colors hover:bg-[#0077ed]"
-                >
-                  <p className="text-sm font-semibold uppercase text-white/65">
-                    {t("service.contact.emailLabel")}
-                  </p>
-                  <p className="mt-3 break-words text-3xl font-semibold tracking-tight sm:text-4xl">
-                    {CONTACT_EMAIL}
-                  </p>
-                  <p className="mt-4 text-sm leading-6 text-white/72">
-                    {t("service.contact.emailHint")}
-                  </p>
-                </a>
-              )}
               {content.highlights.map((key, index) => (
                 <div key={key} className="rounded-lg bg-white px-4 py-4">
                   <p className="text-xs font-semibold text-[#6e6e73]">0{index + 1}</p>
