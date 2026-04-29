@@ -115,6 +115,12 @@ from opencmo.storage.github import (
     upsert_github_lead,
 )
 
+# --- GitHub stats cache (Built-in-open block) ---
+from opencmo.storage.github_stats_cache import (
+    get_cached_github_stats,
+    set_cached_github_stats,
+)
+
 # --- Graph expansion ---
 from opencmo.storage.graph import (
     add_expansion_edge,
@@ -230,12 +236,6 @@ from opencmo.storage.waitlist import (
     add_to_waitlist,
     count_waitlist,
     is_valid_email,
-)
-
-# --- GitHub stats cache (Built-in-open block) ---
-from opencmo.storage.github_stats_cache import (
-    get_cached_github_stats,
-    set_cached_github_stats,
 )
 
 

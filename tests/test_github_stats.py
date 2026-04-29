@@ -266,6 +266,7 @@ async def test_endpoint_returns_200(tmp_path, monkeypatch):
     monkeypatch.setattr(gs_module, "github_get_with_headers", fake_get)
 
     from fastapi.testclient import TestClient
+
     from opencmo.web.app import app
 
     with TestClient(app) as client:

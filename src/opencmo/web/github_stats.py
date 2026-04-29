@@ -15,6 +15,7 @@ import time
 from typing import Optional, TypedDict
 
 from opencmo.storage import get_cached_github_stats, set_cached_github_stats
+
 # Note: ``get_github_token`` is NOT imported here — token resolution is
 # done inside ``github_get_with_headers``. Importing it would trip Ruff F401.
 from opencmo.tools.github_api import github_get_with_headers
