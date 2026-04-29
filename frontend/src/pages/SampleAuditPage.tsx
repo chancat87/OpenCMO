@@ -5,6 +5,7 @@ import { SiteFooter } from "../components/layout/SiteFooter";
 import { ProjectCommandCenter } from "../components/project/ProjectCommandCenter";
 import { ScorePanel } from "../components/project/ScorePanel";
 import { useI18n } from "../i18n";
+import type { TranslationKey } from "../i18n";
 import { usePublicPageMetadata } from "../hooks/usePublicPageMetadata";
 import type { LatestReports, LatestScans, MonitoringSummary, Project, ReportRecord } from "../types";
 import type { NextAction } from "../api/projects";
@@ -69,34 +70,39 @@ const SAMPLE_REPORTS: LatestReports = {
   },
 };
 
-const SAMPLE_ACTIONS: NextAction[] = [
+type SampleActionTemplate = Omit<NextAction, "title" | "description"> & {
+  titleKey: TranslationKey;
+  descriptionKey: TranslationKey;
+};
+
+const SAMPLE_ACTIONS: SampleActionTemplate[] = [
   {
     domain: "seo",
     priority: "high",
     icon: "search",
-    title: "Cut docs landing LCP under 2.5s and add product schema to core pages.",
-    description: "This improves both search crawl quality and the credibility of product summaries in AI answers.",
+    titleKey: "sampleAudit.actionSeoTitle",
+    descriptionKey: "sampleAudit.actionSeoDesc",
   },
   {
     domain: "geo",
     priority: "high",
     icon: "globe",
-    title: "Publish a comparison page that answers “FluxKV vs Flagsmith / Unleash” directly.",
-    description: "Assistants currently describe the category with competitor language first and miss the self-hosting story.",
+    titleKey: "sampleAudit.actionGeoTitle",
+    descriptionKey: "sampleAudit.actionGeoDesc",
   },
   {
     domain: "community",
     priority: "medium",
     icon: "users",
-    title: "Reply in three active threads where teams are comparing self-hosted feature flag options.",
-    description: "The best opportunities are already live in public channels and can convert quickly with founder-level replies.",
+    titleKey: "sampleAudit.actionCommunityTitle",
+    descriptionKey: "sampleAudit.actionCommunityDesc",
   },
   {
     domain: "graph",
     priority: "medium",
     icon: "git-branch",
-    title: "Track Flagsmith, Unleash, and GrowthBook messaging side-by-side before writing the next launch page.",
-    description: "You need a sharper stance on deployment model, OpenFeature support, and rollout governance.",
+    titleKey: "sampleAudit.actionGraphTitle",
+    descriptionKey: "sampleAudit.actionGraphDesc",
   },
 ];
 
@@ -241,6 +247,11 @@ export function SampleAuditPage() {
   const { t, locale } = useI18n();
   const seoLocale = getSeoLocaleFromLocale(locale);
   const sampleAuditPath = getSampleAuditPath(seoLocale);
+  const sampleActions: NextAction[] = SAMPLE_ACTIONS.map(({ titleKey, descriptionKey, ...action }) => ({
+    ...action,
+    title: t(titleKey),
+    description: t(descriptionKey),
+  }));
 
   usePublicPageMetadata({
     title: t("sampleAudit.metaTitle"),
@@ -329,7 +340,7 @@ export function SampleAuditPage() {
               latestReports={SAMPLE_REPORTS}
               competitorCount={COMPETITOR_ITEMS.length}
               pendingApprovals={2}
-              actionsOverride={SAMPLE_ACTIONS}
+              actionsOverride={sampleActions}
               routeOverrides={{
                 changedToday: `${sampleAuditPath}#seo`,
                 whatMattersNow: `${sampleAuditPath}#opportunities`,

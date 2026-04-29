@@ -569,26 +569,26 @@ _SAMPLE_AUDIT_STATIC_SITE_COPY_BY_LOCALE = {
 <main id="static-site-copy">
   <header>
     <p>OpenCMO 示例审计</p>
-    <h1>一份公开示例：OpenCMO 怎样把可见度信号变成下一步动作</h1>
+    <h1>面向开源开发者产品的一份真实感 OpenCMO 审计</h1>
     <p>
-      这份 sample audit 展示了一次 OpenCMO 复核的大致形状：SEO、AI 搜索、
-      社区讨论、竞品和哪些动作已经可以进入执行。
+      这个静态摘要对应示例审计页面，说明 OpenCMO 如何把 SEO 问题、
+      AI 搜索缺口、竞品语境、社区机会和下一步行动整理成可复核的操作者简报。
     </p>
   </header>
   <section>
     <h2>这个公开页面包含什么</h2>
     <ul>
       <li>解释抓取、元数据和站点健康缺口的 SEO 发现</li>
-      <li>展示 AI 助手当前如何概括品牌的 AI 可见度说明</li>
-      <li>影响公开叙事的社区和竞品信号</li>
-      <li>操盘手可以真正推进的优先级动作</li>
+      <li>展示回答引擎如何理解品牌定位的 AI 搜索说明</li>
+      <li>影响公开叙事的社区机会和竞品语境</li>
+      <li>可以进入复核、批准和执行的优先级行动</li>
     </ul>
   </section>
   <section>
     <h2>为什么它需要公开</h2>
     <p>
-      它给搜索引擎、买家和 AI agent 一个具体样本，让外部系统不用进入私有 workspace
-      也能理解产品输出长什么样。
+      它给搜索引擎、买家和回答引擎一个具体样本，让外部系统无需进入私有工作台，
+      也能理解 OpenCMO 的输出结构。
     </p>
   </section>
 </main>
@@ -1108,17 +1108,23 @@ def _apply_public_route_metadata(html: str, full_path: str) -> str:
         title = (
             "OpenCMO Sample Audit | Public walkthrough of a visibility operating report"
             if locale_key == "en"
-            else "OpenCMO 示例审计 | 一份公开的可见度报告 walkthrough"
+            else "示例审计 | OpenCMO"
         )
         description = (
             "See a public OpenCMO sample audit covering SEO, AI visibility, community signals, competitors, and the next actions an operator would ship."
             if locale_key == "en"
-            else "查看一份公开的 OpenCMO 示例审计，了解 SEO、AI 可见度、社区信号、竞品和下一步动作。"
+            else "查看一份 OpenCMO 种子示例审计，包含 SEO 问题、AI 搜索缺口、竞品语境、社区机会和下一步行动。"
+        )
+        keywords = (
+            "OpenCMO, sample audit, SEO audit, AI search visibility, community signals, open-source growth tools"
+            if locale_key == "en"
+            else "OpenCMO, 示例审计, SEO 问题, AI 搜索缺口, 竞品语境, 社区机会, 开源增长工具"
         )
         canonical_url = _public_url("/sample-audit", route_locale)
         replacements = [
             (r"<title>.*?</title>", f"<title>{title}</title>"),
             (r'<meta\s+name="description"\s+content="[^"]*"\s*/?>', f'<meta name="description" content="{description}" />'),
+            (r'<meta\s+name="keywords"\s+content="[^"]*"\s*/?>', f'<meta name="keywords" content="{keywords}" />'),
             (r'<meta\s+property="og:title"\s+content="[^"]*"\s*/?>', f'<meta property="og:title" content="{title}" />'),
             (r'<meta\s+property="og:description"\s+content="[^"]*"\s*/?>', f'<meta property="og:description" content="{description}" />'),
             (r'<meta\s+property="og:url"\s+content="[^"]*"\s*/?>', f'<meta property="og:url" content="{canonical_url}" />'),
@@ -1329,7 +1335,8 @@ app.include_router(blog_gen_router)
 # BEFORE the SPA catch-all below or they'll be swallowed.
 # ---------------------------------------------------------------------------
 
-from typing import Literal, Optional as _Optional  # noqa: E402
+from typing import Literal  # noqa: E402
+from typing import Optional as _Optional
 
 from pydantic import BaseModel, Field  # noqa: E402
 
