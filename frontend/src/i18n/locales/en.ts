@@ -7,6 +7,8 @@ export const en = {
   "common.error": "Error",
   "common.never": "Never",
   "common.projectNotFound": "Project not found",
+  "common.present": "Present",
+  "common.missing": "Missing",
 
   // Nav / Sidebar
   "nav.dashboard": "Command Center",
@@ -126,6 +128,10 @@ export const en = {
   "seo.metric.lcpFull": "LCP (Largest Contentful Paint)",
   "seo.metric.clsFull": "CLS (Cumulative Layout Shift)",
   "seo.metric.tbtFull": "TBT (Total Blocking Time)",
+  "seo.metric.inp": "INP (CrUX field)",
+  "seo.metric.hsts": "HSTS",
+  "seo.metric.securityHeaders": "X-Frame / CSP",
+  "seo.pagespeedUnavailable": "PageSpeed Insights data unavailable for this scan — performance metrics use neutral fallback values. Add PAGESPEED_API_KEY to get real Core Web Vitals.",
 
   // GEO Page
   "geo.noData": "No AI Search data yet",
@@ -1115,6 +1121,8 @@ export const en = {
   "geo.sentiment": "Sentiment",
   "geo.sentimentUnavailable": "Sentiment is unavailable for the latest GEO scan; the total excludes that component.",
   "geo.latestSnapshot": "Latest Snapshot",
+  "geo.shareOfVoice": "Share of Voice",
+  "geo.shareOfVoiceTotal": "Total mentions",
   "geo.configHint": "AI Search checks how assistants and answer engines mention your product. Your default model is always included. Add more provider keys in Settings to compare ChatGPT, Claude, Gemini, Kimi, DeepSeek, and other AI surfaces.",
 
   // Action Tips

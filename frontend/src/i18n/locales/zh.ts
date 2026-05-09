@@ -9,6 +9,8 @@ export const zh: Partial<Record<TranslationKey, string>> = {
   "common.error": "错误",
   "common.never": "从未",
   "common.projectNotFound": "未找到项目",
+  "common.present": "已配置",
+  "common.missing": "缺失",
 
   // Nav / Sidebar
   "nav.dashboard": "工作台",
@@ -128,6 +130,10 @@ export const zh: Partial<Record<TranslationKey, string>> = {
   "seo.metric.lcpFull": "LCP（最大内容绘制）",
   "seo.metric.clsFull": "CLS（累计布局偏移）",
   "seo.metric.tbtFull": "TBT（总阻塞时间）",
+  "seo.metric.inp": "INP（CrUX 真实数据）",
+  "seo.metric.hsts": "HSTS",
+  "seo.metric.securityHeaders": "X-Frame / CSP",
+  "seo.pagespeedUnavailable": "本次扫描未拿到 PageSpeed Insights 数据 — 性能分用了中性默认值。配置 PAGESPEED_API_KEY 可拿到真实 Core Web Vitals。",
 
   // GEO Page
   "geo.noData": "暂无 GEO 数据",
@@ -1209,6 +1215,8 @@ export const zh: Partial<Record<TranslationKey, string>> = {
   "geo.sentiment": "情感",
   "geo.sentimentUnavailable": "最新 GEO 扫描未拿到情感分，这次总分不包含该项。",
   "geo.latestSnapshot": "最新快照",
+  "geo.shareOfVoice": "声量份额",
+  "geo.shareOfVoiceTotal": "总提及数",
   "geo.configHint": "GEO 检测各 AI 平台对你品牌的提及情况。默认 LLM 始终参与检测。在设置中添加更多 API Key 可启用 Claude、Gemini、ChatGPT、Kimi、DeepSeek 等平台。",
 
   // Action Tips
