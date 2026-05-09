@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 
 from opencmo.storage._db import get_db
 
-
 SCAN_DEDUPE_WINDOW_SECONDS = 3600  # one hour
 
 
