@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from opencmo import storage
 from opencmo.background import service as bg_service
@@ -83,6 +83,16 @@ async def api_v1_report_detail(report_id: int):
     if not report:
         return JSONResponse({"error": "Not found"}, status_code=404)
     return JSONResponse(report)
+
+
+@router.api_route("/report-assets/{asset_id}.svg", methods=["GET", "HEAD"])
+async def api_v1_report_asset(asset_id: str):
+    from opencmo.report_charts import get_report_asset_path
+
+    asset_path = get_report_asset_path(asset_id)
+    if not asset_path or not asset_path.exists() or not asset_path.is_file():
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    return FileResponse(asset_path, media_type="image/svg+xml")
 
 
 @router.post("/projects/{project_id}/reports/{kind}/regenerate")

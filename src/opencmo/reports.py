@@ -6,6 +6,7 @@ import asyncio
 import html
 import json
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 
 from opencmo import storage
@@ -16,6 +17,8 @@ logger = logging.getLogger(__name__)
 _REPORT_MODEL_DEFAULT = "gpt-5.4"
 _PERIODIC_WINDOW_DAYS = 7
 _REPORT_LLM_TIMEOUT_SECONDS = 300.0
+_CHART_ASSET_SRC_RE = re.compile(r"^/api/v1/report-assets/[a-f0-9]{32}\.svg$")
+_CHART_ASSET_REF_RE = re.compile(r"/api/v1/report-assets/[a-f0-9]{32}\.svg")
 _REPORT_SYSTEM_COMMON = (
     "你是 AI CMO（首席营销官），拥有完整的多智能体营销系统：SEO审计专家、GEO(AI搜索可见性)分析师、"
     "SERP排名追踪器、社区舆情监控(Reddit/HN/Dev.to/知乎/V2EX/掘金等)、AI引文可信度(Citability)评估引擎、"
@@ -120,6 +123,15 @@ def _simple_markdown_to_html(markdown_text: str) -> str:
         if not stripped:
             close_list()
             continue
+        image_match = re.fullmatch(r"!\[([^\]]*)\]\(([^)]+)\)", stripped)
+        if image_match:
+            raw_src = image_match.group(2)
+            if _CHART_ASSET_SRC_RE.fullmatch(raw_src):
+                close_list()
+                alt = html.escape(image_match.group(1))
+                src = html.escape(raw_src, quote=True)
+                html_lines.append(f'<figure><img src="{src}" alt="{alt}" /><figcaption>{alt}</figcaption></figure>')
+                continue
         if stripped.startswith("### "):
             close_list()
             html_lines.append(f"<h3>{html.escape(stripped[4:])}</h3>")
@@ -143,6 +155,74 @@ def _simple_markdown_to_html(markdown_text: str) -> str:
 
     close_list()
     return "\n".join(html_lines)
+
+
+def _normalize_report_headings(markdown_text: str) -> str:
+    """Keep report heading hierarchy to H1/H2/H3 only."""
+    lines: list[str] = []
+    seen_h1 = False
+    for raw_line in markdown_text.splitlines():
+        match = re.match(r"^(#{1,6})\s+(.+?)\s*$", raw_line)
+        if not match:
+            lines.append(raw_line.rstrip())
+            continue
+        level = len(match.group(1))
+        title = match.group(2).strip()
+        if level == 1 and not seen_h1:
+            seen_h1 = True
+            lines.append(f"# {title}")
+        elif level == 1:
+            lines.append(f"## {title}")
+        elif level == 2:
+            lines.append(f"## {title}")
+        else:
+            lines.append(f"### {title}")
+    return "\n".join(lines).strip()
+
+
+def _insert_after_first_section(markdown_text: str, section: str) -> str:
+    lines = markdown_text.splitlines()
+    h2_indices = [idx for idx, line in enumerate(lines) if line.startswith("## ")]
+    if len(h2_indices) >= 2:
+        insert_at = h2_indices[1]
+    elif len(lines) >= 1 and lines[0].startswith("# "):
+        insert_at = 1
+    else:
+        insert_at = 0
+    return "\n".join([*lines[:insert_at], "", section.strip(), "", *lines[insert_at:]]).strip()
+
+
+def _postprocess_human_report_content(content: str, charts_markdown: str) -> str:
+    content = _normalize_report_headings(content)
+    if _CHART_ASSET_REF_RE.search(content):
+        return content
+    chart_section = f"## 2. 数据图表速览\n\n{charts_markdown or '当前数据不足，未生成图表。'}"
+    return _insert_after_first_section(content, chart_section)
+
+
+def _prepare_report_charts(kind: str, facts: dict, meta: dict) -> tuple[dict, dict, str]:
+    """Generate deterministic charts and return facts/meta copies enriched for prompts."""
+    enriched_facts = dict(facts)
+    enriched_meta = dict(meta)
+    try:
+        from opencmo.report_charts import build_report_charts, charts_to_markdown
+
+        charts = build_report_charts(kind, facts, meta)
+        charts_markdown = charts_to_markdown(charts)
+        enriched_facts["report_charts"] = [chart.to_meta() | {"markdown": chart.markdown} for chart in charts]
+        enriched_facts["report_charts_markdown"] = charts_markdown
+        enriched_meta["charts"] = [chart.to_meta() for chart in charts]
+        enriched_meta["chart_count"] = len(charts)
+        return enriched_facts, enriched_meta, charts_markdown
+    except Exception as exc:
+        logger.exception("Report chart generation failed for %s", kind)
+        enriched_meta["chart_error"] = str(exc) or exc.__class__.__name__
+        charts_markdown = "当前数据不足或图表生成失败，未生成图表。"
+        enriched_facts["report_charts"] = []
+        enriched_facts["report_charts_markdown"] = charts_markdown
+        enriched_meta["charts"] = []
+        enriched_meta["chart_count"] = 0
+        return enriched_facts, enriched_meta, charts_markdown
 
 
 async def _generate_llm_markdown(system_prompt: str, user_prompt: str, *, model_override: str | None = None) -> str:
@@ -650,6 +730,11 @@ def _prompts(kind: str, audience: str, facts: dict, meta: dict, previous_exists:
     if kind == "strategic" and audience == "human":
         system = _compose_report_system_prompt(
             "你的任务是生成一份极其深入的战略分析报告。输出 Markdown，报告总长度应在 2000-4000 字之间。\n\n"
+            "【标题与可视化硬性要求】\n"
+            "- `#` 只用于报告总标题，`##` 只用于一级章节，`###` 只用于二级小节，禁止使用 `####` 或更深标题。\n"
+            "- 必须保留并解释输入中提供的真实图表 Markdown，不能修改图表链接、标题或图表数字。\n"
+            "- 必须包含 `## 数据图表速览`，每张图后解释：图表说明、业务含义、数据限制。\n"
+            "- 一级章节标题要清晰可扫读，二级标题必须是结论型标题，不要写空泛标题。\n\n"
             "严格按以下 6 大模块结构生成，每个模块都必须展开详细论述，不能用简短的一两句话敷衍：\n\n"
             "## 1. 执行摘要与项目定性 (Executive Summary)\n"
             "  - 一句话定义项目当前所处的增长阶段\n"
@@ -688,6 +773,8 @@ def _prompts(kind: str, audience: str, facts: dict, meta: dict, previous_exists:
             f"版本是否已有历史报告：{previous_exists}\n"
             f"数据来源覆盖度：{meta.get('sample_count', 0)}/{meta.get('total_data_sources', 0)} 个数据源有数据\n"
             f"摘要元数据：{_json_dump(meta)}\n\n"
+            f"=== 必须引用的真实图表（由后端基于事实包生成，不得改写数字或链接）===\n"
+            f"{facts.get('report_charts_markdown', '当前数据不足，未生成图表。')}\n\n"
             f"=== 完整事实包（来自所有智能体的采集结果）===\n{_json_dump(facts)}"
         )
         return system, user
@@ -719,6 +806,11 @@ def _prompts(kind: str, audience: str, facts: dict, meta: dict, previous_exists:
     if kind == "periodic" and audience == "human":
         system = _compose_report_system_prompt(
             "你的任务是生成一份深度周报。输出 Markdown，报告总长度应在 1500-3000 字之间。\n\n"
+            "【标题与可视化硬性要求】\n"
+            "- `#` 只用于报告总标题，`##` 只用于一级章节，`###` 只用于二级小节，禁止使用 `####` 或更深标题。\n"
+            "- 必须保留并解释输入中提供的真实图表 Markdown，不能修改图表链接、标题或图表数字。\n"
+            "- 必须包含 `## 数据图表速览`，每张图后解释：图表说明、业务含义、数据限制。\n"
+            "- 少于 2 个时间点的指标不能写成趋势，只能写成当前快照。\n\n"
             "严格按以下结构生成，每个模块都要做深入的业务推导，不能停留在数据罗列层面：\n\n"
             "## 1. 本周最重要的变化 (Top Changes)\n"
             "  - 列出 3-5 个最重要的变化，每个变化不仅要说「发生了什么」，还要解释「为什么重要」「对增长意味着什么」\n"
@@ -746,6 +838,8 @@ def _prompts(kind: str, audience: str, facts: dict, meta: dict, previous_exists:
             f"统计窗口：{meta.get('window_start', '未知')} 到 {meta.get('window_end', '未知')}\n"
             f"数据来源覆盖度：{meta.get('sample_count', 0)}/{meta.get('total_data_sources', 0)} 个数据源有数据\n"
             f"元数据：{_json_dump(meta)}\n\n"
+            f"=== 必须引用的真实图表（由后端基于事实包生成，不得改写数字或链接）===\n"
+            f"{facts.get('report_charts_markdown', '当前数据不足，未生成图表。')}\n\n"
             f"=== 完整事实包（来自所有智能体的采集结果）===\n{_json_dump(facts)}"
         )
         return system, user
@@ -779,6 +873,16 @@ async def _generate_report_record(
     model = await _get_report_model()
     report_model = model
     content = ""
+    charts_markdown = ""
+    chart_asset_ids: list[str] = []
+
+    if audience == "human":
+        facts, meta, charts_markdown = _prepare_report_charts(kind, facts, meta)
+        chart_asset_ids = [
+            chart["asset_id"]
+            for chart in meta.get("charts", [])
+            if isinstance(chart.get("asset_id"), str)
+        ]
 
     # Human reports use the deep multi-agent pipeline;
     # Agent briefs stay single-call (they need to be concise).
@@ -793,6 +897,7 @@ async def _generate_report_record(
             used_pipeline = True
             if not content.strip():
                 raise RuntimeError("Pipeline returned empty report.")
+            content = _postprocess_human_report_content(content, charts_markdown)
         except Exception as pipeline_exc:
             pipeline_error = str(pipeline_exc) or pipeline_exc.__class__.__name__
             logger.warning(
@@ -810,9 +915,17 @@ async def _generate_report_record(
                 used_fallback = True
                 if fallback_model:
                     report_model = fallback_model
+                content = _postprocess_human_report_content(content, charts_markdown)
             except Exception as exc:
                 llm_error = str(exc) or exc.__class__.__name__
                 logger.exception("Report generation failed for %s/%s", kind, audience)
+                if chart_asset_ids:
+                    try:
+                        from opencmo.report_charts import delete_chart_assets
+
+                        delete_chart_assets(chart_asset_ids)
+                    except Exception:
+                        logger.exception("Failed to clean up chart assets for failed %s/%s report", kind, audience)
                 return _failed_report_payload(
                     meta,
                     model,

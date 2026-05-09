@@ -458,6 +458,8 @@ _PLAN_SYSTEM = """\
 3. 每个章节必须指定使用哪些 insights (用 id 引用) 作为论据
 4. 章节数量：4-6 个主体章节
 5. 引言和战略建议章节标记为 is_final_section: true（它们最后写）
+6. 标题层级必须清晰：最终 Markdown 只能使用 `#`、`##`、`###`，不能规划更深层级
+7. 必须规划一个图表解释章节，用于解释后端提供的真实图表，不要要求模型自行创造图表数据
 
 输出 JSON 格式：
 {
@@ -493,6 +495,8 @@ async def _phase_plan_outline(
         f"  类别：{project['category']}\n"
         f"  网址：{project['url']}\n"
         f"  数据质量：{reflection.get('data_quality_score', '?')}/100\n\n"
+        f"可用真实图表：\n"
+        f"{facts.get('report_charts_markdown', '当前数据不足，未生成图表。')}\n\n"
         f"分析发现（共 {len(distilled.get('insights', []))} 条）：\n"
         f"{_json_dump(distilled)}"
     )
@@ -535,6 +539,8 @@ _WRITE_SECTION_SYSTEM = """\
 11. 对于问题诊断，必须进行根因分析（回答"为什么会这样"），列出2-3个可能原因
 12. 如果有历史趋势数据，说明趋势方向和变化速度（如"过去3个月下降30%"）
 13. 每个问题都要关联到商业影响（流量、收入、市场份额等）
+14. 标题层级只能使用 `##` 和 `###`，禁止使用 `####` 或更深标题
+15. 不要自行生成图表数据；如果需要提到图表，只能引用输入中已经提供的图表
 
 输出纯 Markdown 文本（不要 JSON，不要代码块包裹）。
 以 ## 开头写章节标题，然后是正文段落。"""
@@ -691,6 +697,7 @@ _WRITE_EXEC_SUMMARY_SYSTEM = """\
 4. 明确指出 1-3 个最高优先级行动和建议时间窗口，但不要编造 ROI、流量损失或竞品增速
 5. 添加紧迫性提示，但只能基于输入中已经给出的事实和趋势
 6. 面向CMO决策者，30秒内让人理解"为什么现在必须行动"
+7. 如果输入包含真实图表，必须把图表作为证据引用，但不能改写图表数字
 
 输出纯 Markdown（以 ## 执行摘要 开头）。"""
 
@@ -778,6 +785,7 @@ async def _phase_synthesize(
         f"网址：{project['url']}\n"
         f"报告标题：{outline.get('report_title', '深度分析报告')}\n"
         f"叙事线索：{outline.get('narrative_arc', '无')}\n\n"
+        f"真实图表证据：\n{facts.get('report_charts_markdown', '当前数据不足，未生成图表。')}\n\n"
         f"核心发现要点：\n"
         + "\n".join(f"- {p}" for p in distilled.get("executive_summary_points", []))
         + f"\n\n贯穿主题：{', '.join(distilled.get('cross_cutting_themes', []))}\n\n"
