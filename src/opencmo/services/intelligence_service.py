@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import sqlite3
 
 from opencmo import storage
 
@@ -415,11 +416,28 @@ async def analyze_and_enrich_project(project_id: int, url: str, on_progress=None
     analysis = await analyze_url_with_ai(url, on_progress=on_progress, locale=locale)
 
     if analysis["brand_name"] or analysis["category"]:
-        await storage.update_project(
-            project_id,
-            brand_name=analysis["brand_name"] or None,
-            category=analysis["category"] or None,
-        )
+        project = await storage.get_project(project_id)
+        next_brand = analysis["brand_name"] or None
+        if project and next_brand:
+            existing = await storage.find_project_by_identity(next_brand, project["url"])
+            if existing and existing["id"] != project_id:
+                logger.warning(
+                    "Skipping project %d brand enrichment to %s because project %d already uses that brand/url.",
+                    project_id,
+                    next_brand,
+                    existing["id"],
+                )
+                next_brand = None
+        try:
+            await storage.update_project(
+                project_id,
+                brand_name=next_brand,
+                category=analysis["category"] or None,
+            )
+        except sqlite3.IntegrityError as exc:
+            logger.warning("Project %d metadata enrichment conflicted with an existing project: %s", project_id, exc)
+            if next_brand and analysis["category"]:
+                await storage.update_project(project_id, category=analysis["category"])
         logger.info(
             "Project %d enriched: brand=%s, category=%s, keywords=%d",
             project_id,

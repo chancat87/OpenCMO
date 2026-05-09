@@ -7,6 +7,7 @@ import pytest
 
 from opencmo import storage
 from opencmo.monitoring import _collect_signals, run_monitoring_workflow
+from opencmo.services.intelligence_service import analyze_and_enrich_project
 
 
 @pytest.fixture(autouse=True)
@@ -103,3 +104,29 @@ async def test_collect_signals_surfaces_github_rate_limit_as_warning():
     assert warning["code"] == "github_rate_limit"
     assert warning["kind"] == "source_limit"
     assert warning["blocking"] is False
+
+
+@pytest.mark.asyncio
+async def test_analysis_enrichment_skips_brand_update_when_identity_exists():
+    existing_id = await storage.ensure_project("ActualBrand", "https://same.test", "saas")
+    duplicate_id = await storage.ensure_project("Same", "https://same.test", "auto")
+
+    with patch(
+        "opencmo.services.intelligence_service.analyze_url_with_ai",
+        new=AsyncMock(return_value={
+            "brand_name": "ActualBrand",
+            "category": "ai",
+            "keywords": ["actualbrand monitoring"],
+            "competitors": [],
+        }),
+    ):
+        await analyze_and_enrich_project(duplicate_id, "https://same.test")
+
+    existing = await storage.get_project(existing_id)
+    duplicate = await storage.get_project(duplicate_id)
+    keywords = await storage.list_tracked_keywords(duplicate_id)
+
+    assert existing["brand_name"] == "ActualBrand"
+    assert duplicate["brand_name"] == "Same"
+    assert duplicate["category"] == "ai"
+    assert [item["keyword"] for item in keywords] == ["actualbrand monitoring"]

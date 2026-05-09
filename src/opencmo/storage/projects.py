@@ -137,6 +137,28 @@ async def find_projects_by_brand(brand_name: str) -> list[dict]:
         await db.close()
 
 
+async def find_project_by_identity(brand_name: str, url: str) -> dict | None:
+    """Find a project by the database identity key used for uniqueness."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT id, brand_name, url, category, aliases FROM projects WHERE brand_name = ? AND url = ?",
+            (brand_name, url),
+        )
+        row = await cursor.fetchone()
+        if not row:
+            return None
+        return {
+            "id": row[0],
+            "brand_name": row[1],
+            "url": row[2],
+            "category": row[3],
+            "aliases": _parse_aliases(row[4]),
+        }
+    finally:
+        await db.close()
+
+
 async def delete_project(project_id: int) -> bool:
     """Delete a project and all its related data. Returns True if deleted."""
     db = await get_db()
