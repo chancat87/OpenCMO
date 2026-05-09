@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from pathlib import Path
@@ -12,6 +13,15 @@ logger = logging.getLogger(__name__)
 
 _DB_PATH = Path(os.environ.get("OPENCMO_DB_PATH", Path.home() / ".opencmo" / "data.db"))
 _SCHEMA_READY_FOR: Path | None = None
+_ENSURE_LOCK: asyncio.Lock | None = None
+
+
+def _get_ensure_lock() -> asyncio.Lock:
+    """Lazy per-loop lock so concurrent first calls don't race the bootstrap."""
+    global _ENSURE_LOCK
+    if _ENSURE_LOCK is None:
+        _ENSURE_LOCK = asyncio.Lock()
+    return _ENSURE_LOCK
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -23,6 +33,7 @@ CREATE TABLE IF NOT EXISTS projects (
     brand_name TEXT NOT NULL,
     url TEXT NOT NULL,
     category TEXT NOT NULL,
+    aliases TEXT NOT NULL DEFAULT '[]',  -- JSON array of brand aliases (v15+)
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(brand_name, url)
 );
@@ -40,8 +51,16 @@ CREATE TABLE IF NOT EXISTS seo_scans (
     has_robots_txt INTEGER,
     has_sitemap INTEGER,
     has_schema_org INTEGER,
-    seo_health_score REAL   -- multi-dimensional health score 0-100 (v9+)
+    seo_health_score REAL,    -- multi-dimensional health score 0-100 (v9+)
+    score_inp REAL,           -- Interaction to Next Paint, ms, from CrUX field data (v16+)
+    pagespeed_available INTEGER,  -- 1=PageSpeed responded, 0=neutral default applied (v16+)
+    has_hsts INTEGER,         -- Strict-Transport-Security header present (v16+)
+    has_security_headers INTEGER, -- X-Frame-Options or CSP present (v16+)
+    params_hash TEXT,         -- sha1 of (url, scan params) for idempotency (v18+)
+    window_start TEXT         -- floor of scan time to the idempotency window (v18+)
 );
+-- idx_seo_scans_dedupe is created in _ensure_dedupe_indexes() after migrations
+-- so it doesn't run before the columns it references exist on legacy DBs.
 
 CREATE TABLE IF NOT EXISTS geo_scans (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -52,8 +71,12 @@ CREATE TABLE IF NOT EXISTS geo_scans (
     position_score INTEGER,
     sentiment_score INTEGER,
     crawl_success_rate REAL,      -- fraction of providers that returned data (v9+)
-    platform_results_json TEXT NOT NULL
+    platform_results_json TEXT NOT NULL,
+    share_of_voice_json TEXT,     -- JSON: brand vs competitor mention shares (v17+)
+    params_hash TEXT,             -- sha1 of (brand, category, providers) for idempotency (v18+)
+    window_start TEXT             -- floor of scan time to the idempotency window (v18+)
 );
+-- idx_geo_scans_dedupe is created in _ensure_dedupe_indexes() after migrations.
 
 CREATE TABLE IF NOT EXISTS community_scans (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -182,6 +205,7 @@ CREATE TABLE IF NOT EXISTS competitors (
     name TEXT NOT NULL,
     url TEXT,
     category TEXT,
+    aliases TEXT NOT NULL DEFAULT '[]',  -- JSON array of competitor aliases (v15+)
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(project_id, name)
 );
@@ -700,6 +724,25 @@ _MIGRATIONS: list[tuple[int, str, list[str]]] = [
         "CREATE INDEX IF NOT EXISTS idx_blog_drafts_project ON blog_drafts(project_id, created_at DESC)",
         "CREATE INDEX IF NOT EXISTS idx_blog_drafts_task ON blog_drafts(task_id)",
     ]),
+    (15, "brand and competitor aliases", [
+        "ALTER TABLE projects ADD COLUMN aliases TEXT NOT NULL DEFAULT '[]'",
+        "ALTER TABLE competitors ADD COLUMN aliases TEXT NOT NULL DEFAULT '[]'",
+    ]),
+    (16, "INP, HSTS, security headers, pagespeed availability on seo_scans", [
+        "ALTER TABLE seo_scans ADD COLUMN score_inp REAL",
+        "ALTER TABLE seo_scans ADD COLUMN pagespeed_available INTEGER",
+        "ALTER TABLE seo_scans ADD COLUMN has_hsts INTEGER",
+        "ALTER TABLE seo_scans ADD COLUMN has_security_headers INTEGER",
+    ]),
+    (17, "share-of-voice on geo_scans", [
+        "ALTER TABLE geo_scans ADD COLUMN share_of_voice_json TEXT",
+    ]),
+    (18, "scan idempotency columns (indexes added by _ensure_dedupe_indexes)", [
+        "ALTER TABLE seo_scans ADD COLUMN params_hash TEXT",
+        "ALTER TABLE seo_scans ADD COLUMN window_start TEXT",
+        "ALTER TABLE geo_scans ADD COLUMN params_hash TEXT",
+        "ALTER TABLE geo_scans ADD COLUMN window_start TEXT",
+    ]),
 ]
 
 _LATEST_VERSION = _MIGRATIONS[-1][0]
@@ -728,12 +771,45 @@ def _is_idempotent_migration_error(exc: Exception) -> bool:
     return "duplicate column name" in message or "already exists" in message
 
 
+async def _ensure_dedupe_indexes(db: aiosqlite.Connection) -> None:
+    """Create scan-dedupe indexes after migrations confirm columns exist."""
+    statements = [
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_seo_scans_dedupe "
+        "ON seo_scans(project_id, params_hash, window_start) "
+        "WHERE params_hash IS NOT NULL AND window_start IS NOT NULL",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_geo_scans_dedupe "
+        "ON geo_scans(project_id, params_hash, window_start) "
+        "WHERE params_hash IS NOT NULL AND window_start IS NOT NULL",
+    ]
+    for stmt in statements:
+        try:
+            await db.execute(stmt)
+        except Exception as exc:
+            if not _is_idempotent_migration_error(exc):
+                logger.debug("dedupe index skipped: %s", exc)
+
+
 async def _reconcile_required_columns(db: aiosqlite.Connection) -> None:
     """Repair historical schema drift even when schema_version is already current."""
     required_columns = {
-        "seo_scans": {"seo_health_score": "ALTER TABLE seo_scans ADD COLUMN seo_health_score REAL"},
-        "geo_scans": {"crawl_success_rate": "ALTER TABLE geo_scans ADD COLUMN crawl_success_rate REAL"},
+        "seo_scans": {
+            "seo_health_score": "ALTER TABLE seo_scans ADD COLUMN seo_health_score REAL",
+            "score_inp": "ALTER TABLE seo_scans ADD COLUMN score_inp REAL",
+            "pagespeed_available": "ALTER TABLE seo_scans ADD COLUMN pagespeed_available INTEGER",
+            "has_hsts": "ALTER TABLE seo_scans ADD COLUMN has_hsts INTEGER",
+            "has_security_headers": "ALTER TABLE seo_scans ADD COLUMN has_security_headers INTEGER",
+            "params_hash": "ALTER TABLE seo_scans ADD COLUMN params_hash TEXT",
+            "window_start": "ALTER TABLE seo_scans ADD COLUMN window_start TEXT",
+        },
+        "geo_scans": {
+            "crawl_success_rate": "ALTER TABLE geo_scans ADD COLUMN crawl_success_rate REAL",
+            "share_of_voice_json": "ALTER TABLE geo_scans ADD COLUMN share_of_voice_json TEXT",
+            "params_hash": "ALTER TABLE geo_scans ADD COLUMN params_hash TEXT",
+            "window_start": "ALTER TABLE geo_scans ADD COLUMN window_start TEXT",
+        },
         "scheduled_jobs": {"locale": "ALTER TABLE scheduled_jobs ADD COLUMN locale TEXT NOT NULL DEFAULT 'en'"},
+        "projects": {"aliases": "ALTER TABLE projects ADD COLUMN aliases TEXT NOT NULL DEFAULT '[]'"},
+        "competitors": {"aliases": "ALTER TABLE competitors ADD COLUMN aliases TEXT NOT NULL DEFAULT '[]'"},
     }
 
     for table_name, columns in required_columns.items():
@@ -765,35 +841,47 @@ async def _run_migrations(db: aiosqlite.Connection) -> None:
 
 
 async def ensure_db() -> None:
-    """Create the database and schema once per process and DB path."""
+    """Create the database and schema once per process and DB path.
+
+    Wrapped in an asyncio.Lock so concurrent first callers (cold start, tests
+    using ``patch.object(storage, "_DB_PATH", ...)`` then firing parallel work)
+    can't both run the bootstrap and race on ``ALTER TABLE``.
+    """
     global _SCHEMA_READY_FOR
     _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     if _SCHEMA_READY_FOR == _DB_PATH and _DB_PATH.exists():
         return
 
-    db = await aiosqlite.connect(str(_DB_PATH))
-    try:
-        await db.execute("PRAGMA journal_mode=WAL")
-        await db.execute("PRAGMA foreign_keys=ON")
-        await db.executescript(_SCHEMA)
+    async with _get_ensure_lock():
+        # Re-check inside the critical section: another waiter may have just
+        # finished bootstrapping while we were blocked on the lock.
+        if _SCHEMA_READY_FOR == _DB_PATH and _DB_PATH.exists():
+            return
 
-        # For fresh databases, stamp the latest version directly.
-        current = await _get_schema_version(db)
-        if current == 0:
-            await db.execute(
-                "INSERT INTO schema_version (version) VALUES (?)",
-                (_LATEST_VERSION,),
-            )
+        db = await aiosqlite.connect(str(_DB_PATH))
+        try:
+            await db.execute("PRAGMA journal_mode=WAL")
+            await db.execute("PRAGMA foreign_keys=ON")
+            await db.executescript(_SCHEMA)
+
+            # For fresh databases, stamp the latest version directly.
+            current = await _get_schema_version(db)
+            if current == 0:
+                await db.execute(
+                    "INSERT INTO schema_version (version) VALUES (?)",
+                    (_LATEST_VERSION,),
+                )
+                await db.commit()
+            else:
+                await _run_migrations(db)
+
+            await _reconcile_required_columns(db)
+            await _ensure_dedupe_indexes(db)
             await db.commit()
-        else:
-            await _run_migrations(db)
 
-        await _reconcile_required_columns(db)
-        await db.commit()
-
-        _SCHEMA_READY_FOR = _DB_PATH
-    finally:
-        await db.close()
+            _SCHEMA_READY_FOR = _DB_PATH
+        finally:
+            await db.close()
 
 
 async def get_db() -> aiosqlite.Connection:

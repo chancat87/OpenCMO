@@ -12,7 +12,7 @@ import { SeoPerformanceChart } from "../components/charts/SeoPerformanceChart";
 import { CwvMiniChart } from "../components/charts/CwvMiniChart";
 import { useI18n } from "../i18n";
 import { ActionTip } from "../components/common/ActionTip";
-import { Gauge, Timer, Move, Zap } from "lucide-react";
+import { Gauge, Timer, Move, Zap, MousePointerClick, ShieldCheck, ShieldAlert, Info } from "lucide-react";
 
 function getCwvStatus(value: number | null | undefined, good: number, poor: number): "good" | "warning" | "poor" {
   if (value == null) return "warning";
@@ -38,14 +38,25 @@ export function SeoPage() {
   if (!summary) return <ErrorAlert message={t("common.projectNotFound")} />;
 
   const perf = chart?.performance as (number | null)[] | undefined;
-  const lcp = chart?.lcp as (number | null)[] | undefined;
+  const lcpMs = chart?.lcp as (number | null)[] | undefined;
   const cls = chart?.cls as (number | null)[] | undefined;
   const tbt = chart?.tbt as (number | null)[] | undefined;
+  const inp = chart?.inp as (number | null)[] | undefined;
+  const hsts = chart?.has_hsts as (boolean | null)[] | undefined;
+  const sec = chart?.has_security_headers as (boolean | null)[] | undefined;
+  const pagespeedAvail = chart?.pagespeed_available as (boolean | null)[] | undefined;
+
+  // PageSpeed returns LCP in ms; UI thresholds (2.5s/4s) and labels expect seconds.
+  const lcp = lcpMs?.map((v) => (v != null ? v / 1000 : null));
 
   const latestPerf = perf?.[perf.length - 1];
   const latestLcp = lcp?.[lcp.length - 1];
   const latestCls = cls?.[cls.length - 1];
   const latestTbt = tbt?.[tbt.length - 1];
+  const latestInp = inp?.[inp.length - 1];
+  const latestHsts = hsts?.[hsts.length - 1];
+  const latestSec = sec?.[sec.length - 1];
+  const latestPagespeed = pagespeedAvail?.[pagespeedAvail.length - 1];
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -96,6 +107,53 @@ export function SeoPage() {
               accentText="text-sky-600"
             />
           </div>
+
+          {/* INP + Security headers strip (only renders when at least one signal is present) */}
+          {(latestInp != null || latestHsts != null || latestSec != null) && (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {latestInp != null && (
+                <KpiCard
+                  icon={MousePointerClick}
+                  label={t("seo.metric.inp") || "INP (CrUX field)"}
+                  value={`${Math.round(latestInp)}ms`}
+                  delta={getDelta(inp)}
+                  status={getCwvStatus(latestInp, 200, 500)}
+                  accentBg="bg-indigo-50"
+                  accentText="text-indigo-600"
+                />
+              )}
+              {latestHsts != null && (
+                <KpiCard
+                  icon={latestHsts ? ShieldCheck : ShieldAlert}
+                  label={t("seo.metric.hsts") || "HSTS"}
+                  value={latestHsts ? (t("common.present") || "Present") : (t("common.missing") || "Missing")}
+                  status={latestHsts ? "good" : "warning"}
+                  accentBg={latestHsts ? "bg-emerald-50" : "bg-amber-50"}
+                  accentText={latestHsts ? "text-emerald-600" : "text-amber-600"}
+                />
+              )}
+              {latestSec != null && (
+                <KpiCard
+                  icon={latestSec ? ShieldCheck : ShieldAlert}
+                  label={t("seo.metric.securityHeaders") || "X-Frame / CSP"}
+                  value={latestSec ? (t("common.present") || "Present") : (t("common.missing") || "Missing")}
+                  status={latestSec ? "good" : "warning"}
+                  accentBg={latestSec ? "bg-emerald-50" : "bg-amber-50"}
+                  accentText={latestSec ? "text-emerald-600" : "text-amber-600"}
+                />
+              )}
+            </div>
+          )}
+
+          {latestPagespeed === false && (
+            <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
+              <Info className="h-4 w-4 shrink-0" />
+              <span>
+                {t("seo.pagespeedUnavailable") ||
+                  "PageSpeed Insights data unavailable for this scan — performance metrics use neutral fallback values. Add PAGESPEED_API_KEY to get real Core Web Vitals."}
+              </span>
+            </div>
+          )}
 
           {/* Performance Score Trend */}
           <ChartCard title={t("score.seoScore")} accentBorder="border-l-sky-500">

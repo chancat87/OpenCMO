@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import urllib.robotparser
 from html.parser import HTMLParser
 from urllib.parse import urlparse
 
@@ -220,7 +221,9 @@ def _compute_seo_health_score(
 async def _fetch_core_web_vitals(url: str) -> dict | None:
     """Fetch Core Web Vitals from Google PageSpeed Insights API.
 
-    Returns dict with keys: performance, lcp, cls, tbt; or None on failure.
+    Returns dict with keys: performance, lcp, cls, tbt, inp; or None on failure.
+    INP is sourced from CrUX field data (loadingExperience.metrics) when present
+    — sites without enough real-user traffic may not have an INP value.
     """
     from opencmo import llm
     api_key = llm.get_key("PAGESPEED_API_KEY", "")
@@ -248,19 +251,65 @@ async def _fetch_core_web_vitals(url: str) -> dict | None:
         cls_ = audits.get("cumulative-layout-shift", {}).get("numericValue")
         tbt = audits.get("total-blocking-time", {}).get("numericValue")
 
+        # INP comes from CrUX field data when available, falling back to origin-level.
+        def _crux_inp(section: dict) -> float | None:
+            metrics = section.get("metrics", {}) if isinstance(section, dict) else {}
+            inp_obj = metrics.get("INTERACTION_TO_NEXT_PAINT")
+            if isinstance(inp_obj, dict):
+                v = inp_obj.get("percentile")
+                return float(v) if v is not None else None
+            return None
+
+        inp = _crux_inp(data.get("loadingExperience", {})) or _crux_inp(
+            data.get("originLoadingExperience", {})
+        )
+
         return {
             "performance": perf_score,
             "lcp": lcp,
             "cls": cls_,
             "tbt": tbt,
+            "inp": inp,
         }
     except Exception as exc:
         logger.debug("PageSpeed API failed for %s: %s", url, exc)
         return None
 
 
+async def _check_security_headers(url: str) -> dict:
+    """Inspect response headers for HSTS, X-Frame-Options, and CSP.
+
+    Returns dict with keys: has_hsts, has_xfo, has_csp, has_security_headers.
+    """
+    result = {
+        "has_hsts": False,
+        "has_xfo": False,
+        "has_csp": False,
+        "has_security_headers": False,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            resp = await client.head(url)
+            # Some servers don't allow HEAD — fall back to a small GET.
+            if resp.status_code >= 400:
+                resp = await client.get(url, headers={"Range": "bytes=0-0"})
+            headers = {k.lower(): v for k, v in resp.headers.items()}
+            result["has_hsts"] = "strict-transport-security" in headers
+            result["has_xfo"] = "x-frame-options" in headers
+            result["has_csp"] = "content-security-policy" in headers
+            result["has_security_headers"] = result["has_xfo"] or result["has_csp"]
+    except Exception as exc:
+        logger.debug("Security header check failed for %s: %s", url, exc)
+    return result
+
+
 async def _check_robots_and_sitemap(url: str) -> dict:
     """Check robots.txt and sitemap.xml for the given URL's origin.
+
+    Uses :class:`urllib.robotparser.RobotFileParser` so Allow directives that
+    re-permit subpaths under a wildcard ``Disallow: /`` are honored correctly.
+    The ``robots_disallow_all`` flag specifically reports whether the audited
+    URL itself is unfetchable by a generic crawler (`*`).
 
     Returns dict with keys: has_robots, robots_disallow_all, sitemap_in_robots,
     has_sitemap, sitemap_loc_count.
@@ -296,15 +345,14 @@ async def _check_robots_and_sitemap(url: str) -> dict:
                 if robots_resp.status_code == 200 and _looks_like_robots(robots_resp.text):
                     result["has_robots"] = True
                     body = robots_resp.text
+                    rp = urllib.robotparser.RobotFileParser()
+                    rp.parse(body.splitlines())
+                    # Generic crawler perspective on the audited URL itself.
+                    result["robots_disallow_all"] = not rp.can_fetch("*", url)
                     for line in body.splitlines():
-                        stripped = line.strip().lower()
-                        if stripped.startswith("disallow") and "/ " not in stripped:
-                            # Check for "Disallow: /" exactly (block everything)
+                        stripped = line.strip()
+                        if stripped.lower().startswith("sitemap:"):
                             parts = stripped.split(":", 1)
-                            if len(parts) == 2 and parts[1].strip() == "/":
-                                result["robots_disallow_all"] = True
-                        if stripped.startswith("sitemap:"):
-                            parts = line.strip().split(":", 1)
                             if len(parts) == 2:
                                 result["sitemap_in_robots"] = parts[1].strip()
             except httpx.HTTPError:
@@ -326,7 +374,15 @@ async def _check_robots_and_sitemap(url: str) -> dict:
     return result
 
 
-def _build_report(parser: _SEOParser, result, url: str, *, cwv: dict | None = None, robots_sitemap: dict | None = None) -> str:
+def _build_report(
+    parser: _SEOParser,
+    result,
+    url: str,
+    *,
+    cwv: dict | None = None,
+    robots_sitemap: dict | None = None,
+    security_headers: dict | None = None,
+) -> str:
     lines: list[str] = [f"# SEO Audit Report: {url}\n"]
 
     # SSL
@@ -474,8 +530,34 @@ def _build_report(parser: _SEOParser, result, url: str, *, cwv: dict | None = No
             lines.append(f"{tag} TBT (Total Blocking Time): {tbt:.0f}ms")
         else:
             lines.append(_warn("TBT", "Not available"))
+
+        inp = cwv.get("inp")
+        if inp is not None:
+            tag = _cwv_status(inp, 200, 500)
+            lines.append(f"{tag} INP (Interaction to Next Paint, CrUX field data): {inp:.0f}ms")
+        else:
+            lines.append(_warn("INP", "Not available — site may not have enough real-user traffic for CrUX field data"))
     else:
         lines.append(_warn("Core Web Vitals", "Could not fetch PageSpeed data — check network or set PAGESPEED_API_KEY"))
+
+    # --- Security headers ---
+    lines.append("")
+    lines.append("## Security Headers")
+    if security_headers is not None:
+        if security_headers.get("has_hsts"):
+            lines.append(_check("Strict-Transport-Security (HSTS)", True, "Header present"))
+        else:
+            lines.append(_warn("Strict-Transport-Security (HSTS)", "Missing — add `Strict-Transport-Security: max-age=31536000; includeSubDomains` to enforce HTTPS"))
+        if security_headers.get("has_csp"):
+            lines.append(_check("Content-Security-Policy", True, "Header present"))
+        else:
+            lines.append(_warn("Content-Security-Policy", "Missing — consider adding to mitigate XSS"))
+        if security_headers.get("has_xfo"):
+            lines.append(_check("X-Frame-Options", True, "Header present"))
+        else:
+            lines.append(_warn("X-Frame-Options", "Missing — add `X-Frame-Options: DENY` or use CSP frame-ancestors"))
+    else:
+        lines.append(_warn("Security Headers", "Could not check"))
 
     # --- robots.txt & sitemap.xml ---
     lines.append("")
@@ -527,11 +609,17 @@ async def audit_page_seo(url: str) -> str:
         html = getattr(result, "html", "") or ""
         parser.feed(html)
 
-        # Fetch external data (failures are non-blocking)
-        cwv = await _fetch_core_web_vitals(url)
-        robots_sitemap = await _check_robots_and_sitemap(url)
+        # Fetch external data concurrently (failures are non-blocking).
+        cwv, robots_sitemap, security_headers = await asyncio.gather(
+            _fetch_core_web_vitals(url),
+            _check_robots_and_sitemap(url),
+            _check_security_headers(url),
+        )
 
-        report = _build_report(parser, result, url, cwv=cwv, robots_sitemap=robots_sitemap)
+        report = _build_report(
+            parser, result, url,
+            cwv=cwv, robots_sitemap=robots_sitemap, security_headers=security_headers,
+        )
 
         # Compute multi-dimensional health score
         seo_health_score = _compute_seo_health_score(
@@ -553,10 +641,16 @@ async def audit_page_seo(url: str) -> str:
                 score_lcp=cwv.get("lcp") if cwv else None,
                 score_cls=cwv.get("cls") if cwv else None,
                 score_tbt=cwv.get("tbt") if cwv else None,
+                score_inp=cwv.get("inp") if cwv else None,
                 has_robots_txt=robots_sitemap.get("has_robots") if robots_sitemap else None,
                 has_sitemap=robots_sitemap.get("has_sitemap") if robots_sitemap else None,
                 has_schema_org=bool(parser.schema_types),
                 seo_health_score=seo_health_score,
+                pagespeed_available=cwv is not None,
+                has_hsts=security_headers.get("has_hsts") if security_headers else None,
+                has_security_headers=security_headers.get("has_security_headers") if security_headers else None,
+                params_hash=storage.scan_params_hash("seo", url),
+                window_start=storage.scan_window_start(),
             )
         except Exception:
             pass  # Storage failure should not block the audit

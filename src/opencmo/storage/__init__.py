@@ -198,6 +198,7 @@ from opencmo.storage.scan_runs import (
 
 # --- Scans (SEO / GEO / Community) ---
 from opencmo.storage.scans import (
+    SCAN_DEDUPE_WINDOW_SECONDS,
     get_community_history,
     get_geo_history,
     get_latest_scans,
@@ -206,6 +207,8 @@ from opencmo.storage.scans import (
     save_community_scan,
     save_geo_scan,
     save_seo_scan,
+    scan_params_hash,
+    scan_window_start,
 )
 
 # --- SERP tracking ---
@@ -280,6 +283,7 @@ __all__ = [
     "save_seo_scan", "save_geo_scan", "save_community_scan",
     "get_seo_history", "get_geo_history", "get_community_history",
     "get_latest_scans", "get_previous_scans",
+    "scan_params_hash", "scan_window_start", "SCAN_DEDUPE_WINDOW_SECONDS",
     # discussions
     "upsert_tracked_discussion", "save_discussion_snapshot",
     "get_tracked_discussions", "get_discussion_snapshots",

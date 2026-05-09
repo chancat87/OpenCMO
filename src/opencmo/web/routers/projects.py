@@ -325,10 +325,14 @@ async def api_v1_seo_chart(project_id: int):
             for s in history
         ],
         "pagespeed_performance": [s["score_performance"] for s in history],
+        "pagespeed_available": [s.get("pagespeed_available") for s in history],
         "health": [s.get("seo_health_score") for s in history],
         "lcp": [s["score_lcp"] for s in history],
         "cls": [s["score_cls"] for s in history],
         "tbt": [s["score_tbt"] for s in history],
+        "inp": [s.get("score_inp") for s in history],
+        "has_hsts": [s.get("has_hsts") for s in history],
+        "has_security_headers": [s.get("has_security_headers") for s in history],
     })
 
 
@@ -339,14 +343,33 @@ async def api_v1_geo_history(project_id: int):
 
 @router.get("/projects/{project_id}/geo/chart")
 async def api_v1_geo_chart(project_id: int):
+    import json as _json
+
     history = await storage.get_geo_history(project_id, limit=30)
     history.reverse()
+
+    # Surface the latest share-of-voice payload (most recent scan) so the
+    # frontend can render the SOV table without re-fetching history.
+    latest_sov = None
+    for snapshot in reversed(history):
+        raw = snapshot.get("share_of_voice_json")
+        if not raw:
+            continue
+        try:
+            latest_sov = _json.loads(raw)
+        except (TypeError, ValueError):
+            latest_sov = None
+        if latest_sov:
+            break
+
     return JSONResponse({
         "labels": [s["scanned_at"][:10] for s in history],
         "geo_score": [s["geo_score"] for s in history],
         "visibility": [s["visibility_score"] for s in history],
         "position": [s["position_score"] for s in history],
         "sentiment": [s["sentiment_score"] for s in history],
+        "crawl_success_rate": [s.get("crawl_success_rate") for s in history],
+        "share_of_voice": latest_sov,
     })
 
 

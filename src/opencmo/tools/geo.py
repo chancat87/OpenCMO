@@ -1,8 +1,35 @@
+import asyncio
 import json
 
 from agents import function_tool
 
-from opencmo.tools.geo_providers import GEO_PROVIDER_REGISTRY, GeoProviderResult
+from opencmo.tools.geo_providers import (
+    GEO_PROVIDER_REGISTRY,
+    GeoProviderResult,
+    compute_share_of_voice,
+    get_enabled_providers,
+    reset_brand_aliases,
+    set_brand_aliases,
+)
+
+
+async def _resolve_brand_context(brand_name: str) -> tuple[list[str], list[tuple[str, list[str]]]]:
+    """Look up project-defined aliases and competitors. Empty if no/ambiguous project."""
+    try:
+        from opencmo import storage
+        matches = await storage.find_projects_by_brand(brand_name)
+        if len(matches) != 1:
+            return [], []
+        project = matches[0]
+        aliases = list(project.get("aliases") or [])
+        competitors_rows = await storage.list_competitors(project["id"])
+        competitors = [
+            (c["name"], list(c.get("aliases") or []))
+            for c in competitors_rows
+        ]
+        return aliases, competitors
+    except Exception:
+        return [], []
 
 
 @function_tool
@@ -19,50 +46,85 @@ async def scan_geo_visibility(brand_name: str, category: str) -> str:
         brand_name: The brand or product name to search for.
         category: The product category (e.g., "web scraping", "project management").
     """
-    enabled_providers = [p for p in GEO_PROVIDER_REGISTRY if p.is_enabled]
+    enabled_providers = get_enabled_providers()
     disabled_providers = [p for p in GEO_PROVIDER_REGISTRY if not p.is_enabled]
 
     if not enabled_providers:
         return "No GEO providers are enabled. Check your environment configuration."
 
-    # Use multi-query aggregation for deeper analysis
-    aggregated_results = {}
-    flat_results: dict[str, GeoProviderResult] = {}
+    aliases, competitors = await _resolve_brand_context(brand_name)
+    aliases_token = set_brand_aliases(aliases)
+    try:
+        return await _run_scan(
+            brand_name, category, enabled_providers, disabled_providers,
+            brand_aliases=aliases, competitors=competitors,
+        )
+    finally:
+        reset_brand_aliases(aliases_token)
 
-    for provider in enabled_providers:
+
+async def _run_scan(
+    brand_name: str,
+    category: str,
+    enabled_providers: list,
+    disabled_providers: list,
+    *,
+    brand_aliases: list[str] | None = None,
+    competitors: list[tuple[str, list[str]]] | None = None,
+) -> str:
+    # Run all enabled providers concurrently. Crawl providers self-serialize
+    # via browser_slot; LLM providers each hit a different vendor endpoint.
+    # asyncio.create_task() copies the contextvar (alias setup) into each branch.
+    async def _check_one(provider):
         try:
             agg = await provider.check_visibility_multi(brand_name, category)
-            aggregated_results[provider.name] = agg
-            # Create a backward-compatible flat result for scoring
-            flat_results[provider.name] = GeoProviderResult(
-                platform=provider.name,
+            return provider.name, agg, None
+        except Exception as exc:
+            return provider.name, None, exc
+
+    raw = await asyncio.gather(*(_check_one(p) for p in enabled_providers))
+
+    aggregated_results = {}
+    flat_results: dict[str, GeoProviderResult] = {}
+    for name, agg, exc in raw:
+        if agg is not None:
+            aggregated_results[name] = agg
+            flat_results[name] = GeoProviderResult(
+                platform=name,
                 mentioned=agg.mentioned,
                 mention_count=agg.total_mention_count,
                 position_pct=agg.best_position_pct,
                 content_snippet="",  # snippets are in per_query_results
                 error=agg.error,
             )
-        except Exception as e:
-            flat_results[provider.name] = GeoProviderResult(
-                platform=provider.name,
+        else:
+            flat_results[name] = GeoProviderResult(
+                platform=name,
                 mentioned=False,
                 mention_count=0,
                 position_pct=None,
                 content_snippet="",
-                error=str(e),
+                error=str(exc) if exc else "no result",
+                source_status="error",
             )
 
-    # Compute GEO Score
-    successful_providers = sum(1 for r in flat_results.values() if not r.error)
-    crawl_success_rate = successful_providers / len(enabled_providers) if enabled_providers else 0.0
+    # Carry source_status from aggregated results onto flat results so the
+    # backward-compat scoring path can exclude blocked/empty providers.
+    for name, agg in aggregated_results.items():
+        flat_results[name].source_status = agg.source_status
 
-    # Visibility (0-40): mentioned on how many platforms
-    platforms_mentioned = sum(1 for r in flat_results.values() if r.mentioned)
-    visibility_score = int(platforms_mentioned / len(enabled_providers) * 40) if enabled_providers else 0
+    # Compute GEO Score — only count providers that actually observed something.
+    usable = [r for r in flat_results.values() if r.source_status == "ok"]
+    usable_count = len(usable)
+    crawl_success_rate = usable_count / len(enabled_providers) if enabled_providers else 0.0
+
+    # Visibility (0-40): mentioned on how many *usable* platforms.
+    platforms_mentioned = sum(1 for r in usable if r.mentioned)
+    visibility_score = int(platforms_mentioned / usable_count * 40) if usable_count else 0
 
     # Position (0-30): earlier mentions = higher score
     position_scores = []
-    for r in flat_results.values():
+    for r in usable:
         if r.position_pct is not None:
             # 0% position = score 30, 100% = score 0
             position_scores.append(30 * (1 - r.position_pct / 100))
@@ -100,6 +162,16 @@ async def scan_geo_visibility(brand_name: str, category: str) -> str:
     else:
         geo_score = visibility_score + position_score + (sentiment_score or 0)
 
+    # Compute share-of-voice across competitors when project context is available.
+    sov: dict | None = None
+    if competitors:
+        sov_snippets: list[str] = []
+        for agg in aggregated_results.values():
+            for qr in agg.per_query_results:
+                if qr.content_snippet and qr.source_status == "ok":
+                    sov_snippets.append(qr.content_snippet)
+        sov = compute_share_of_voice(sov_snippets, brand_name, brand_aliases, competitors)
+
     # Persist scan (best-effort, do not block on failure)
     try:
         from opencmo import storage
@@ -111,6 +183,7 @@ async def scan_geo_visibility(brand_name: str, category: str) -> str:
                     "mention_count": r.mention_count,
                     "position_pct": r.position_pct,
                     "error": r.error,
+                    "source_status": r.source_status,
                 }
                 for name, r in flat_results.items()
             }
@@ -123,6 +196,7 @@ async def scan_geo_visibility(brand_name: str, category: str) -> str:
         }
         platform_results_json = json.dumps(payload)
         # save_geo_scan requires a project_id; use project_id=0 as ad-hoc scan
+        provider_names = sorted(p.name for p in enabled_providers)
         await storage.save_geo_scan(
             project_id=0,
             geo_score=geo_score,
@@ -131,6 +205,11 @@ async def scan_geo_visibility(brand_name: str, category: str) -> str:
             sentiment_score=sentiment_score,
             crawl_success_rate=crawl_success_rate,
             platform_results_json=platform_results_json,
+            share_of_voice_json=json.dumps(sov) if sov is not None else None,
+            params_hash=storage.scan_params_hash(
+                "geo", brand_name.lower(), category.lower(), provider_names,
+            ),
+            window_start=storage.scan_window_start(),
         )
     except Exception:
         pass  # storage persistence is best-effort
@@ -153,9 +232,37 @@ async def scan_geo_visibility(brand_name: str, category: str) -> str:
         f"## Platform Results ({len(enabled_providers)} enabled, {len(disabled_providers)} disabled)\n",
     ]
 
+    if sov is not None:
+        share_pct = lambda v: f"{v * 100:.1f}%"  # noqa: E731
+        sov_lines = [
+            "## Share of Voice",
+            "",
+            f"Across {sov['total_mentions']} brand-or-competitor mentions in usable AI responses:",
+            "",
+            "| Brand | Mentions | Share |",
+            "|-------|---------:|------:|",
+            f"| **{sov['brand']['name']}** | {sov['brand']['mentions']} | {share_pct(sov['brand']['share'])} |",
+        ]
+        for c in sov["competitors"]:
+            sov_lines.append(f"| {c['name']} | {c['mentions']} | {share_pct(c['share'])} |")
+        sov_lines.append("")
+        # Insert SOV section right before Platform Results for visibility
+        platform_idx = next(i for i, line in enumerate(lines) if line.startswith("## Platform Results"))
+        lines[platform_idx:platform_idx] = sov_lines
+
     for name, data in flat_results.items():
-        if data.error and not data.mentioned:
-            lines.append(f"### {name} [enabled]: ERROR -- {data.error}\n")
+        if data.source_status == "error":
+            lines.append(f"### {name} [enabled]: ERROR -- {data.error or 'unknown'}\n")
+            continue
+        if data.source_status == "blocked":
+            lines.append(
+                f"### {name} [enabled]: BLOCKED — provider returned a captcha/anti-bot page; not counted in scoring\n"
+            )
+            continue
+        if data.source_status == "empty":
+            lines.append(
+                f"### {name} [enabled]: EMPTY — provider returned no usable content (likely JS-rendered SPA); not counted in scoring\n"
+            )
             continue
         status = "FOUND" if data.mentioned else "NOT FOUND"
         lines.append(f"### {name} [enabled]: {status}")

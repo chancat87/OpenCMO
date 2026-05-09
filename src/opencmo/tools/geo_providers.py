@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import contextvars
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from urllib.parse import quote_plus
 
 from crawl4ai import AsyncWebCrawler
 
@@ -49,6 +52,10 @@ class GeoProviderResult:
     content_snippet: str  # <=snippet_chars
     error: str | None
     query: str = ""  # which query produced this result
+    # "ok" | "empty" | "blocked" | "error" — distinguishes "no mention" from "couldn't observe".
+    # Crawl providers return "blocked"/"empty" when the response is a captcha/JS shell,
+    # so they shouldn't deflate the visibility denominator.
+    source_status: str = "ok"
 
 
 @dataclass
@@ -60,13 +67,59 @@ class GeoAggregatedResult:
     best_position_pct: float | None  # best (lowest) position %
     per_query_results: list[GeoProviderResult]
     error: str | None
+    source_status: str = "ok"   # worst-case across per_query_results (ok > empty > blocked > error)
+
+
+_BLOCKED_MARKERS = (
+    "captcha", "verify you are human", "cloudflare",
+    "access denied", "rate limit", "too many requests",
+    "are you a robot", "403 forbidden",
+)
+
+
+def _classify_crawl_content(content: str) -> str:
+    """Return 'ok' | 'empty' | 'blocked' for a crawl provider's response body.
+
+    Markers are checked first so a short anti-bot page (e.g. a 403 captcha
+    stub under 200 chars) gets ``blocked`` instead of being absorbed into
+    ``empty`` and looking like a transient miss.
+    """
+    if not content:
+        return "empty"
+    lowered = content.lower()
+    if any(marker in lowered for marker in _BLOCKED_MARKERS):
+        return "blocked"
+    if len(content.strip()) < 200:
+        return "empty"
+    return "ok"
+
+
+_STATUS_RANK = {"ok": 0, "empty": 1, "blocked": 2, "error": 3}
+
+
+def _aggregate_source_status(statuses: list[str]) -> str:
+    """Roll per-query statuses up to the platform.
+
+    A platform counts as ``ok`` if *any* of its queries succeeded — one captcha
+    in the bunch must not poison the whole platform's visibility scoring.
+    Otherwise pick the worst observed status to surface the dominant failure.
+    """
+    if not statuses:
+        return "error"
+    if any(s == "ok" for s in statuses):
+        return "ok"
+    return max(statuses, key=lambda s: _STATUS_RANK.get(s, 3))
+
+
+# Backward-compat alias — older callers (and tests) referenced the old name.
+_worst_source_status = _aggregate_source_status
 
 
 # ---------------------------------------------------------------------------
 # Query templates
 # ---------------------------------------------------------------------------
 
-_QUERY_TEMPLATES = [
+_QUERY_TEMPLATES_EN = [
     "What are the best {category} tools and platforms?",
     "Can you recommend some {category} alternatives?",
     "{brand_name} vs competitors in {category}",
@@ -74,13 +127,31 @@ _QUERY_TEMPLATES = [
     "{category} comparison 2026",
 ]
 
+_QUERY_TEMPLATES_CN = [
+    "有哪些好用的{category}工具和平台？",
+    "可以推荐几款{category}的替代方案吗？",
+    "{brand_name}和{category}领域的竞争对手相比怎么样？",
+    "{brand_name} 评测",
+    "2026 年 {category} 对比",
+]
+
+_QUERY_TEMPLATES = _QUERY_TEMPLATES_EN  # backward-compat alias
+
+_CJK_RE = re.compile(r"[぀-ヿ㐀-䶿一-鿿]")
+
+
+def _looks_cjk(*texts: str) -> bool:
+    """Return True if any of the given strings contains CJK characters."""
+    return any(_CJK_RE.search(t or "") for t in texts)
+
 
 def _get_query_templates(brand_name: str, category: str) -> list[str]:
-    """Generate query list based on scrape depth."""
+    """Generate query list based on scrape depth and brand/category language."""
     from opencmo.scrape_config import get_scrape_profile
     profile = get_scrape_profile()
-    n = min(profile.geo_query_templates, len(_QUERY_TEMPLATES))
-    templates = _QUERY_TEMPLATES[:n]
+    pool = _QUERY_TEMPLATES_CN if _looks_cjk(brand_name, category) else _QUERY_TEMPLATES_EN
+    n = min(profile.geo_query_templates, len(pool))
+    templates = pool[:n]
     return [
         t.format(brand_name=brand_name, category=category)
         for t in templates
@@ -107,25 +178,139 @@ _API_QUERY_TEMPLATE = (
 # ---------------------------------------------------------------------------
 
 
-def _analyze_text(content: str, brand_name: str) -> tuple[bool, int, float | None]:
-    """Analyze text for brand mentions.
+def _normalize_match_text(text: str) -> str:
+    """Lowercase + collapse whitespace; preserves CJK characters."""
+    return re.sub(r"\s+", " ", text.lower()).strip()
 
-    Returns:
-        (mentioned, mention_count, position_pct) where position_pct is the
-        percentage through the text where the first mention appears, or None.
+
+def _match_brand_in_text(
+    content: str,
+    primary: str,
+    aliases: list[str] | None = None,
+) -> tuple[bool, int, float | None]:
+    """Match a brand by primary name + aliases with word-boundary safety.
+
+    ASCII candidates use \\b regex word boundaries to avoid 'Apple'→'Pineapple'
+    false positives. CJK candidates fall back to literal substring (since \\b
+    doesn't fire between CJK chars). Position is the earliest match across all
+    candidates.
     """
-    content_lower = content.lower()
-    brand_lower = brand_name.lower()
+    if not content or not primary:
+        return False, 0, None
+    candidates = [c for c in [primary, *(aliases or [])] if c and c.strip()]
+    content_norm = _normalize_match_text(content)
+    if not content_norm:
+        return False, 0, None
 
-    mentioned = brand_lower in content_lower
-    mention_count = content_lower.count(brand_lower)
+    total_count = 0
+    first_pos: int | None = None
+    seen_norm: set[str] = set()
+    for cand in candidates:
+        cand_norm = _normalize_match_text(cand)
+        if not cand_norm or cand_norm in seen_norm:
+            continue
+        seen_norm.add(cand_norm)
+        if _CJK_RE.search(cand_norm):
+            pattern = re.escape(cand_norm)
+        else:
+            pattern = r"(?<![a-z0-9])" + re.escape(cand_norm) + r"(?![a-z0-9])"
+        for m in re.finditer(pattern, content_norm):
+            total_count += 1
+            if first_pos is None or m.start() < first_pos:
+                first_pos = m.start()
 
+    mentioned = total_count > 0
     position_pct: float | None = None
-    if mentioned and content_lower:
-        first_idx = content_lower.index(brand_lower)
-        position_pct = round(first_idx / len(content_lower) * 100, 1)
+    if first_pos is not None:
+        position_pct = round(first_pos / len(content_norm) * 100, 1)
+    return mentioned, total_count, position_pct
 
-    return mentioned, mention_count, position_pct
+
+# Per-task contextvar so providers see the project's aliases without threading
+# them through every call site. asyncio.create_task copies context, so concurrent
+# scans in different tasks see their own value.
+_aliases_var: contextvars.ContextVar[list[str] | None] = contextvars.ContextVar(
+    "geo_brand_aliases", default=None
+)
+
+
+def set_brand_aliases(aliases: list[str] | None) -> contextvars.Token:
+    """Set aliases for the current scan; returns a token for restoration."""
+    return _aliases_var.set(list(aliases) if aliases else [])
+
+
+def reset_brand_aliases(token: contextvars.Token) -> None:
+    _aliases_var.reset(token)
+
+
+def _current_aliases() -> list[str]:
+    return _aliases_var.get() or []
+
+
+def _analyze_text(content: str, brand_name: str) -> tuple[bool, int, float | None]:
+    """Match against the brand and any aliases set on the current task context.
+
+    Aliases are propagated via :func:`set_brand_aliases` so providers don't have
+    to thread them through every internal call.
+    """
+    return _match_brand_in_text(content, brand_name, _current_aliases())
+
+
+def compute_share_of_voice(
+    snippets: list[str],
+    brand_name: str,
+    brand_aliases: list[str] | None,
+    competitors: list[tuple[str, list[str]]],
+) -> dict | None:
+    """Compute brand vs competitor mention share across all snippets.
+
+    Returns None when there's no competitor list to compare against.
+    """
+    if not competitors:
+        return None
+    text_blobs = [s for s in snippets if s]
+    if not text_blobs:
+        return None
+
+    brand_count = 0
+    for blob in text_blobs:
+        _, c, _ = _match_brand_in_text(blob, brand_name, brand_aliases)
+        brand_count += c
+
+    competitor_counts: list[tuple[str, int]] = []
+    for name, aliases in competitors:
+        comp_count = 0
+        for blob in text_blobs:
+            _, c, _ = _match_brand_in_text(blob, name, aliases)
+            comp_count += c
+        competitor_counts.append((name, comp_count))
+
+    total = brand_count + sum(c for _, c in competitor_counts)
+    if total == 0:
+        return {
+            "brand": {"name": brand_name, "mentions": 0, "share": 0.0},
+            "competitors": [
+                {"name": n, "mentions": 0, "share": 0.0}
+                for n, _ in competitor_counts
+            ],
+            "total_mentions": 0,
+        }
+    return {
+        "brand": {
+            "name": brand_name,
+            "mentions": brand_count,
+            "share": round(brand_count / total, 3),
+        },
+        "competitors": [
+            {
+                "name": n,
+                "mentions": c,
+                "share": round(c / total, 3),
+            }
+            for n, c in competitor_counts
+        ],
+        "total_mentions": total,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -147,6 +332,14 @@ class GeoProvider(ABC):
             from opencmo import llm
             return all(llm.get_key(v) for v in self.auth_env_vars)
         return True
+
+    def provider_identity(self) -> tuple:
+        """Stable key for cross-provider dedup.
+
+        Two providers with the same identity hit the same backend with the same
+        prompt path; only one should run. Default is unique per class.
+        """
+        return ("provider", type(self).__name__)
 
     @abstractmethod
     async def check_visibility(
@@ -173,6 +366,7 @@ class GeoProvider(ABC):
                     content_snippet="",
                     error=str(e),
                     query=query,
+                    source_status="error",
                 ))
 
             if i < len(queries) - 1:
@@ -186,6 +380,7 @@ class GeoProvider(ABC):
         positions = [r.position_pct for r in results if r.position_pct is not None]
         best_pos = min(positions) if positions else None
         errors = [r.error for r in results if r.error]
+        agg_status = _aggregate_source_status([r.source_status for r in results])
 
         return GeoAggregatedResult(
             platform=self.name,
@@ -194,6 +389,7 @@ class GeoProvider(ABC):
             best_position_pct=best_pos,
             per_query_results=results,
             error="; ".join(errors) if errors else None,
+            source_status=agg_status,
         )
 
     async def _check_single_query(
@@ -225,6 +421,9 @@ class DefaultLLMProvider(GeoProvider):
     @property
     def is_enabled(self) -> bool:
         return True
+
+    def provider_identity(self) -> tuple:
+        return ("user-configured-llm",)
 
     async def check_visibility(
         self, brand_name: str, category: str
@@ -282,19 +481,31 @@ class PerplexityProvider(GeoProvider):
         self, brand_name: str, category: str
     ) -> GeoProviderResult:
         # For backward compat, use default query
-        query = f"best {category} tools"
+        query = f"有哪些好用的{category}工具" if _looks_cjk(brand_name, category) else f"best {category} tools"
         return await self._check_single_query(brand_name, query)
 
     async def _check_single_query(
         self, brand_name: str, query: str
     ) -> GeoProviderResult:
         snippet_chars = _get_snippet_chars()
-        url = f"https://www.perplexity.ai/search?q={query.replace(' ', '+')}"
+        url = f"https://www.perplexity.ai/search?q={quote_plus(query)}"
         try:
             async with browser_slot():
                 async with AsyncWebCrawler() as crawler:
                     crawl_result = await crawler.arun(url=url)
                     content = _extract_markdown(crawl_result)
+                    status = _classify_crawl_content(content)
+                    if status != "ok":
+                        return GeoProviderResult(
+                            platform=self.name,
+                            mentioned=False,
+                            mention_count=0,
+                            position_pct=None,
+                            content_snippet=content[:snippet_chars],
+                            error=None,
+                            query=query,
+                            source_status=status,
+                        )
                     mentioned, mention_count, position_pct = _analyze_text(
                         content, brand_name
                     )
@@ -306,6 +517,7 @@ class PerplexityProvider(GeoProvider):
                         content_snippet=content[:snippet_chars],
                         error=None,
                         query=query,
+                        source_status="ok",
                     )
         except Exception as e:
             return GeoProviderResult(
@@ -316,6 +528,7 @@ class PerplexityProvider(GeoProvider):
                 content_snippet="",
                 error=str(e),
                 query=query,
+                source_status="error",
             )
 
 
@@ -328,19 +541,31 @@ class YouDotComProvider(GeoProvider):
     async def check_visibility(
         self, brand_name: str, category: str
     ) -> GeoProviderResult:
-        query = f"best {category} tools"
+        query = f"有哪些好用的{category}工具" if _looks_cjk(brand_name, category) else f"best {category} tools"
         return await self._check_single_query(brand_name, query)
 
     async def _check_single_query(
         self, brand_name: str, query: str
     ) -> GeoProviderResult:
         snippet_chars = _get_snippet_chars()
-        url = f"https://you.com/search?q={query.replace(' ', '+')}"
+        url = f"https://you.com/search?q={quote_plus(query)}"
         try:
             async with browser_slot():
                 async with AsyncWebCrawler() as crawler:
                     crawl_result = await crawler.arun(url=url)
                     content = _extract_markdown(crawl_result)
+                    status = _classify_crawl_content(content)
+                    if status != "ok":
+                        return GeoProviderResult(
+                            platform=self.name,
+                            mentioned=False,
+                            mention_count=0,
+                            position_pct=None,
+                            content_snippet=content[:snippet_chars],
+                            error=None,
+                            query=query,
+                            source_status=status,
+                        )
                     mentioned, mention_count, position_pct = _analyze_text(
                         content, brand_name
                     )
@@ -352,6 +577,7 @@ class YouDotComProvider(GeoProvider):
                         content_snippet=content[:snippet_chars],
                         error=None,
                         query=query,
+                        source_status="ok",
                     )
         except Exception as e:
             return GeoProviderResult(
@@ -362,6 +588,7 @@ class YouDotComProvider(GeoProvider):
                 content_snippet="",
                 error=str(e),
                 query=query,
+                source_status="error",
             )
 
 
@@ -383,6 +610,11 @@ class ChatGPTProvider(GeoProvider):
             llm.get_key("OPENCMO_GEO_CHATGPT") == "1"
             and bool(llm.get_key("OPENAI_API_KEY"))
         )
+
+    def provider_identity(self) -> tuple:
+        # Same backend as DefaultLLMProvider — both go through llm.chat_completion_messages
+        # with the user's configured base/key/model.
+        return ("user-configured-llm",)
 
     async def check_visibility(
         self, brand_name: str, category: str
@@ -665,6 +897,34 @@ class DoubaoProvider(_OpenAICompatibleProvider):
 # ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
+
+
+def get_enabled_providers(
+    registry: list[GeoProvider] | None = None,
+) -> list[GeoProvider]:
+    """Return enabled providers with cross-provider duplicates collapsed.
+
+    When two providers share the same `provider_identity()` (e.g. DefaultLLM
+    and ChatGPT both routing through the user's configured OpenAI-compatible
+    endpoint), keep the one the user opted into explicitly (status='disabled'
+    + currently is_enabled) and drop the always-on one.
+    """
+    if registry is None:
+        registry = GEO_PROVIDER_REGISTRY
+    enabled = [p for p in registry if p.is_enabled]
+    by_identity: dict[tuple, GeoProvider] = {}
+    for p in enabled:
+        ident = p.provider_identity()
+        existing = by_identity.get(ident)
+        if existing is None:
+            by_identity[ident] = p
+            continue
+        # Collision: prefer the explicit opt-in (status='disabled' but currently enabled
+        # via env flag) over the always-on default.
+        if existing.status == "enabled" and p.status == "disabled":
+            by_identity[ident] = p
+    return list(by_identity.values())
+
 
 GEO_PROVIDER_REGISTRY: list[GeoProvider] = [
     DefaultLLMProvider(),

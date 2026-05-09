@@ -2,7 +2,27 @@
 
 from __future__ import annotations
 
+import hashlib
+import sqlite3
+from datetime import datetime, timezone
+
 from opencmo.storage._db import get_db
+
+
+SCAN_DEDUPE_WINDOW_SECONDS = 3600  # one hour
+
+
+def scan_window_start(window_seconds: int = SCAN_DEDUPE_WINDOW_SECONDS) -> str:
+    """Floor the current UTC time to the idempotency window boundary."""
+    now_ts = int(datetime.now(timezone.utc).timestamp())
+    floor_ts = now_ts - (now_ts % window_seconds)
+    return datetime.fromtimestamp(floor_ts, timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def scan_params_hash(*parts: object) -> str:
+    """Stable short hash of (canonical scan params) for dedupe."""
+    blob = "|".join(repr(p) for p in parts)
+    return hashlib.sha1(blob.encode("utf-8"), usedforsecurity=False).hexdigest()[:16]
 
 
 def _normalized_seo_score(score_performance: float | None, seo_health_score: float | None) -> float | None:
@@ -27,27 +47,74 @@ async def save_seo_scan(
     has_sitemap: bool | None = None,
     has_schema_org: bool | None = None,
     seo_health_score: float | None = None,
+    score_inp: float | None = None,
+    pagespeed_available: bool | None = None,
+    has_hsts: bool | None = None,
+    has_security_headers: bool | None = None,
+    params_hash: str | None = None,
+    window_start: str | None = None,
 ) -> int:
-    """Save an SEO scan snapshot. Returns scan id."""
+    """Save an SEO scan snapshot. Returns scan id.
+
+    When ``params_hash`` and ``window_start`` are both provided, the row is
+    upserted: a previous snapshot for the same (project_id, params_hash, window)
+    is updated in place instead of creating a duplicate. This makes accidental
+    re-triggers idempotent within the configured window.
+    """
+    has_dedupe_key = params_hash is not None and window_start is not None
+    insert_values = (
+        project_id, url, report_json,
+        score_performance, score_lcp, score_cls, score_tbt,
+        int(has_robots_txt) if has_robots_txt is not None else None,
+        int(has_sitemap) if has_sitemap is not None else None,
+        int(has_schema_org) if has_schema_org is not None else None,
+        seo_health_score,
+        score_inp,
+        int(pagespeed_available) if pagespeed_available is not None else None,
+        int(has_hsts) if has_hsts is not None else None,
+        int(has_security_headers) if has_security_headers is not None else None,
+        params_hash, window_start,
+    )
     db = await get_db()
     try:
-        cursor = await db.execute(
-            """INSERT INTO seo_scans
-               (project_id, url, report_json,
-                score_performance, score_lcp, score_cls, score_tbt,
-                has_robots_txt, has_sitemap, has_schema_org, seo_health_score)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                project_id, url, report_json,
-                score_performance, score_lcp, score_cls, score_tbt,
-                int(has_robots_txt) if has_robots_txt is not None else None,
-                int(has_sitemap) if has_sitemap is not None else None,
-                int(has_schema_org) if has_schema_org is not None else None,
-                seo_health_score,
-            ),
-        )
-        await db.commit()
-        return cursor.lastrowid
+        # Try INSERT first; if the partial unique index rejects it, another
+        # writer already wrote this (project_id, params_hash, window_start)
+        # — fall through to UPDATE. This avoids the SELECT-then-INSERT TOCTOU.
+        try:
+            cursor = await db.execute(
+                """INSERT INTO seo_scans
+                   (project_id, url, report_json,
+                    score_performance, score_lcp, score_cls, score_tbt,
+                    has_robots_txt, has_sitemap, has_schema_org, seo_health_score,
+                    score_inp, pagespeed_available, has_hsts, has_security_headers,
+                    params_hash, window_start)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                insert_values,
+            )
+            await db.commit()
+            return cursor.lastrowid
+        except sqlite3.IntegrityError:
+            if not has_dedupe_key:
+                raise  # not a dedupe collision — surface it
+            await db.execute(
+                """UPDATE seo_scans SET
+                      url = ?, report_json = ?,
+                      score_performance = ?, score_lcp = ?, score_cls = ?, score_tbt = ?,
+                      has_robots_txt = ?, has_sitemap = ?, has_schema_org = ?,
+                      seo_health_score = ?, score_inp = ?, pagespeed_available = ?,
+                      has_hsts = ?, has_security_headers = ?,
+                      scanned_at = datetime('now')
+                   WHERE project_id = ? AND params_hash = ? AND window_start = ?""",
+                insert_values[1:-2] + (project_id, params_hash, window_start),
+            )
+            cursor = await db.execute(
+                """SELECT id FROM seo_scans
+                   WHERE project_id = ? AND params_hash = ? AND window_start = ? LIMIT 1""",
+                (project_id, params_hash, window_start),
+            )
+            row = await cursor.fetchone()
+            await db.commit()
+            return row[0] if row else 0
     finally:
         await db.close()
 
@@ -61,23 +128,58 @@ async def save_geo_scan(
     sentiment_score: int | None = None,
     crawl_success_rate: float | None = None,
     platform_results_json: str = "{}",
+    share_of_voice_json: str | None = None,
+    params_hash: str | None = None,
+    window_start: str | None = None,
 ) -> int:
-    """Save a GEO scan snapshot. Returns scan id."""
+    """Save a GEO scan snapshot. Returns scan id.
+
+    When ``params_hash`` and ``window_start`` are both provided, the row is
+    upserted (see :func:`save_seo_scan` for the same semantics).
+    """
+    coerced_geo = geo_score if geo_score is not None else 0
+    has_dedupe_key = params_hash is not None and window_start is not None
     db = await get_db()
     try:
-        cursor = await db.execute(
-            """INSERT INTO geo_scans
-               (project_id, geo_score, visibility_score, position_score,
-                sentiment_score, crawl_success_rate, platform_results_json)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            # Coerce None → 0: existing databases have geo_score NOT NULL from
-            # before migration v9, and SQLite cannot ALTER COLUMN to drop it.
-            (project_id, geo_score if geo_score is not None else 0,
-             visibility_score, position_score,
-             sentiment_score, crawl_success_rate, platform_results_json),
-        )
-        await db.commit()
-        return cursor.lastrowid
+        # Coerce None → 0: existing databases have geo_score NOT NULL from
+        # before migration v9, and SQLite cannot ALTER COLUMN to drop it.
+        try:
+            cursor = await db.execute(
+                """INSERT INTO geo_scans
+                   (project_id, geo_score, visibility_score, position_score,
+                    sentiment_score, crawl_success_rate, platform_results_json,
+                    share_of_voice_json, params_hash, window_start)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (project_id, coerced_geo,
+                 visibility_score, position_score,
+                 sentiment_score, crawl_success_rate, platform_results_json,
+                 share_of_voice_json, params_hash, window_start),
+            )
+            await db.commit()
+            return cursor.lastrowid
+        except sqlite3.IntegrityError:
+            if not has_dedupe_key:
+                raise
+            await db.execute(
+                """UPDATE geo_scans SET
+                      geo_score = ?, visibility_score = ?, position_score = ?,
+                      sentiment_score = ?, crawl_success_rate = ?,
+                      platform_results_json = ?, share_of_voice_json = ?,
+                      scanned_at = datetime('now')
+                   WHERE project_id = ? AND params_hash = ? AND window_start = ?""",
+                (coerced_geo, visibility_score, position_score,
+                 sentiment_score, crawl_success_rate,
+                 platform_results_json, share_of_voice_json,
+                 project_id, params_hash, window_start),
+            )
+            cursor = await db.execute(
+                """SELECT id FROM geo_scans
+                   WHERE project_id = ? AND params_hash = ? AND window_start = ? LIMIT 1""",
+                (project_id, params_hash, window_start),
+            )
+            row = await cursor.fetchone()
+            await db.commit()
+            return row[0] if row else 0
     finally:
         await db.close()
 
@@ -107,7 +209,8 @@ async def get_seo_history(project_id: int, limit: int = 20) -> list[dict]:
         cursor = await db.execute(
             """SELECT id, url, scanned_at, score_performance, score_lcp, score_cls,
                       score_tbt, has_robots_txt, has_sitemap, has_schema_org,
-                      seo_health_score
+                      seo_health_score, score_inp, pagespeed_available,
+                      has_hsts, has_security_headers
                FROM seo_scans WHERE project_id = ? ORDER BY scanned_at DESC LIMIT ?""",
             (project_id, limit),
         )
@@ -120,6 +223,10 @@ async def get_seo_history(project_id: int, limit: int = 20) -> list[dict]:
                 "has_sitemap": bool(r[8]) if r[8] is not None else None,
                 "has_schema_org": bool(r[9]) if r[9] is not None else None,
                 "seo_health_score": r[10],
+                "score_inp": r[11],
+                "pagespeed_available": bool(r[12]) if r[12] is not None else None,
+                "has_hsts": bool(r[13]) if r[13] is not None else None,
+                "has_security_headers": bool(r[14]) if r[14] is not None else None,
             }
             for r in rows
         ]
@@ -133,7 +240,8 @@ async def get_geo_history(project_id: int, limit: int = 20) -> list[dict]:
     try:
         cursor = await db.execute(
             """SELECT id, scanned_at, geo_score, visibility_score, position_score,
-                      sentiment_score, crawl_success_rate, platform_results_json
+                      sentiment_score, crawl_success_rate, platform_results_json,
+                      share_of_voice_json
                FROM geo_scans WHERE project_id = ? ORDER BY scanned_at DESC LIMIT ?""",
             (project_id, limit),
         )
@@ -144,6 +252,7 @@ async def get_geo_history(project_id: int, limit: int = 20) -> list[dict]:
                 "visibility_score": r[3], "position_score": r[4],
                 "sentiment_score": r[5], "crawl_success_rate": r[6],
                 "platform_results_json": r[7],
+                "share_of_voice_json": r[8],
             }
             for r in rows
         ]

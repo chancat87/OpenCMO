@@ -17,6 +17,10 @@ from opencmo.tools.geo_providers import (
     QwenProvider,
     ZhipuProvider,
     _analyze_text,
+    _match_brand_in_text,
+    get_enabled_providers,
+    reset_brand_aliases,
+    set_brand_aliases,
 )
 
 
@@ -110,6 +114,96 @@ def test_analyze_text_multiple_mentions():
 def test_analyze_text_case_insensitive():
     mentioned, count, pos = _analyze_text("Try crawl4ai for scraping", "Crawl4AI")
     assert mentioned is True
+
+
+# ---------------------------------------------------------------------------
+# Word-boundary + alias matching
+# ---------------------------------------------------------------------------
+
+
+def test_word_boundary_blocks_partial_substring():
+    # "Apple" must not match "Pineapple"
+    mentioned, count, _ = _match_brand_in_text("Pineapple is fruit", "Apple")
+    assert mentioned is False
+    assert count == 0
+
+
+def test_word_boundary_allows_punctuation():
+    # ASCII brand should still match when followed by punctuation/whitespace
+    mentioned, count, _ = _match_brand_in_text(
+        "Linear, Notion, and Asana are tools.", "Linear"
+    )
+    assert mentioned is True
+    assert count == 1
+
+
+def test_alias_recovers_spaced_variant():
+    # "OpenAI" with alias "Open AI" must match text that says "Open AI"
+    mentioned, count, _ = _match_brand_in_text(
+        "I use Open AI for prompts.", "OpenAI", aliases=["Open AI"]
+    )
+    assert mentioned is True
+    assert count == 1
+
+
+def test_aliases_dedup_normalized_duplicates():
+    # Aliases listed in different cases collapse to one matcher
+    mentioned, count, _ = _match_brand_in_text(
+        "Open AI is everywhere.", "OpenAI", aliases=["Open AI", "open ai", "OPEN AI"]
+    )
+    assert mentioned is True
+    assert count == 1
+
+
+def test_cjk_brand_matches_literal():
+    mentioned, count, _ = _match_brand_in_text(
+        "我们团队最近换到飞书做协作，飞书的体验不错。", "飞书"
+    )
+    assert mentioned is True
+    assert count == 2
+
+
+def test_position_takes_earliest_alias_match():
+    # primary appears later than alias → position should reflect alias's earlier hit
+    mentioned, count, pos = _match_brand_in_text(
+        "Open AI launched. Later, OpenAI shipped more.",
+        "OpenAI",
+        aliases=["Open AI"],
+    )
+    assert mentioned is True
+    assert count == 2
+    assert pos is not None and pos < 50  # earliest match is in first half
+
+
+def test_aliases_contextvar_propagates_to_analyze_text():
+    token = set_brand_aliases(["Open AI"])
+    try:
+        mentioned, count, _ = _analyze_text("Open AI is here", "OpenAI")
+    finally:
+        reset_brand_aliases(token)
+    assert mentioned is True
+    assert count == 1
+
+
+# ---------------------------------------------------------------------------
+# Provider dedup
+# ---------------------------------------------------------------------------
+
+
+def test_dedup_drops_default_when_chatgpt_explicit(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setenv("OPENCMO_GEO_CHATGPT", "1")
+    names = [p.name for p in get_enabled_providers()]
+    assert "ChatGPT" in names
+    assert "Default LLM" not in names
+
+
+def test_dedup_keeps_default_when_chatgpt_not_opted_in(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.delenv("OPENCMO_GEO_CHATGPT", raising=False)
+    names = [p.name for p in get_enabled_providers()]
+    assert "Default LLM" in names
+    assert "ChatGPT" not in names
 
 
 # ---------------------------------------------------------------------------

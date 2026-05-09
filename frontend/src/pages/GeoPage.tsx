@@ -13,6 +13,18 @@ import { useI18n } from "../i18n";
 import { ActionTip } from "../components/common/ActionTip";
 import { Globe, Eye, MapPin, Heart, Info } from "lucide-react";
 
+interface SovRow {
+  name: string;
+  mentions: number;
+  share: number;
+}
+
+interface ShareOfVoice {
+  brand: SovRow;
+  competitors: SovRow[];
+  total_mentions: number;
+}
+
 function getDelta(arr: (number | null)[] | undefined): number | null {
   if (!arr || arr.length < 2) return null;
   const curr = arr[arr.length - 1];
@@ -129,6 +141,40 @@ export function GeoPage() {
               })}
             </div>
           </ChartCard>
+
+          {/* Share of Voice */}
+          {(() => {
+            const sov = (chart as { share_of_voice?: ShareOfVoice | null } | undefined)?.share_of_voice;
+            if (!sov) return null;
+            const total = sov.total_mentions || 0;
+            return (
+              <ChartCard title={t("geo.shareOfVoice") || "Share of Voice"} accentBorder="border-l-emerald-500">
+                <div className="space-y-3">
+                  <div className="text-xs text-zinc-500">
+                    {t("geo.shareOfVoiceTotal") || "Total mentions"}: <span className="font-mono text-zinc-700">{total}</span>
+                  </div>
+                  {[sov.brand, ...sov.competitors].map((row, idx) => (
+                    <div key={`${row.name}-${idx}`}>
+                      <div className="mb-1 flex items-center justify-between text-sm">
+                        <span className={idx === 0 ? "font-semibold text-emerald-700" : "text-zinc-700"}>
+                          {row.name}
+                        </span>
+                        <span className="font-mono text-zinc-500">
+                          {row.mentions} · {(row.share * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ${idx === 0 ? "bg-emerald-500" : "bg-zinc-400"}`}
+                          style={{ width: `${Math.min(row.share * 100, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ChartCard>
+            );
+          })()}
 
           {/* Action Tips */}
           {sentimentUnavailable ? (

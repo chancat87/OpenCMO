@@ -8,6 +8,7 @@ an llms.txt file exists.
 from __future__ import annotations
 
 import logging
+import urllib.robotparser
 from urllib.parse import urlparse
 
 import httpx
@@ -52,105 +53,81 @@ _CRAWLER_LABELS = {
 }
 
 
-def _parse_robots_for_crawlers(robots_text: str) -> dict[str, dict]:
-    """Parse robots.txt and return per-crawler status."""
-    results: dict[str, dict] = {}
-    lines = robots_text.splitlines()
-
-    # Build user-agent blocks
+def _split_robots_blocks(robots_text: str) -> dict[str, list[str]]:
+    """Map lowercase user-agent → its directive lines for granular reporting."""
     blocks: dict[str, list[str]] = {}
-    current_agents: list[str] = []
-
-    for line in lines:
-        line = line.split("#", 1)[0].strip()
+    current: list[str] | None = None
+    for raw in robots_text.splitlines():
+        line = raw.split("#", 1)[0].strip()
         if not line:
+            current = None
             continue
         if line.lower().startswith("user-agent:"):
-            agent = line.split(":", 1)[1].strip()
-            current_agents.append(agent)
-        elif current_agents:
-            for agent in current_agents:
-                blocks.setdefault(agent, []).append(line)
-        else:
-            # Directive before any user-agent — skip
-            pass
-        # Reset agents on non-user-agent, non-directive lines
-        if not line.lower().startswith("user-agent:") and not line.lower().startswith(("allow:", "disallow:", "sitemap:", "crawl-delay:")):
-            current_agents = []
+            ua = line.split(":", 1)[1].strip()
+            current = blocks.setdefault(ua.lower(), [])
+        elif current is not None:
+            current.append(line)
+    return blocks
 
-    # Re-parse: simpler approach — split by user-agent blocks
-    blocks = {}
-    current_agents = []
-    for line in lines:
-        stripped = line.split("#", 1)[0].strip()
-        if not stripped:
-            current_agents = []
-            continue
-        if stripped.lower().startswith("user-agent:"):
-            agent = stripped.split(":", 1)[1].strip()
-            if not current_agents:
-                current_agents = [agent]
-            else:
-                current_agents.append(agent)
-        else:
-            for agent in current_agents:
-                blocks.setdefault(agent, []).append(stripped)
 
-    # Check wildcard rules
-    wildcard_rules = blocks.get("*", [])
-    wildcard_blocked = any(
-        r.lower().startswith("disallow:") and r.split(":", 1)[1].strip() == "/"
-        for r in wildcard_rules
-    )
+def _build_robots_parser(robots_text: str) -> urllib.robotparser.RobotFileParser:
+    rp = urllib.robotparser.RobotFileParser()
+    rp.parse(robots_text.splitlines())
+    return rp
 
+
+def _parse_robots_for_crawlers(robots_text: str) -> dict[str, dict]:
+    """Per-crawler status using stdlib RobotFileParser.can_fetch.
+
+    Status semantics:
+      ALLOWED            — explicit per-crawler block exists; root is fetchable
+      PARTIALLY_BLOCKED  — explicit block; root fetchable but some Disallow path
+      BLOCKED            — explicit block; root is not fetchable
+      BLOCKED_BY_WILDCARD — no explicit block; wildcard '*' denies root
+      NOT_MENTIONED      — no explicit block; root fetchable
+    """
+    rp = _build_robots_parser(robots_text)
+    blocks = _split_robots_blocks(robots_text)
+
+    results: dict[str, dict] = {}
     for crawler in AI_CRAWLERS:
         label = _CRAWLER_LABELS.get(crawler, crawler)
-        # Find matching block (case-insensitive)
-        matched_block = None
-        for agent_name, directives in blocks.items():
-            if agent_name.lower() == crawler.lower():
-                matched_block = directives
-                break
+        block_lines = blocks.get(crawler.lower())
+        has_block = block_lines is not None
+        # can_fetch handles longest-match Allow/Disallow per RFC 9309
+        can_root = rp.can_fetch(crawler, "/")
 
-        if matched_block is not None:
-            has_disallow_all = any(
-                d.lower().startswith("disallow:") and d.split(":", 1)[1].strip() == "/"
-                for d in matched_block
-            )
-            has_allow = any(
-                d.lower().startswith("allow:")
-                for d in matched_block
-            )
-            has_partial_disallow = any(
-                d.lower().startswith("disallow:") and d.split(":", 1)[1].strip() not in ("", "/")
-                for d in matched_block
+        partial_disallow = False
+        if has_block:
+            partial_disallow = any(
+                d.lower().startswith("disallow:")
+                and d.split(":", 1)[1].strip() not in ("", "/")
+                for d in block_lines
             )
 
-            if has_disallow_all and not has_allow:
+        if has_block:
+            if not can_root:
                 status = "BLOCKED"
                 directive = "Disallow: /"
-            elif has_disallow_all and has_allow:
+            elif partial_disallow:
                 status = "PARTIALLY_BLOCKED"
-                directive = "; ".join(matched_block[:3])
-            elif has_partial_disallow:
-                status = "PARTIALLY_BLOCKED"
-                directive = "; ".join(matched_block[:3])
+                directive = "; ".join(block_lines[:3])
             else:
                 status = "ALLOWED"
-                directive = "; ".join(matched_block[:2]) if matched_block else "Allow: /"
-        elif wildcard_blocked:
-            status = "BLOCKED_BY_WILDCARD"
-            directive = "Blocked by User-agent: * Disallow: /"
+                directive = "; ".join(block_lines[:2]) if block_lines else "Allow: /"
         else:
-            status = "NOT_MENTIONED"
-            directive = "No specific rules"
+            if not can_root:
+                status = "BLOCKED_BY_WILDCARD"
+                directive = "Blocked by User-agent: * Disallow: /"
+            else:
+                status = "NOT_MENTIONED"
+                directive = "No specific rules"
 
         results[crawler] = {
             "label": label,
             "status": status,
             "directive": directive,
         }
-
     return results
 
 

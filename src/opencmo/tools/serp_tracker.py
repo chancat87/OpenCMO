@@ -30,6 +30,17 @@ class SerpResult:
     error: str | None
 
 
+def _domain_matches(domain: str, target: str) -> bool:
+    """Match a SERP result's domain against the project's target domain.
+
+    Strict equality plus subdomain support, so ``ai.com`` no longer matches
+    ``openai.com`` (the old ``target in domain`` substring check).
+    """
+    if not domain or not target:
+        return False
+    return domain == target or domain.endswith("." + target)
+
+
 # ---------------------------------------------------------------------------
 # Provider ABC
 # ---------------------------------------------------------------------------
@@ -98,7 +109,7 @@ class CrawlSerpProvider(SerpProvider):
             target = target_domain.lower().removeprefix("www.")
             for i, link in enumerate(links[:num_results]):
                 domain = urlparse(link).netloc.lower().removeprefix("www.")
-                if target in domain:
+                if _domain_matches(domain, target):
                     return SerpResult(
                         position=i + 1,
                         url_found=link,
@@ -188,7 +199,7 @@ class TavilySerpProvider(SerpProvider):
             for i, item in enumerate(results):
                 url = item.get("url", "")
                 domain = urlparse(url).netloc.lower().removeprefix("www.")
-                if target in domain:
+                if _domain_matches(domain, target):
                     return SerpResult(
                         position=i + 1,
                         url_found=url,

@@ -2,18 +2,37 @@
 
 from __future__ import annotations
 
+import json
+
 from opencmo.storage._db import get_db
 
 
+def _parse_aliases(raw: str | None) -> list[str]:
+    if not raw:
+        return []
+    try:
+        value = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return []
+    if isinstance(value, list):
+        return [str(v) for v in value if v]
+    return []
+
+
 async def add_competitor(
-    project_id: int, name: str, url: str | None = None, category: str | None = None
+    project_id: int,
+    name: str,
+    url: str | None = None,
+    category: str | None = None,
+    aliases: list[str] | None = None,
 ) -> int:
     """Add a competitor. Returns competitor id."""
     db = await get_db()
     try:
+        aliases_json = json.dumps([a for a in (aliases or []) if a])
         await db.execute(
-            "INSERT OR IGNORE INTO competitors (project_id, name, url, category) VALUES (?, ?, ?, ?)",
-            (project_id, name, url, category),
+            "INSERT OR IGNORE INTO competitors (project_id, name, url, category, aliases) VALUES (?, ?, ?, ?, ?)",
+            (project_id, name, url, category, aliases_json),
         )
         await db.commit()
         cursor = await db.execute(
@@ -31,12 +50,16 @@ async def list_competitors(project_id: int) -> list[dict]:
     db = await get_db()
     try:
         cursor = await db.execute(
-            "SELECT id, name, url, category, created_at FROM competitors WHERE project_id = ? ORDER BY id",
+            "SELECT id, name, url, category, aliases, created_at FROM competitors WHERE project_id = ? ORDER BY id",
             (project_id,),
         )
         rows = await cursor.fetchall()
         return [
-            {"id": r[0], "name": r[1], "url": r[2], "category": r[3], "created_at": r[4]}
+            {
+                "id": r[0], "name": r[1], "url": r[2], "category": r[3],
+                "aliases": _parse_aliases(r[4]),
+                "created_at": r[5],
+            }
             for r in rows
         ]
     finally:
@@ -48,13 +71,16 @@ async def get_competitor(competitor_id: int) -> dict | None:
     db = await get_db()
     try:
         cursor = await db.execute(
-            "SELECT id, project_id, name, url FROM competitors WHERE id = ?",
+            "SELECT id, project_id, name, url, aliases FROM competitors WHERE id = ?",
             (competitor_id,),
         )
         row = await cursor.fetchone()
         if not row:
             return None
-        return {"id": row[0], "project_id": row[1], "name": row[2], "url": row[3]}
+        return {
+            "id": row[0], "project_id": row[1], "name": row[2], "url": row[3],
+            "aliases": _parse_aliases(row[4]),
+        }
     finally:
         await db.close()
 

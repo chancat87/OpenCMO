@@ -444,6 +444,19 @@ async def _build_strategic_facts(project_id: int) -> tuple[dict, dict]:
         "risks": risks,
         "change_lines": change_lines,
         "previous_report_excerpt": (previous_human["content"][:2000] if previous_human else ""),
+        # --- Aliases consumed by report_pipeline._DIMENSIONS ---
+        # The deep-report pipeline references different key names; expose both
+        # so the LLM-facing slicing sees SEO/GEO/community/serp data instead of
+        # silently slotting in None.
+        "seo_latest": (latest or {}).get("seo"),
+        "geo_latest": (latest or {}).get("geo"),
+        "community_latest": (latest or {}).get("community"),
+        "serp_snapshots": serp_latest,
+        "ai_crawler_history": ai_crawler_history,
+        "citability_history": citability_history,
+        "brand_presence_history": brand_presence_history,
+        "insights_history": insights,
+        "approvals": recent_approvals,
     }
     data_sources = [
         latest.get("seo"), latest.get("geo"), latest.get("community"),

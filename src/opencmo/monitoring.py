@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from dataclasses import asdict, dataclass, field
@@ -254,6 +255,7 @@ async def _collect_signals(
             from opencmo.tools.seo_audit import (
                 _build_report,
                 _check_robots_and_sitemap,
+                _check_security_headers,
                 _compute_seo_health_score,
                 _fetch_core_web_vitals,
                 _SEOParser,
@@ -268,9 +270,15 @@ async def _collect_signals(
             parser = _SEOParser()
             html = getattr(result, "html", "") or ""
             parser.feed(html)
-            cwv = await _fetch_core_web_vitals(url)
-            robots_sitemap = await _check_robots_and_sitemap(url)
-            report = _build_report(parser, result, url, cwv=cwv, robots_sitemap=robots_sitemap)
+            cwv, robots_sitemap, security_headers = await asyncio.gather(
+                _fetch_core_web_vitals(url),
+                _check_robots_and_sitemap(url),
+                _check_security_headers(url),
+            )
+            report = _build_report(
+                parser, result, url,
+                cwv=cwv, robots_sitemap=robots_sitemap, security_headers=security_headers,
+            )
             seo_health_score = _compute_seo_health_score(parser, cwv=cwv, robots_sitemap=robots_sitemap)
             await _storage.save_seo_scan(
                 project_id, url, report,
@@ -278,10 +286,16 @@ async def _collect_signals(
                 score_lcp=cwv.get("lcp") if cwv else None,
                 score_cls=cwv.get("cls") if cwv else None,
                 score_tbt=cwv.get("tbt") if cwv else None,
+                score_inp=cwv.get("inp") if cwv else None,
                 has_robots_txt=robots_sitemap.get("has_robots") if robots_sitemap else None,
                 has_sitemap=robots_sitemap.get("has_sitemap") if robots_sitemap else None,
                 has_schema_org=bool(parser.schema_types),
                 seo_health_score=seo_health_score,
+                pagespeed_available=cwv is not None,
+                has_hsts=security_headers.get("has_hsts") if security_headers else None,
+                has_security_headers=security_headers.get("has_security_headers") if security_headers else None,
+                params_hash=_storage.scan_params_hash("seo", url),
+                window_start=_storage.scan_window_start(),
             )
             await _emit(run_id, on_progress, _event(
                 "signal_collect",
@@ -326,21 +340,52 @@ async def _collect_signals(
         try:
             import json as _json
 
-            from opencmo.tools.geo_providers import GEO_PROVIDER_REGISTRY
+            from opencmo.tools.geo_providers import (
+                compute_share_of_voice,
+                get_enabled_providers,
+                reset_brand_aliases,
+                set_brand_aliases,
+            )
             from opencmo.tools.text_signals import analyze_geo_sentiment
 
-            enabled = [p for p in GEO_PROVIDER_REGISTRY if p.is_enabled]
-            results = {}
-            for provider in enabled:
-                try:
-                    agg = await provider.check_visibility_multi(brand, category)
-                    results[provider.name] = agg
-                except Exception:
-                    pass
+            enabled = get_enabled_providers()
+            project_aliases = (project or {}).get("aliases") if project else None
+            aliases_token = set_brand_aliases(project_aliases)
+            try:
+                async def _check_one(provider):
+                    try:
+                        return provider.name, await provider.check_visibility_multi(brand, category)
+                    except Exception:
+                        return provider.name, None
 
-            platforms_mentioned = sum(1 for r in results.values() if r.mentioned)
-            visibility_score = int(platforms_mentioned / len(enabled) * 40) if enabled else 0
-            position_scores = [30 * (1 - r.best_position_pct / 100) for r in results.values() if r.best_position_pct is not None]
+                pairs = await asyncio.gather(*(_check_one(p) for p in enabled))
+                results = {name: agg for name, agg in pairs if agg is not None}
+            finally:
+                reset_brand_aliases(aliases_token)
+
+            # Share-of-voice using known competitors
+            sov = None
+            try:
+                comp_rows = await _storage.list_competitors(project_id)
+                competitors_for_sov = [
+                    (c["name"], list(c.get("aliases") or [])) for c in comp_rows
+                ]
+                if competitors_for_sov:
+                    sov_snippets = []
+                    for agg in results.values():
+                        for qr in getattr(agg, "per_query_results", []):
+                            if getattr(qr, "content_snippet", "") and getattr(qr, "source_status", "ok") == "ok":
+                                sov_snippets.append(qr.content_snippet)
+                    sov = compute_share_of_voice(
+                        sov_snippets, brand, project_aliases, competitors_for_sov
+                    )
+            except Exception:
+                sov = None
+
+            usable = {name: r for name, r in results.items() if getattr(r, "source_status", "ok") == "ok"}
+            platforms_mentioned = sum(1 for r in usable.values() if r.mentioned)
+            visibility_score = int(platforms_mentioned / len(usable) * 40) if usable else 0
+            position_scores = [30 * (1 - r.best_position_pct / 100) for r in usable.values() if r.best_position_pct is not None]
             position_score = int(sum(position_scores) / len(position_scores)) if position_scores else 0
             sentiment_snippets: dict[str, str] = {}
             for name, aggregated in results.items():
@@ -376,6 +421,12 @@ async def _collect_signals(
                 position_score=position_score,
                 sentiment_score=sentiment_score,
                 platform_results_json=platform_json,
+                share_of_voice_json=_json.dumps(sov) if sov is not None else None,
+                params_hash=_storage.scan_params_hash(
+                    "geo", brand.lower(), category.lower(),
+                    sorted(p.name for p in enabled),
+                ),
+                window_start=_storage.scan_window_start(),
             )
             await _emit(run_id, on_progress, _event(
                 "signal_collect",

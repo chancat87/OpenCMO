@@ -2,7 +2,21 @@
 
 from __future__ import annotations
 
+import json
+
 from opencmo.storage._db import get_db
+
+
+def _parse_aliases(raw: str | None) -> list[str]:
+    if not raw:
+        return []
+    try:
+        value = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return []
+    if isinstance(value, list):
+        return [str(v) for v in value if v]
+    return []
 
 
 async def ensure_project(brand_name: str, url: str, category: str) -> int:
@@ -24,25 +38,33 @@ async def ensure_project(brand_name: str, url: str, category: str) -> int:
         await db.close()
 
 
-async def update_project(project_id: int, brand_name: str | None = None, category: str | None = None) -> None:
-    """Update project metadata (brand_name and/or category)."""
+async def update_project(
+    project_id: int,
+    brand_name: str | None = None,
+    category: str | None = None,
+    aliases: list[str] | None = None,
+) -> None:
+    """Update project metadata (brand_name, category, and/or aliases)."""
+    fields: list[str] = []
+    values: list = []
+    if brand_name is not None:
+        fields.append("brand_name = ?")
+        values.append(brand_name)
+    if category is not None:
+        fields.append("category = ?")
+        values.append(category)
+    if aliases is not None:
+        fields.append("aliases = ?")
+        values.append(json.dumps([a for a in aliases if a]))
+    if not fields:
+        return
+    values.append(project_id)
     db = await get_db()
     try:
-        if brand_name and category:
-            await db.execute(
-                "UPDATE projects SET brand_name = ?, category = ? WHERE id = ?",
-                (brand_name, category, project_id),
-            )
-        elif brand_name:
-            await db.execute(
-                "UPDATE projects SET brand_name = ? WHERE id = ?",
-                (brand_name, project_id),
-            )
-        elif category:
-            await db.execute(
-                "UPDATE projects SET category = ? WHERE id = ?",
-                (category, project_id),
-            )
+        await db.execute(
+            f"UPDATE projects SET {', '.join(fields)} WHERE id = ?",
+            tuple(values),
+        )
         await db.commit()
     finally:
         await db.close()
@@ -53,24 +75,41 @@ async def get_project(project_id: int) -> dict | None:
     db = await get_db()
     try:
         cursor = await db.execute(
-            "SELECT id, brand_name, url, category FROM projects WHERE id = ?",
+            "SELECT id, brand_name, url, category, aliases FROM projects WHERE id = ?",
             (project_id,),
         )
         row = await cursor.fetchone()
         if not row:
             return None
-        return {"id": row[0], "brand_name": row[1], "url": row[2], "category": row[3]}
+        return {
+            "id": row[0],
+            "brand_name": row[1],
+            "url": row[2],
+            "category": row[3],
+            "aliases": _parse_aliases(row[4]),
+        }
     finally:
         await db.close()
 
 
 async def list_projects() -> list[dict]:
-    """Return all projects."""
+    """Return all projects, newest first (highest id first)."""
     db = await get_db()
     try:
-        cursor = await db.execute("SELECT id, brand_name, url, category FROM projects")
+        cursor = await db.execute(
+            "SELECT id, brand_name, url, category, aliases FROM projects ORDER BY id DESC"
+        )
         rows = await cursor.fetchall()
-        return [{"id": r[0], "brand_name": r[1], "url": r[2], "category": r[3]} for r in rows]
+        return [
+            {
+                "id": r[0],
+                "brand_name": r[1],
+                "url": r[2],
+                "category": r[3],
+                "aliases": _parse_aliases(r[4]),
+            }
+            for r in rows
+        ]
     finally:
         await db.close()
 
@@ -80,11 +119,20 @@ async def find_projects_by_brand(brand_name: str) -> list[dict]:
     db = await get_db()
     try:
         cursor = await db.execute(
-            "SELECT id, brand_name, url, category FROM projects WHERE brand_name = ? COLLATE NOCASE",
+            "SELECT id, brand_name, url, category, aliases FROM projects WHERE brand_name = ? COLLATE NOCASE",
             (brand_name,),
         )
         rows = await cursor.fetchall()
-        return [{"id": r[0], "brand_name": r[1], "url": r[2], "category": r[3]} for r in rows]
+        return [
+            {
+                "id": r[0],
+                "brand_name": r[1],
+                "url": r[2],
+                "category": r[3],
+                "aliases": _parse_aliases(r[4]),
+            }
+            for r in rows
+        ]
     finally:
         await db.close()
 
