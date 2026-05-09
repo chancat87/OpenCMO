@@ -35,11 +35,27 @@
 
 ---
 
-## ショーケース：実例
+## 本番環境の実例
 
-**[Cursor.com](https://cursor.com) の実際のスキャン**で OpenCMO を体験 — Reddit、Hacker News、Bilibili、Dev.to、V2EX から 176 件のコミュニティ議論を発見し、177 ノードのナレッジグラフを生成しました。
+OpenCMO は実際のプロジェクトで日々動いています。2 つのライブスキャンから、URL 1 つを入力すると何が生成されるかを示します。
 
-**[Cursor ショーケース（フルデータ）を見る](docs/showcase/cursor/)**
+### Coze — グローバル AI エージェントプラットフォームのモニタリング
+
+- **自動検出された競合**: Dify、FastGPT、OpenAI GPTs
+- **50 キーワード**を追跡（例: `coze 和 dify 哪个好用`、`coze vs chatgpt custom gpts`）
+- 監視期間中に **326 SERP スナップショット**
+- **100 件のコミュニティ議論** — Hacker News 61、Bilibili 29、Dev.to 10
+- 関連リポジトリから **153 名の GitHub 開発者**を潜在ユーザーとして特定
+- 検出: *「Citability スコアが 24 ポイント低下」* — AI 検索の可視性回帰を次回の定期スキャンで自動検知
+
+### DigiGrow — Checkatrade と Wix と競合する英国の SaaS
+
+- **54 キーワード**追跡、**672 SERP ランクチェック**
+- **100 件のコミュニティ議論**（Hacker News、Dev.to、Bilibili、V2EX）
+- エンドツーエンドで **34 件のアクション可能なインサイト**を生成
+- 検出（critical）: `digigrow.uk online marketing solutions` が 24 時間で **#2 から #16 に下落**（5/2 → 5/3）— ダッシュボードを誰もポーリングせずにアクション可能なインサイトとしてプッシュ
+
+> [パブリックデモ](https://www.aidcmo.com/) で自分の URL を試す — 1 スキャン、フルパイプライン、リアルな数値。
 
 ---
 

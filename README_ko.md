@@ -35,11 +35,27 @@
 
 ---
 
-## 쇼케이스: 실제 사례
+## 실제 프로덕션 사례
 
-**[Cursor.com](https://cursor.com) 실제 스캔**으로 OpenCMO를 체험하세요 — Reddit, Hacker News, Bilibili, Dev.to, V2EX에서 176건의 커뮤니티 토론을 발견하고 177개 노드의 지식 그래프를 생성했습니다.
+OpenCMO는 매일 실제 프로젝트에서 실행됩니다. 두 개의 라이브 스캔이 URL 하나가 어떤 결과로 이어지는지 보여줍니다.
 
-**[Cursor 쇼케이스(전체 데이터) 보기](docs/showcase/cursor/)**
+### Coze — 글로벌 AI 에이전트 플랫폼 모니터링
+
+- **자동 발견된 경쟁사**: Dify, FastGPT, OpenAI GPTs
+- **50개 키워드** 추적 (예: `coze 和 dify 哪个好用`, `coze vs chatgpt custom gpts`)
+- 모니터링 기간 동안 **326건 SERP 스냅샷**
+- **100건 커뮤니티 토론** — Hacker News 61, Bilibili 29, Dev.to 10
+- 관련 저장소에서 **153명 GitHub 개발자**를 잠재 사용자로 식별
+- 자동 감지: *"Citability 점수 24점 하락"* — AI 검색 가시성 회귀가 다음 정기 스캔에서 자동 경고
+
+### DigiGrow — Checkatrade와 Wix와 경쟁하는 영국 SaaS
+
+- **54개 키워드** 추적, **672건 SERP 순위 체크**
+- **100건 커뮤니티 토론** (Hacker News, Dev.to, Bilibili, V2EX)
+- 엔드투엔드로 **34건의 실행 가능한 인사이트** 생성
+- 자동 감지(critical): `digigrow.uk online marketing solutions`이 24시간 만에 **#2에서 #16으로 하락** (5/2 → 5/3) — 아무도 대시보드를 폴링하지 않은 상태에서 실행 가능한 인사이트로 푸시
+
+> [공개 데모](https://www.aidcmo.com/)에서 자신의 URL로 시도해 보세요 — 1회 스캔, 전체 파이프라인, 실제 수치.
 
 ---
 

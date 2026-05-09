@@ -35,11 +35,27 @@
 
 ---
 
-## Showcase: Ejemplo Real
+## Ejemplos de Produccion Reales
 
-Mira OpenCMO en accion con un **escaneo real de [Cursor.com](https://cursor.com)** — 176 discusiones de comunidad descubiertas en Reddit, Hacker News, Bilibili, Dev.to y V2EX, con un grafo de conocimiento de 177 nodos.
+OpenCMO se ejecuta a diario en proyectos reales. Dos escaneos en vivo muestran en que se convierte una sola URL.
 
-**[Ver el showcase de Cursor con datos completos](docs/showcase/cursor/)**
+### Coze — monitoreo de una plataforma global de agentes de IA
+
+- **Competidores auto-descubiertos**: Dify, FastGPT, OpenAI GPTs
+- **50 palabras clave** rastreadas (ej. `coze 和 dify 哪个好用`, `coze vs chatgpt custom gpts`)
+- **326 instantaneas SERP** durante la ventana de monitoreo
+- **100 discusiones de comunidad** — 61 en Hacker News, 29 en Bilibili, 10 en Dev.to
+- **153 desarrolladores de GitHub** identificados como usuarios potenciales desde repos relacionados
+- Detectado: *"Citability score cayo 24 puntos"* — regresion de visibilidad en busqueda IA, alertada en el siguiente escaneo programado
+
+### DigiGrow — un SaaS britanico que compite con Checkatrade y Wix
+
+- **54 palabras clave** rastreadas, **672 chequeos de ranking SERP**
+- **100 discusiones de comunidad** (Hacker News, Dev.to, Bilibili, V2EX)
+- **34 insights accionables** generados de extremo a extremo
+- Detectado (critical): `digigrow.uk online marketing solutions` cayo de **#2 a #16 en 24 horas** (5/2 → 5/3) — convertido en insight accionable sin que nadie revisara el dashboard
+
+> Prueba la [demo publica](https://www.aidcmo.com/) con tu propia URL — un escaneo, pipeline completo, numeros reales.
 
 ---
 

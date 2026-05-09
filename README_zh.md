@@ -35,11 +35,27 @@
 
 ---
 
-## 实战展示：真实案例
+## 真实生产示例
 
-通过一次**对 [Cursor.com](https://cursor.com) 的真实扫描**，体验 OpenCMO 的实际效果：在 Reddit、Hacker News、Bilibili、Dev.to 和 V2EX 上发现了 176 条社区讨论，并生成了 177 节点的知识图谱。
+OpenCMO 每天都在真实项目上跑。两个线上扫描展示一次 URL 输入会被转化成什么。
 
-**[查看 Cursor 完整数据展示](docs/showcase/cursor/)**
+### Coze — 监控一个全球 AI Agent 平台
+
+- **自动识别的竞品**：Dify、FastGPT、OpenAI GPTs
+- 跟踪 **50 个关键词**（例如 `coze 和 dify 哪个好用`、`coze vs chatgpt custom gpts`）
+- 监测窗口内 **326 次 SERP 快照**
+- **100 条社区讨论** — Hacker News 61、Bilibili 29、Dev.to 10
+- 从相关仓库挖出 **153 位 GitHub 开发者** 作为潜在用户
+- 自动捕获：*"Citability 分数下降 24 分"* — AI 搜索可见性回归，下一次定时扫描自动报警
+
+### DigiGrow — 一家与 Checkatrade、Wix 竞争的英国 SaaS
+
+- 跟踪 **54 个关键词**，**672 次 SERP 排名检查**
+- **100 条社区讨论**，覆盖 Hacker News、Dev.to、Bilibili、V2EX
+- 端到端生成 **34 条可执行洞察**
+- 自动捕获（critical）：`digigrow.uk online marketing solutions` 在 24 小时内从 **第 #2 跌到 #16**（5/2 → 5/3）— 不需要人盯面板，下一次扫描自动推出可执行洞察
+
+> 在 [线上 Demo](https://www.aidcmo.com/) 输入你自己的 URL，一次扫描，完整 pipeline，真实数据。
 
 ---
 

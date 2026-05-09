@@ -35,11 +35,27 @@
 
 ---
 
-## Showcase: Real-World Example
+## Real Production Examples
 
-See OpenCMO in action with a **real scan of [Cursor.com](https://cursor.com)** — 176 community discussions discovered across Reddit, Hacker News, Bilibili, Dev.to, and V2EX, with a 177-node knowledge graph.
+OpenCMO is run daily on real projects. Two live scans show what one URL turns into.
 
-**[View the Cursor showcase with full data](docs/showcase/cursor/)**
+### Coze — monitoring a global AI agent platform
+
+- **Auto-discovered competitors**: Dify, FastGPT, OpenAI GPTs
+- **50 keywords** tracked (e.g. `coze 和 dify 哪个好用`, `coze vs chatgpt custom gpts`)
+- **326 SERP snapshots** over the monitoring window
+- **100 community discussions** — 61 on Hacker News, 29 on Bilibili, 10 on Dev.to
+- **153 GitHub developers** surfaced as potential users from related repos
+- Caught: *"Citability score dropped 24 points"* — AI-search visibility regression flagged in the next scheduled scan
+
+### DigiGrow — a UK SaaS competing with Checkatrade and Wix
+
+- **54 keywords**, **672 SERP rank checks** logged over the window
+- **100 community discussions** across Hacker News, Dev.to, Bilibili, V2EX
+- **34 actionable insights** generated end-to-end
+- Caught (critical): `digigrow.uk online marketing solutions` dropped from **#2 to #16 in 24 hours** (May 2 → May 3) — pushed as an actionable insight without anyone polling the dashboard
+
+> Try the [public demo](https://www.aidcmo.com/) with your own URL — one scan, full pipeline, real numbers.
 
 ---
 
