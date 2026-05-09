@@ -914,14 +914,18 @@ def get_enabled_providers(
     enabled = [p for p in registry if p.is_enabled]
     by_identity: dict[tuple, GeoProvider] = {}
     for p in enabled:
-        ident = p.provider_identity()
+        provider_identity = getattr(p, "provider_identity", None)
+        if callable(provider_identity):
+            ident = provider_identity()
+        else:
+            ident = ("provider", type(p).__name__, getattr(p, "name", ""))
         existing = by_identity.get(ident)
         if existing is None:
             by_identity[ident] = p
             continue
         # Collision: prefer the explicit opt-in (status='disabled' but currently enabled
         # via env flag) over the always-on default.
-        if existing.status == "enabled" and p.status == "disabled":
+        if getattr(existing, "status", None) == "enabled" and getattr(p, "status", None) == "disabled":
             by_identity[ident] = p
     return list(by_identity.values())
 
