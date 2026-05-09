@@ -522,16 +522,16 @@ async def _collect_signals(
             discovery_warnings = [str(item).strip() for item in result.get("warnings", []) if str(item).strip()]
             for message in discovery_warnings:
                 warnings.append(message)
-            await _emit(run_id, on_progress, _event(
-                "signal_collect",
-                "warning",
-                message,
-                agent="Signal Collector",
-                code="github_rate_limit" if "rate limit" in message.lower() else "github_warning",
-                kind="source_limit" if "rate limit" in message.lower() else "coverage_gap",
-                hint="Retry after the GitHub API limit resets or add a dedicated GitHub token for discovery coverage.",
-                blocking=False,
-            ))
+                await _emit(run_id, on_progress, _event(
+                    "signal_collect",
+                    "warning",
+                    message,
+                    agent="Signal Collector",
+                    code="github_rate_limit" if "rate limit" in message.lower() else "github_warning",
+                    kind="source_limit" if "rate limit" in message.lower() else "coverage_gap",
+                    hint="Retry after the GitHub API limit resets or add a dedicated GitHub token for discovery coverage.",
+                    blocking=False,
+                ))
             if discovered or contactable or not discovery_warnings:
                 await _emit(run_id, on_progress, _event(
                     "signal_collect",

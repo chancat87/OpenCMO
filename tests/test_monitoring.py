@@ -107,6 +107,27 @@ async def test_collect_signals_surfaces_github_rate_limit_as_warning():
 
 
 @pytest.mark.asyncio
+async def test_collect_signals_emits_github_success_when_discovery_has_no_warnings():
+    project_id = await storage.ensure_project("Coze", "https://www.coze.com/", "ai")
+
+    captured: list[dict] = []
+
+    async def capture(_run_id: int, _callback, event: dict) -> None:
+        captured.append(event)
+
+    with patch("opencmo.monitoring._emit", side_effect=capture), \
+         patch(
+             "opencmo.services.github_service.auto_discover_from_product",
+             new=AsyncMock(return_value={"discovered": 3, "contactable": 1, "warnings": []}),
+         ):
+        await _collect_signals(1, project_id, "github", 1, None)
+
+    summaries = [event["summary"] for event in captured if event["stage"] == "signal_collect"]
+    assert "GitHub discovery finished: 3 found, 1 contactable." in summaries
+    assert not any("GitHub discovery failed" in summary for summary in summaries)
+
+
+@pytest.mark.asyncio
 async def test_analysis_enrichment_skips_brand_update_when_identity_exists():
     existing_id = await storage.ensure_project("ActualBrand", "https://same.test", "saas")
     duplicate_id = await storage.ensure_project("Same", "https://same.test", "auto")
