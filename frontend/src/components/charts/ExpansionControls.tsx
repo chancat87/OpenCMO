@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Play, Pause, RotateCcw, Loader2, Zap } from "lucide-react";
-import { useExpansionStatus, useStartExpansion, usePauseExpansion, useResetExpansion } from "../../hooks/useGraphData";
+import { useExpansionProgress, useExpansionStatus, useStartExpansion, usePauseExpansion, useResetExpansion } from "../../hooks/useGraphData";
 import { ConfirmDialog } from "../common/ConfirmDialog";
 import { useI18n } from "../../i18n";
 
@@ -22,9 +22,12 @@ export function ExpansionControls({ projectId }: { projectId: number }) {
   const isPaused = runtime === "paused" || desired === "paused";
   const isInterrupted = runtime === "interrupted";
   const isIdle = runtime === "idle" && desired === "idle";
+  const { data: progress } = useExpansionProgress(projectId, isRunning || wave > 0);
+  const latestProgress = progress?.progress?.filter((item) => item.summary).at(-1);
 
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-zinc-200/60 bg-white/80 px-5 py-3 shadow-sm backdrop-blur-sm">
+    <div className="rounded-2xl border border-zinc-200/60 bg-white/80 px-5 py-3 shadow-sm backdrop-blur-sm">
+      <div className="flex flex-wrap items-center gap-3">
       {/* Status indicator */}
       <div className="flex items-center gap-2">
         {isRunning ? (
@@ -108,6 +111,14 @@ export function ExpansionControls({ projectId }: { projectId: number }) {
         <span className="ml-auto text-xs text-amber-600 font-medium">
           {t("graph.interrupted")}
         </span>
+      )}
+      </div>
+
+      {(latestProgress || wave > 0) && (
+        <div className="mt-3 rounded-xl bg-zinc-50 px-3 py-2 text-xs leading-5 text-zinc-600">
+          <span className="font-semibold text-zinc-800">{t("graph.expansionFocus")}</span>{" "}
+          {latestProgress?.summary ?? t("graph.expansionIdleSummary", { discovered, explored })}
+        </div>
       )}
 
       {showReset && (

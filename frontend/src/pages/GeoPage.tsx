@@ -1,4 +1,4 @@
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 import { useProjectSummary } from "../hooks/useProject";
 import { useGeoChart } from "../hooks/useGeoData";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
@@ -11,7 +11,7 @@ import { ChartCard } from "../components/common/ChartCard";
 import { GeoScoreChart } from "../components/charts/GeoScoreChart";
 import { useI18n } from "../i18n";
 import { ActionTip } from "../components/common/ActionTip";
-import { Globe, Eye, MapPin, Heart, Info } from "lucide-react";
+import { ArrowRight, Gauge, Globe, Eye, MapPin, Heart, Info } from "lucide-react";
 
 interface SovRow {
   name: string;
@@ -45,6 +45,27 @@ const SNAPSHOT_SERIES = [
   { key: "sentiment", labelKey: "geo.sentiment", color: "bg-amber-500" },
 ];
 
+function InsightCard({
+  label,
+  value,
+  why,
+  next,
+}: {
+  label: string;
+  value: string;
+  why: string;
+  next: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200/80 bg-white p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</p>
+      <p className="mt-2 text-xl font-semibold text-slate-950">{value}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{why}</p>
+      <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-sm font-medium leading-6 text-slate-800">{next}</p>
+    </div>
+  );
+}
+
 export function GeoPage() {
   const { id } = useParams();
   const projectId = Number(id);
@@ -60,6 +81,17 @@ export function GeoPage() {
   const position = chart?.position as (number | null)[] | undefined;
   const sentiment = chart?.sentiment as (number | null)[] | undefined;
   const sentimentUnavailable = latest(sentiment) == null;
+  const currentGeoScore = latest(geoScore);
+  const currentVisibility = latest(visibility);
+  const currentPosition = latest(position);
+  const currentSentiment = latest(sentiment);
+  const sov = (chart as { share_of_voice?: ShareOfVoice | null } | undefined)?.share_of_voice;
+  const brandShare = sov ? sov.brand.share * 100 : null;
+  const topCompetitor = sov?.competitors?.[0] ?? null;
+  const sampleCount = chart?.labels?.length ?? 0;
+  const confidence = sampleCount >= 3 && currentGeoScore != null
+    ? t("geo.confidenceUsable", { count: sampleCount })
+    : t("geo.confidenceLimited", { count: sampleCount });
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -75,6 +107,58 @@ export function GeoPage() {
         <EmptyState title={t("geo.noData")} description={t("geo.noDataDesc")} />
       ) : (
         <div className="space-y-6">
+          <section className="rounded-3xl border border-slate-200/80 bg-slate-50 p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                  <Gauge size={14} />
+                  {t("geo.insightTitle")}
+                </div>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+                  {currentGeoScore != null
+                    ? t("geo.insightHeadline", { score: Math.round(currentGeoScore) })
+                    : t("geo.insightHeadlineMissing")}
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{confidence}</p>
+              </div>
+              <Link
+                to={`/projects/${projectId}/graph`}
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+              >
+                {brandShare != null && topCompetitor && brandShare < topCompetitor.share * 100
+                  ? t("geo.openGraphGaps")
+                  : t("geo.runNextScan")}
+                <ArrowRight size={15} />
+              </Link>
+            </div>
+            <div className="mt-5 grid gap-3 lg:grid-cols-4">
+              <InsightCard
+                label={t("geo.coverage")}
+                value={brandShare != null ? `${brandShare.toFixed(1)}%` : t("geo.notCollected")}
+                why={sov ? t("geo.coverageWhy", { total: sov.total_mentions }) : t("geo.coverageMissing")}
+                next={brandShare != null && brandShare < 20 ? t("geo.coverageNextLow") : t("geo.coverageNext")}
+              />
+              <InsightCard
+                label={t("geo.shareOfVoice")}
+                value={topCompetitor ? `${sov?.brand.name} vs ${topCompetitor.name}` : t("geo.notCollected")}
+                why={topCompetitor ? t("geo.sovWhy", { share: (topCompetitor.share * 100).toFixed(1) }) : t("geo.sovMissing")}
+                next={topCompetitor ? t("geo.sovNext") : t("geo.addCompetitorsNext")}
+              />
+              <InsightCard
+                label={t("geo.contextAccuracy")}
+                value={currentSentiment != null ? `${Math.round(currentSentiment)}/100` : t("geo.limitedSample")}
+                why={currentSentiment != null ? t("geo.sentimentWhy") : t("geo.sentimentMissingWhy")}
+                next={currentSentiment != null && currentSentiment < 60 ? t("geo.sentimentNextLow") : t("geo.sentimentNext")}
+              />
+              <InsightCard
+                label={t("geo.position")}
+                value={currentPosition != null ? `${Math.round(currentPosition)}/100` : t("geo.limitedSample")}
+                why={currentVisibility != null ? t("geo.positionWhy", { visibility: Math.round(currentVisibility) }) : t("geo.positionMissing")}
+                next={currentPosition != null && currentPosition < 50 ? t("geo.positionNextLow") : t("geo.positionNext")}
+              />
+            </div>
+          </section>
+
           {/* KPI Cards */}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <KpiCard
@@ -144,7 +228,6 @@ export function GeoPage() {
 
           {/* Share of Voice */}
           {(() => {
-            const sov = (chart as { share_of_voice?: ShareOfVoice | null } | undefined)?.share_of_voice;
             if (!sov) return null;
             const total = sov.total_mentions || 0;
             return (

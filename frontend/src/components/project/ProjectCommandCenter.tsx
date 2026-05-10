@@ -1,4 +1,4 @@
-import { ArrowRight, Bot, CheckCircle2, FileText, GitBranch, Globe, PenLine, Search, Users } from "lucide-react";
+import { ArrowRight, Bot, CheckCircle2, FileText, GitBranch, Globe, PenLine, Search, Target, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import type { LatestReports, LatestScans, MonitoringSummary } from "../../types";
@@ -55,6 +55,26 @@ function SummaryCard({
       <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{value}</p>
       <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
     </article>
+  );
+}
+
+function OutcomeMetric({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+        {label}
+      </p>
+      <p className="mt-2 truncate text-xl font-semibold text-slate-950">{value}</p>
+      <p className="mt-1 text-sm leading-6 text-slate-600">{detail}</p>
+    </div>
   );
 }
 
@@ -236,6 +256,14 @@ export function ProjectCommandCenter({
     blogDraftsCount > 0
       ? t("agents.contentFound", { count: blogDraftsCount })
       : t("agents.contentPending");
+  const seoValue =
+    latest.seo?.score != null ? `${Math.round(latest.seo.score * 100)}/100` : t("score.dataUnavailable");
+  const geoValue =
+    latest.geo?.score != null ? `${Math.round(latest.geo.score)}/100` : t("score.dataUnavailable");
+  const communityValue =
+    latest.community?.total_hits != null ? String(latest.community.total_hits) : t("score.dataUnavailable");
+  const graphValue =
+    competitorTotal > 0 ? String(competitorTotal) : t("score.dataUnavailable");
 
   const primaryAction =
     needsSetup
@@ -275,6 +303,17 @@ export function ProjectCommandCenter({
               to: routes.changedToday,
               summary: t("project.commandChangedEmpty"),
           };
+  const topOpportunity = actions[0]?.title ?? primaryAction.summary;
+  const evidenceLine = latestMonitoring
+    ? t("outcome.evidenceMonitoring", {
+        findings: findingsCount,
+        actions: recommendationsCount,
+      })
+    : surfaceUpdates > 0
+      ? t("outcome.evidenceSurfaces", { count: surfaceUpdates })
+      : needsSetup
+        ? t("outcome.evidenceNeedsBaseline")
+        : t("outcome.evidenceNoNewSignals");
 
   const setupItems: PriorityItem[] = [
     missingCompetitors || !hasScanData
@@ -416,6 +455,51 @@ export function ProjectCommandCenter({
   return (
     <section className="space-y-5">
       <div className="rounded-3xl border border-slate-200/80 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.08),_transparent_40%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-6 shadow-sm">
+        <div className="mb-6 rounded-2xl border border-slate-900/10 bg-white/80 p-5">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                <Target size={14} />
+                {t("outcome.title")}
+              </div>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+                {topOpportunity}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{evidenceLine}</p>
+            </div>
+            <Link
+              to={primaryAction.to}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+            >
+              {primaryAction.label}
+              <ArrowRight size={15} />
+            </Link>
+          </div>
+
+          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <OutcomeMetric
+              label={t("outcome.seo")}
+              value={seoValue}
+              detail={latest.seo ? t("outcome.seoEvidence") : t("outcome.missingScan")}
+            />
+            <OutcomeMetric
+              label={t("outcome.geo")}
+              value={geoValue}
+              detail={latest.geo ? t("outcome.geoEvidence") : t("outcome.missingScan")}
+            />
+            <OutcomeMetric
+              label={t("outcome.community")}
+              value={communityValue}
+              detail={latest.community ? t("outcome.communityEvidence") : t("outcome.missingScan")}
+            />
+            <OutcomeMetric
+              label={t("outcome.graph")}
+              value={graphValue}
+              detail={competitorTotal > 0 ? t("outcome.graphEvidence") : t("outcome.graphMissing")}
+            />
+          </div>
+        </div>
+
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex items-start gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white">

@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback, useState, useMemo } from "react";
 import ForceGraph3D from "react-force-graph-3d";
 import * as THREE from "three";
+import { Link } from "react-router";
 import type { GraphData, GraphNode } from "../../api/graph";
 import { useI18n } from "../../i18n";
 
@@ -520,6 +521,31 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
                 <div className="flex justify-between"><span className="text-zinc-400">{t("graph.discoveryDepth")}</span><span className="font-medium text-zinc-700">{selectedNode.depth}</span></div>
               )}
             </div>
+            {selectedNode.type === "competitor" && (
+              <Link
+                to="../serp"
+                relative="path"
+                className="mt-4 flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-700"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {t("graph.actionViewKeywords")} →
+              </Link>
+            )}
+            {(selectedNode.type === "keyword" || selectedNode.type === "competitor_keyword") && (
+              <Link
+                to="../serp"
+                relative="path"
+                className="mt-4 flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-700"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {t("graph.actionTrackKeyword")} →
+              </Link>
+            )}
+            {selectedNode.depth != null && selectedNode.depth > 0 && !selectedNode.explored && (
+              <div className="mt-4 rounded-xl bg-purple-50 px-3 py-2 text-xs leading-5 text-purple-700">
+                {t("graph.actionFrontierReason")}
+              </div>
+            )}
             {selectedNode.url && (
               <a
                 href={selectedNode.url}

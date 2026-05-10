@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchGraph, fetchCompetitors, addCompetitor, deleteCompetitor, discoverCompetitors,
   fetchExpansionStatus, startExpansion, pauseExpansion, resetExpansion,
+  fetchExpansionProgress,
 } from "../api/graph";
 import type { GraphData, Competitor, ExpansionState } from "../api/graph";
 
@@ -22,6 +23,15 @@ export function useExpansionStatus(projectId: number) {
       if (state === "running") return 2_000;
       return 10_000;
     },
+  });
+}
+
+export function useExpansionProgress(projectId: number, enabled = true) {
+  return useQuery<{ progress: Array<{ stage: string; status: string; summary: string }> }>({
+    queryKey: ["expansion-progress", projectId],
+    queryFn: () => fetchExpansionProgress(projectId),
+    enabled,
+    refetchInterval: enabled ? 3_000 : false,
   });
 }
 
