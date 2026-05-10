@@ -172,7 +172,11 @@ def test_settings_protected_and_rejects_private_base_url(tmp_path, monkeypatch):
     db_path = tmp_path / "test.db"
     with patch.object(storage, "_DB_PATH", db_path):
         with TestClient(app) as test_client:
-            assert test_client.get("/api/v1/settings").status_code == 200
+            assert test_client.get("/api/v1/settings").status_code == 401
+            assert test_client.get(
+                "/api/v1/settings",
+                headers={"Authorization": "Bearer test-token"},
+            ).status_code == 200
             assert test_client.post(
                 "/api/v1/settings",
                 json={"OPENAI_BASE_URL": "https://api.openai.com/v1"},
