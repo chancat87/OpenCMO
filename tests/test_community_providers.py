@@ -1255,9 +1255,10 @@ def test_scan_community_sorts_direct_mentions_before_platform_groups():
 def test_scan_community_uses_external_fallback_for_stub_platforms(monkeypatch):
     import json
 
+    from opencmo import llm
     from opencmo.tools.community import _scan_community_impl
 
-    monkeypatch.setenv("TAVILY_API_KEY", "test-key")
+    token = llm.set_request_keys({"TAVILY_API_KEY": "test-key"})
 
     mock_tavily_client = AsyncMock()
     mock_tavily_client.search = AsyncMock(return_value={
@@ -1271,15 +1272,54 @@ def test_scan_community_uses_external_fallback_for_stub_platforms(monkeypatch):
         ]
     })
 
-    with patch.dict(
-        sys.modules,
-        {"tavily": SimpleNamespace(AsyncTavilyClient=lambda api_key: mock_tavily_client)},
-    ):
-        with patch("opencmo.tools.community.PROVIDER_REGISTRY", [XiaoHongShuProvider()]):
-            raw = asyncio.run(_scan_community_impl("OpenCMO", "marketing", locale="zh"))
+    try:
+        with patch.dict(
+            sys.modules,
+            {"tavily": SimpleNamespace(AsyncTavilyClient=lambda api_key: mock_tavily_client)},
+        ):
+            with patch("opencmo.tools.community.PROVIDER_REGISTRY", [XiaoHongShuProvider()]):
+                raw = asyncio.run(_scan_community_impl("OpenCMO", "marketing", locale="zh"))
+    finally:
+        llm.reset_request_keys(token)
 
     envelope = json.loads(raw)
     assert envelope["hits"]
     assert envelope["hits"][0]["platform"] == "xiaohongshu"
     assert envelope["hits"][0]["source_kind"] == "external_search"
     assert envelope["hits"][0]["intent_type"] in {"direct_mention", "opportunity"}
+
+
+def test_trim_scan_result_caps_provider_errors_before_hits(monkeypatch):
+    from opencmo.tools import community
+    from opencmo.tools.community import _trim_scan_result
+    from opencmo.tools.community_providers import DiscussionHit, ProviderError, ScanResult
+
+    monkeypatch.setattr(community, "_get_output_budget", lambda: 1200)
+    hits = [
+        DiscussionHit(
+            platform="reddit",
+            title=f"Hit {i}",
+            url=f"https://example.com/{i}",
+            engagement_score=100 - i,
+            raw_score=100 - i,
+            comments_count=0,
+            age_days=0,
+            author="author",
+            detail_id=str(i),
+            extra_param_1="",
+            extra_param_2="",
+            preview="p" * 600,
+            source="brand_search",
+        )
+        for i in range(6)
+    ]
+    provider_errors = [
+        ProviderError(provider=f"provider-{i}", errors=["e" * 600, "f" * 600, "g" * 600])
+        for i in range(8)
+    ]
+
+    result = _trim_scan_result(ScanResult(hits=hits, provider_errors=provider_errors))
+
+    assert len(result.provider_errors) <= community._MAX_PROVIDER_ERRORS
+    assert all(len(error.errors) <= community._MAX_ERRORS_PER_PROVIDER for error in result.provider_errors)
+    assert len(result.hits) >= community._MIN_TRIMMED_HITS

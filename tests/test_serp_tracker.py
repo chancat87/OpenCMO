@@ -1,5 +1,7 @@
 """Tests for SERP tracker — provider, storage, trends."""
 
+import sys
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -283,3 +285,32 @@ def test_get_active_provider_dataforseo(monkeypatch):
     monkeypatch.setenv("DATAFORSEO_PASSWORD", "test")
     provider = DataForSeoProvider()
     assert provider.is_enabled
+
+
+def test_tavily_provider_client_uses_current_byok_key(monkeypatch):
+    """Tavily client should be created from the current ContextVar key, not ambient env."""
+    from opencmo import llm
+    from opencmo.tools.serp_tracker import TavilySerpProvider
+
+    keys: list[str] = []
+
+    class FakeTavilyClient:
+        def __init__(self, api_key):
+            keys.append(api_key)
+
+    monkeypatch.setitem(sys.modules, "tavily", SimpleNamespace(AsyncTavilyClient=FakeTavilyClient))
+    provider = TavilySerpProvider()
+
+    token = llm.set_request_keys({"TAVILY_API_KEY": "byok-1"})
+    try:
+        provider._get_client(llm.get_key("TAVILY_API_KEY", ""))
+    finally:
+        llm.reset_request_keys(token)
+
+    token = llm.set_request_keys({"TAVILY_API_KEY": "byok-2"})
+    try:
+        provider._get_client(llm.get_key("TAVILY_API_KEY", ""))
+    finally:
+        llm.reset_request_keys(token)
+
+    assert keys == ["byok-1", "byok-2"]

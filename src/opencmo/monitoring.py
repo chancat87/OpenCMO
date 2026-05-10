@@ -1179,13 +1179,18 @@ async def run_monitoring_workflow(
 
                 # Queue report generation as a separate background task so the scan
                 # task can complete quickly and not be vulnerable to server restarts.
-                dedupe_key = f"report:strategic:{project_id}"
+                dedupe_key = f"report:project:{project_id}:strategic:{locale}"
                 existing_report_task = await _bg_service.find_active_task_by_dedupe_key(dedupe_key)
                 if existing_report_task is None:
                     await _bg_service.enqueue_task(
                         kind="report",
                         project_id=project_id,
-                        payload={"project_id": project_id, "kind": "strategic", "source_run_id": run_id},
+                        payload={
+                            "project_id": project_id,
+                            "kind": "strategic",
+                            "locale": locale,
+                            "source_run_id": run_id,
+                        },
                         dedupe_key=dedupe_key,
                     )
                     await _emit(run_id, on_progress, _event(

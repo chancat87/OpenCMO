@@ -173,12 +173,14 @@ class TavilySerpProvider(SerpProvider):
 
     def __init__(self) -> None:
         self._client: AsyncTavilyClient | None = None
+        self._client_api_key: str | None = None
 
-    def _get_client(self) -> AsyncTavilyClient:
-        if self._client is None:
+    def _get_client(self, api_key: str) -> AsyncTavilyClient:
+        if self._client is None or self._client_api_key != api_key:
             from tavily import AsyncTavilyClient as _AsyncTavilyClient
 
-            self._client = _AsyncTavilyClient()
+            self._client = _AsyncTavilyClient(api_key=api_key)
+            self._client_api_key = api_key
         return self._client
 
     @property
@@ -191,7 +193,9 @@ class TavilySerpProvider(SerpProvider):
         self, keyword: str, target_domain: str, num_results: int = 20
     ) -> SerpResult:
         try:
-            client = self._get_client()
+            from opencmo import llm
+            api_key = llm.get_key("TAVILY_API_KEY", "")
+            client = self._get_client(api_key)
             response = await client.search(query=keyword, max_results=num_results)
             results = response.get("results", [])
 

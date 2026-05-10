@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import asdict
 from datetime import datetime
 from urllib.parse import urlparse
@@ -93,7 +92,7 @@ def _render_stub_queries(
 
 
 def _has_tavily() -> bool:
-    return bool(llm.get_key("TAVILY_API_KEY") or os.environ.get("TAVILY_API_KEY"))
+    return bool(llm.get_key("TAVILY_API_KEY"))
 
 
 def _format_site_query(query: str, domains: list[str]) -> str:
@@ -169,7 +168,7 @@ async def _search_external_platform(
         if use_tavily:
             try:
                 from tavily import AsyncTavilyClient
-                api_key = llm.get_key("TAVILY_API_KEY") or os.environ.get("TAVILY_API_KEY")
+                api_key = llm.get_key("TAVILY_API_KEY")
                 client = AsyncTavilyClient(api_key=api_key)
                 resp = await client.search(
                     query=_format_site_query(spec.query, domains),
@@ -254,6 +253,21 @@ def _get_output_budget() -> int:
     return get_scrape_profile().output_budget_chars
 
 
+_MAX_PROVIDER_ERRORS = 5
+_MAX_ERRORS_PER_PROVIDER = 2
+_MIN_TRIMMED_HITS = 3
+
+
+def _cap_provider_errors(provider_errors: list[ProviderError]) -> list[ProviderError]:
+    capped: list[ProviderError] = []
+    for provider_error in provider_errors[:_MAX_PROVIDER_ERRORS]:
+        capped.append(ProviderError(
+            provider=provider_error.provider,
+            errors=[_truncate(error, 200) for error in provider_error.errors[:_MAX_ERRORS_PER_PROVIDER]],
+        ))
+    return capped
+
+
 def _trim_scan_result(sr: ScanResult) -> ScanResult:
     """Trim ScanResult to fit within output budget. Mutates and returns sr."""
     budget = _get_output_budget()
@@ -261,17 +275,23 @@ def _trim_scan_result(sr: ScanResult) -> ScanResult:
     if len(serialized) <= budget:
         return sr
 
-    # Step 1: shorten all previews to 100 chars
+    # Step 1: cap provider errors before sacrificing discussion hits.
+    sr.provider_errors = _cap_provider_errors(sr.provider_errors)
+    serialized = json.dumps(asdict(sr), ensure_ascii=False)
+    if len(serialized) <= budget:
+        return sr
+
+    # Step 2: shorten all previews to 100 chars.
     for h in sr.hits:
         h.preview = _truncate(h.preview, 100)
     serialized = json.dumps(asdict(sr), ensure_ascii=False)
     if len(serialized) <= budget:
         return sr
 
-    # Step 2: remove lowest-engagement hits one at a time
-    sr.hits.sort(key=lambda h: ((h.engagement_score or 0), (h.raw_score or 0)))
-    while len(serialized) > budget and sr.hits:
-        sr.hits.pop(0)
+    # Step 3: remove lowest-engagement hits, but preserve a minimal result set.
+    sr.hits.sort(key=lambda h: ((h.engagement_score or 0), (h.raw_score or 0)), reverse=True)
+    while len(serialized) > budget and len(sr.hits) > _MIN_TRIMMED_HITS:
+        sr.hits.pop()
         serialized = json.dumps(asdict(sr), ensure_ascii=False)
 
     return sr

@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import html as html_mod
 import math
-import os
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -1201,7 +1200,9 @@ class YouTubeProvider(CommunityProvider):
         except ImportError:
             return [], ["tavily-python not installed"]
         try:
-            client = AsyncTavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+            from opencmo import llm
+            api_key = llm.get_key("TAVILY_API_KEY", "")
+            client = AsyncTavilyClient(api_key=api_key)
             resp = await client.search(
                 query=f"{query} site:youtube.com",
                 max_results=10,
@@ -1551,7 +1552,9 @@ class TwitterProvider(CommunityProvider):
         profile = _get_profile()
         max_results = getattr(profile, "twitter_max_results", 25)
         try:
-            client = tweepy.Client(bearer_token=os.environ["TWITTER_BEARER_TOKEN"])
+            from opencmo import llm
+            bearer_token = llm.get_key("TWITTER_BEARER_TOKEN", "")
+            client = tweepy.Client(bearer_token=bearer_token)
             resp = client.search_recent_tweets(
                 query=f"{query} -is:retweet lang:en",
                 max_results=min(max(10, max_results), 100),
@@ -1575,7 +1578,9 @@ class TwitterProvider(CommunityProvider):
             return [], ["tavily-python not installed"]
 
         try:
-            client = AsyncTavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+            from opencmo import llm
+            api_key = llm.get_key("TAVILY_API_KEY", "")
+            client = AsyncTavilyClient(api_key=api_key)
             resp = await client.search(
                 query=f"{query} site:x.com OR site:twitter.com",
                 max_results=10,
