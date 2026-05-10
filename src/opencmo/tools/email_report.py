@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -10,6 +11,7 @@ from email.mime.text import MIMEText
 from agents import function_tool
 
 logger = logging.getLogger(__name__)
+_REPORT_ASSET_RELATIVE_SRC_RE = re.compile(r'(<img\b[^>]*\bsrc=)(["\'])(/api/v1/report-assets/[a-f0-9]{32}\.svg)(\2)', re.IGNORECASE)
 
 
 def _get_smtp_config() -> dict | None:
@@ -34,10 +36,32 @@ def _get_smtp_config() -> dict | None:
     }
 
 
-async def send_report_impl(project_id: int) -> dict:
+def _get_report_public_base_url() -> str:
+    from opencmo import llm
+
+    base_url = (
+        llm.get_key("OPENCMO_PUBLIC_BASE_URL")
+        or llm.get_key("OPENCMO_APP_BASE_URL")
+        or llm.get_key("OPENCMO_REPORT_BASE_URL")
+        or "https://www.aidcmo.com"
+    )
+    return str(base_url).rstrip("/")
+
+
+def _make_report_asset_urls_absolute(html: str) -> str:
+    base_url = _get_report_public_base_url()
+
+    def replace(match: re.Match[str]) -> str:
+        return f"{match.group(1)}{match.group(2)}{base_url}{match.group(3)}{match.group(4)}"
+
+    return _REPORT_ASSET_RELATIVE_SRC_RE.sub(replace, html)
+
+
+async def send_report_impl(project_id: int, *, locale: str = "zh") -> dict:
     """Build and send the latest periodic human report for a project."""
     from opencmo import storage
 
+    locale = storage.normalize_report_locale(locale)
     config = _get_smtp_config()
     if not config:
         return {"ok": False, "error": "SMTP not configured"}
@@ -46,16 +70,16 @@ async def send_report_impl(project_id: int) -> dict:
     if not project:
         return {"ok": False, "error": f"Project {project_id} not found"}
 
-    report = await storage.get_latest_report(project_id, "periodic", "human")
+    report = await storage.get_latest_report(project_id, "periodic", "human", locale=locale)
     if not report:
         from opencmo.reports import generate_periodic_report_bundle
 
-        generated = await generate_periodic_report_bundle(project_id, source_run_id=None)
+        generated = await generate_periodic_report_bundle(project_id, source_run_id=None, locale=locale)
         report = generated["human"]
     if report.get("generation_status") != "completed" or not (report.get("content_html") or report.get("content")):
         return {"ok": False, "error": "Latest weekly report is unavailable"}
 
-    html = report.get("content_html") or f"<pre>{report.get('content', '')}</pre>"
+    html = _make_report_asset_urls_absolute(report.get("content_html") or f"<pre>{report.get('content', '')}</pre>")
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"OpenCMO Weekly Brief: {project['brand_name']}"
@@ -81,6 +105,7 @@ async def send_report_impl(project_id: int) -> dict:
             "report_id": report["id"],
             "kind": report["kind"],
             "audience": report["audience"],
+            "locale": report.get("locale", locale),
         }
     except Exception as exc:
         return {"ok": False, "error": str(exc)}

@@ -21,6 +21,7 @@ import asyncio
 import json
 import logging
 import re
+from contextvars import ContextVar
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,34 @@ _MAX_GRADER_RETRIES = 1  # Phase 1 optimization: reduced from 2 to 1
 _GRADER_PASS_THRESHOLD = 3.8  # Phase 1 optimization: raised from 3.5 to 3.8 to reduce low-quality retries
 # Maximum concurrent LLM calls to prevent API rate limiting
 _MAX_CONCURRENT_LLM_CALLS = 3  # conservative default for unstable local gateways
+_PIPELINE_LOCALE: ContextVar[str] = ContextVar("report_pipeline_locale", default="zh")
+
+_LOCALE_LANGUAGE_INSTRUCTIONS = {
+    "en": "Language requirement: write all human-readable output in English. For JSON outputs, keep the required JSON keys unchanged, but write all string values in English.",
+    "zh": "语言要求：所有面向用户的输出必须使用简体中文。JSON 输出保持约定字段名不变，但字符串值使用简体中文。",
+    "ja": "Language requirement: write all human-readable output in Japanese. For JSON outputs, keep the required JSON keys unchanged, but write all string values in Japanese.",
+    "ko": "Language requirement: write all human-readable output in Korean. For JSON outputs, keep the required JSON keys unchanged, but write all string values in Korean.",
+    "es": "Language requirement: write all human-readable output in Spanish. For JSON outputs, keep the required JSON keys unchanged, but write all string values in Spanish.",
+}
+
+
+def _pipeline_structure_labels(locale: str | None = None) -> dict[str, str]:
+    from opencmo.reports import _report_structure_labels
+
+    return _report_structure_labels(locale or _PIPELINE_LOCALE.get())
+
+
+def _pipeline_empty_charts_text(locale: str | None = None) -> str:
+    from opencmo.reports import _empty_report_charts_text
+
+    return _empty_report_charts_text(locale or _PIPELINE_LOCALE.get())
+
+
+def _with_required_h2(system: str, heading: str) -> str:
+    return (
+        f"{system}\n\n"
+        f"结构标题（已按目标语言给出）：输出必须以 `## {heading}` 开头，逐字使用该标题。"
+    )
 
 
 def _json_dump(data: object) -> str:
@@ -67,7 +96,9 @@ def _truncate_list(data: list | None, max_items: int, sort_key: str | None = Non
 async def _llm_text_call(system: str, user: str) -> str:
     """Single LLM call returning plain text / markdown."""
     from opencmo.reports import _generate_llm_markdown
-    return await _generate_llm_markdown(system, user)
+    locale = _PIPELINE_LOCALE.get()
+    instruction = _LOCALE_LANGUAGE_INSTRUCTIONS.get(locale, _LOCALE_LANGUAGE_INSTRUCTIONS["zh"])
+    return await _generate_llm_markdown(f"{system}\n\n{instruction}", user)
 
 
 async def _llm_json_call(system: str, user: str) -> dict | list:
@@ -84,8 +115,9 @@ _DIMENSIONS = [
     {
         "id": "seo_tech",
         "name": "SEO & 技术健康度",
-        "keys": ["seo_latest", "ai_crawler_history"],
+        "keys": ["seo_latest", "seo_history", "ai_crawler_history"],
         "description": "网站 SEO 审计数据和 AI 爬虫可达性数据",
+        "truncate": {"seo_history": 10},
     },
     {
         "id": "search_visibility",
@@ -97,15 +129,16 @@ _DIMENSIONS = [
     {
         "id": "ai_visibility",
         "name": "AI 可见性 & 品牌引用",
-        "keys": ["geo_latest", "citability_history", "brand_presence_history"],
+        "keys": ["geo_latest", "geo_history", "citability_history", "brand_presence_history"],
         "description": "GEO 评分、AI 平台引文可信度和品牌存在感",
+        "truncate": {"geo_history": 10, "citability_history": 10, "brand_presence_history": 10},
     },
     {
         "id": "community_market",
         "name": "社区 & 市场信号",
-        "keys": ["community_latest", "discussions", "insights_history"],
+        "keys": ["community_latest", "community_history", "discussions", "insights_history"],
         "description": "社区讨论、市场趋势和 AI 洞察告警",
-        "truncate": {"discussions": 15, "insights_history": 10},
+        "truncate": {"community_history": 10, "discussions": 15, "insights_history": 10},
     },
     {
         "id": "competitive",
@@ -457,9 +490,9 @@ _PLAN_SYSTEM = """\
 2. 每个章节必须有明确的**核心论点**（不是描述性标题）
 3. 每个章节必须指定使用哪些 insights (用 id 引用) 作为论据
 4. 章节数量：4-6 个主体章节
-5. 引言和战略建议章节标记为 is_final_section: true（它们最后写）
+5. 不要规划“结论/摘要/目录/引言/战略建议”章节；这些由最终合成阶段统一生成
 6. 标题层级必须清晰：最终 Markdown 只能使用 `#`、`##`、`###`，不能规划更深层级
-7. 必须规划一个图表解释章节，用于解释后端提供的真实图表，不要要求模型自行创造图表数据
+7. 不要规划图表章节；后端会把真实图表速览固定放在目录之后
 
 输出 JSON 格式：
 {
@@ -479,7 +512,7 @@ _PLAN_SYSTEM = """\
   "narrative_arc": "报告的叙事线索：从问题诊断 → 根因分析 → 机会识别 → 行动路线图"
 }
 
-注意：主体章节 is_final_section 设为 false，引言和战略建议设为 true。
+注意：所有 sections 都应是主体分析章节，is_final_section 必须设为 false。
 必须返回合法 JSON，不要加 markdown 代码块。"""
 
 
@@ -691,15 +724,14 @@ _WRITE_EXEC_SUMMARY_SYSTEM = """\
 你是一位面向高管的报告编辑。基于以下各章节摘要和核心发现，撰写执行摘要。
 
 要求：
-1. 250-350 字
-2. 第一句必须点明最关键的业务影响（如：获客效率、品牌可见性、市场竞争压力）
-3. 只有当输入中已经出现明确数字时才允许量化；如果缺少可靠数字，必须改用定性判断并说明数据缺口
-4. 明确指出 1-3 个最高优先级行动和建议时间窗口，但不要编造 ROI、流量损失或竞品增速
-5. 添加紧迫性提示，但只能基于输入中已经给出的事实和趋势
-6. 面向CMO决策者，30秒内让人理解"为什么现在必须行动"
-7. 如果输入包含真实图表，必须把图表作为证据引用，但不能改写图表数字
+1. 必须结论先行，不要铺垫，不要写背景。
+2. 180-260 字，用 3-5 条短段落或 bullet 直接回答：现在最重要的判断是什么、为什么重要、下一步先做什么。
+3. 第一句必须点明最关键的业务影响（如：获客效率、品牌可见性、市场竞争压力）。
+4. 只有当输入中已经出现明确数字时才允许量化；如果缺少可靠数字，必须改用定性判断并说明数据缺口。
+5. 明确指出 1-3 个最高优先级行动和建议时间窗口，但不要编造 ROI、流量损失或竞品增速。
+6. 如果输入包含真实图表，必须把图表作为证据引用，但不能改写图表数字。
 
-输出纯 Markdown（以 ## 执行摘要 开头）。"""
+输出纯 Markdown。"""
 
 _WRITE_INTRO_SYSTEM = """\
 你是一位战略报告编辑。基于以下上下文信息，撰写报告引言。
@@ -710,7 +742,7 @@ _WRITE_INTRO_SYSTEM = """\
 3. 快速建立上下文：品牌定位、面对什么市场环境、为什么现在需要关注
 4. 语调专业且有紧迫感
 
-输出纯 Markdown（以 ## 引言 开头）。"""
+输出纯 Markdown。"""
 
 _WRITE_STRATEGY_SYSTEM = """\
 你是一位 CMO 级战略顾问。基于以下各章节分析摘要，提出战略建议与行动路线图。
@@ -733,7 +765,29 @@ _WRITE_STRATEGY_SYSTEM = """\
 - 指出当前最值得把握的机会窗口
 - 只有当输入中已有明确数字时才允许量化；不要编造 ICE 分数、ROI 或未来指标变化
 
-输出纯 Markdown（以 ## 战略建议与行动路线图 开头）。"""
+输出纯 Markdown。"""
+
+
+def _build_table_of_contents(section_contents: list[tuple[dict, str]], *, locale: str | None = None) -> str:
+    """Build a deterministic reader-facing table of contents."""
+    labels = _pipeline_structure_labels(locale)
+    lines = [
+        f"## {labels['toc']}",
+        "",
+        f"- {labels['charts']}",
+        f"- {labels['background']}",
+    ]
+    for section, content in section_contents:
+        title = str(section.get("title") or "").strip()
+        if not title:
+            for raw_line in content.splitlines():
+                if raw_line.startswith("## "):
+                    title = raw_line[3:].strip()
+                    break
+        if title:
+            lines.append(f"- {title}")
+    lines.append(f"- {labels['strategy']}")
+    return "\n".join(lines)
 
 
 async def _summarize_one_section(section: dict, content: str) -> str:
@@ -780,12 +834,13 @@ async def _phase_synthesize(
     )
 
     # Context for all synthesis writers (small — just summaries, not full content)
+    labels = _pipeline_structure_labels()
     synthesis_context = (
         f"品牌：{project['brand_name']} ({project['category']})\n"
         f"网址：{project['url']}\n"
-        f"报告标题：{outline.get('report_title', '深度分析报告')}\n"
+        f"报告标题：{outline.get('report_title', labels['title_suffix'])}\n"
         f"叙事线索：{outline.get('narrative_arc', '无')}\n\n"
-        f"真实图表证据：\n{facts.get('report_charts_markdown', '当前数据不足，未生成图表。')}\n\n"
+        f"真实图表证据：\n{facts.get('report_charts_markdown', _pipeline_empty_charts_text())}\n\n"
         f"核心发现要点：\n"
         + "\n".join(f"- {p}" for p in distilled.get("executive_summary_points", []))
         + f"\n\n贯穿主题：{', '.join(distilled.get('cross_cutting_themes', []))}\n\n"
@@ -799,17 +854,23 @@ async def _phase_synthesize(
         async with semaphore:
             return await coro
 
-    exec_task = _bounded_synthesis(_llm_text_call(_WRITE_EXEC_SUMMARY_SYSTEM, synthesis_context))
-    intro_task = _bounded_synthesis(_llm_text_call(_WRITE_INTRO_SYSTEM, synthesis_context))
-    strategy_task = _bounded_synthesis(_llm_text_call(_WRITE_STRATEGY_SYSTEM, synthesis_context))
+    conclusion_task = _bounded_synthesis(
+        _llm_text_call(_with_required_h2(_WRITE_EXEC_SUMMARY_SYSTEM, labels["conclusion"]), synthesis_context)
+    )
+    intro_task = _bounded_synthesis(
+        _llm_text_call(_with_required_h2(_WRITE_INTRO_SYSTEM, labels["background"]), synthesis_context)
+    )
+    strategy_task = _bounded_synthesis(
+        _llm_text_call(_with_required_h2(_WRITE_STRATEGY_SYSTEM, labels["strategy"]), synthesis_context)
+    )
 
-    exec_summary, intro, strategy = await asyncio.gather(
-        exec_task, intro_task, strategy_task,
+    lead_conclusion, intro, strategy = await asyncio.gather(
+        conclusion_task, intro_task, strategy_task,
         return_exceptions=True,
     )
 
-    if isinstance(exec_summary, Exception):
-        raise RuntimeError(f"Executive summary generation failed: {exec_summary}") from exec_summary
+    if isinstance(lead_conclusion, Exception):
+        raise RuntimeError(f"Lead conclusion generation failed: {lead_conclusion}") from lead_conclusion
     if isinstance(intro, Exception):
         raise RuntimeError(f"Intro generation failed: {intro}") from intro
     if isinstance(strategy, Exception):
@@ -817,12 +878,14 @@ async def _phase_synthesize(
 
     # Step 3: Assemble final report (no LLM needed — just concatenation)
     logger.info("[Pipeline Phase 6.3] Assembling final report")
-    report_title = outline.get("report_title", f"{project['brand_name']} 深度战略分析")
+    report_title = outline.get("report_title", f"{project['brand_name']} {labels['title_suffix']}")
+    table_of_contents = _build_table_of_contents(section_contents)
     sections_md = "\n\n".join(content for _, content in section_contents)
 
     final_report = (
         f"# {report_title}\n\n"
-        f"{exec_summary}\n\n"
+        f"{lead_conclusion}\n\n"
+        f"{table_of_contents}\n\n"
         f"{intro}\n\n"
         f"{sections_md}\n\n"
         f"{strategy}"
@@ -841,6 +904,7 @@ async def run_deep_report_pipeline(
     previous_exists: bool,
     *,
     kind: str = "strategic",
+    locale: str = "zh",
     on_progress: Any = None,
 ) -> str:
     """Run the full 6-phase deep report pipeline.
@@ -860,105 +924,109 @@ async def run_deep_report_pipeline(
                 "detail": detail or summary,
             })
 
-    logger.info(
-        "=== Deep Report Pipeline START (%s) for %s ===",
-        kind, facts["project"]["brand_name"],
-    )
+    token = _PIPELINE_LOCALE.set(locale)
+    try:
+        logger.info(
+            "=== Deep Report Pipeline START (%s/%s) for %s ===",
+            kind, locale, facts["project"]["brand_name"],
+        )
 
-    # ── Phase 1: Reflection (parallel per-dimension) ──
-    _emit("reflection", "running", "Phase 1: Running data quality auditors...")
-    reflection = await _phase_reflect(facts, meta)
-    _emit("reflection", "completed", f"Phase 1 complete: {len(reflection.get('dimensions', {}))} dimensions audited")
+        # ── Phase 1: Reflection (parallel per-dimension) ──
+        _emit("reflection", "running", "Phase 1: Running data quality auditors...")
+        reflection = await _phase_reflect(facts, meta)
+        _emit("reflection", "completed", f"Phase 1 complete: {len(reflection.get('dimensions', {}))} dimensions audited")
 
-    # ── Phase 2: Distill insights (parallel per-dimension) ──
-    _emit("distillation", "running", "Phase 2: Distilling strategic insights...")
-    distilled = await _phase_distill(facts, meta, reflection)
-    insight_count = len(distilled.get("insights", []))
-    _emit("distillation", "completed", f"Phase 2 complete: {insight_count} insights extracted")
+        # ── Phase 2: Distill insights (parallel per-dimension) ──
+        _emit("distillation", "running", "Phase 2: Distilling strategic insights...")
+        distilled = await _phase_distill(facts, meta, reflection)
+        insight_count = len(distilled.get("insights", []))
+        _emit("distillation", "completed", f"Phase 2 complete: {insight_count} insights extracted")
 
-    # ── Phase 3: Plan outline ──
-    _emit("planning", "running", "Phase 3: Planning report structure...")
-    outline = await _phase_plan_outline(facts, distilled, reflection)
-    sections = outline.get("sections", [])
-    _emit("planning", "completed", f"Phase 3 complete: {len(sections)} sections planned")
+        # ── Phase 3: Plan outline ──
+        _emit("planning", "running", "Phase 3: Planning report structure...")
+        outline = await _phase_plan_outline(facts, distilled, reflection)
+        sections = outline.get("sections", [])
+        _emit("planning", "completed", f"Phase 3 complete: {len(sections)} sections planned")
 
-    # Build insight lookup map
-    insights_list = distilled.get("insights", [])
-    insights_map: dict[str, dict] = {ins["id"]: ins for ins in insights_list if "id" in ins}
+        # Build insight lookup map
+        insights_list = distilled.get("insights", [])
+        insights_map: dict[str, dict] = {ins["id"]: ins for ins in insights_list if "id" in ins}
 
-    # Separate main sections from final sections (intro/conclusion)
-    main_sections = [s for s in sections if not s.get("is_final_section", False)]
+        # Separate main sections from final sections (intro/conclusion)
+        main_sections = [s for s in sections if not s.get("is_final_section", False)]
 
-    if not main_sections:
-        raise RuntimeError("Outline planner returned no main sections")
+        if not main_sections:
+            raise RuntimeError("Outline planner returned no main sections")
 
-    # ── Phase 4 + 5: Write & Grade (with retry loop) ──
-    _emit("writing", "running", f"Phase 4-5: Writing {len(main_sections)} sections in parallel...")
+        # ── Phase 4 + 5: Write & Grade (with retry loop) ──
+        _emit("writing", "running", f"Phase 4-5: Writing {len(main_sections)} sections in parallel...")
 
-    async def _write_and_grade(section: dict) -> tuple[dict, str]:
-        """Write a section, grade it, revise if needed."""
-        section_title = section.get("title", section.get("id", "?"))
-        _emit("writing", "running", f"Writing section: {section_title}")
-        content = await _phase_write_section(outline, section, insights_map)
+        async def _write_and_grade(section: dict) -> tuple[dict, str]:
+            """Write a section, grade it, revise if needed."""
+            section_title = section.get("title", section.get("id", "?"))
+            _emit("writing", "running", f"Writing section: {section_title}")
+            content = await _phase_write_section(outline, section, insights_map)
 
-        for attempt in range(_MAX_GRADER_RETRIES + 1):
-            grade = await _phase_grade_section(section, content)
-            if grade.get("grading_unavailable", False):
-                raise RuntimeError(
-                    grade.get("revision_instructions", f"Section grading unavailable for {section_title}")
-                )
-            if grade.get("pass", False):
-                _emit("grading", "completed", f"Section passed: {section_title}")
-                return section, content
-            if attempt < _MAX_GRADER_RETRIES:
-                logger.info(
-                    "[Pipeline] Section %s failed grading (attempt %d/%d), revising...",
-                    section.get("id", "?"), attempt + 1, _MAX_GRADER_RETRIES,
-                )
-                _emit("grading", "running", f"Revising section: {section_title} (attempt {attempt + 1})")
-                content = await _phase_revise_section(section, content, grade)
-            else:
-                logger.warning(
-                    "[Pipeline] Section %s exhausted retries, using last version",
-                    section.get("id", "?"),
-                )
+            for attempt in range(_MAX_GRADER_RETRIES + 1):
+                grade = await _phase_grade_section(section, content)
+                if grade.get("grading_unavailable", False):
+                    raise RuntimeError(
+                        grade.get("revision_instructions", f"Section grading unavailable for {section_title}")
+                    )
+                if grade.get("pass", False):
+                    _emit("grading", "completed", f"Section passed: {section_title}")
+                    return section, content
+                if attempt < _MAX_GRADER_RETRIES:
+                    logger.info(
+                        "[Pipeline] Section %s failed grading (attempt %d/%d), revising...",
+                        section.get("id", "?"), attempt + 1, _MAX_GRADER_RETRIES,
+                    )
+                    _emit("grading", "running", f"Revising section: {section_title} (attempt {attempt + 1})")
+                    content = await _phase_revise_section(section, content, grade)
+                else:
+                    logger.warning(
+                        "[Pipeline] Section %s exhausted retries, using last version",
+                        section.get("id", "?"),
+                    )
 
-        return section, content
+            return section, content
 
-    # Run all main sections in parallel with concurrency limit
-    logger.info("[Pipeline] Writing %d main sections in parallel...", len(main_sections))
-    semaphore = asyncio.Semaphore(_MAX_CONCURRENT_LLM_CALLS)
+        # Run all main sections in parallel with concurrency limit
+        logger.info("[Pipeline] Writing %d main sections in parallel...", len(main_sections))
+        semaphore = asyncio.Semaphore(_MAX_CONCURRENT_LLM_CALLS)
 
-    async def _bounded_write_and_grade(section: dict) -> tuple[dict, str]:
-        async with semaphore:
-            return await _write_and_grade(section)
+        async def _bounded_write_and_grade(section: dict) -> tuple[dict, str]:
+            async with semaphore:
+                return await _write_and_grade(section)
 
-    section_results = await asyncio.gather(
-        *[_bounded_write_and_grade(sec) for sec in main_sections],
-        return_exceptions=True,
-    )
+        section_results = await asyncio.gather(
+            *[_bounded_write_and_grade(sec) for sec in main_sections],
+            return_exceptions=True,
+        )
 
-    # Collect successful sections, skip failures
-    completed_sections: list[tuple[dict, str]] = []
-    for i, result in enumerate(section_results):
-        if isinstance(result, Exception):
-            logger.error("[Pipeline] Section %d failed: %s — skipping", i, result)
-            _emit("writing", "failed", f"Section {i} failed: {result}")
-            continue
-        completed_sections.append(result)
+        # Collect successful sections, skip failures
+        completed_sections: list[tuple[dict, str]] = []
+        for i, result in enumerate(section_results):
+            if isinstance(result, Exception):
+                logger.error("[Pipeline] Section %d failed: %s — skipping", i, result)
+                _emit("writing", "failed", f"Section {i} failed: {result}")
+                continue
+            completed_sections.append(result)
 
-    if not completed_sections:
-        raise RuntimeError("All section writers failed")
+        if not completed_sections:
+            raise RuntimeError("All section writers failed")
 
-    _emit("writing", "completed", f"Phase 4-5 complete: {len(completed_sections)} sections written and graded")
+        _emit("writing", "completed", f"Phase 4-5 complete: {len(completed_sections)} sections written and graded")
 
-    # ── Phase 6: Synthesize (parallel summarizers + parallel writers) ──
-    _emit("synthesis", "running", "Phase 6: Synthesizing final report...")
-    final_report = await _phase_synthesize(outline, completed_sections, distilled, facts)
-    _emit("synthesis", "completed", f"Phase 6 complete: {len(final_report)} chars")
+        # ── Phase 6: Synthesize (parallel summarizers + parallel writers) ──
+        _emit("synthesis", "running", "Phase 6: Synthesizing final report...")
+        final_report = await _phase_synthesize(outline, completed_sections, distilled, facts)
+        _emit("synthesis", "completed", f"Phase 6 complete: {len(final_report)} chars")
 
-    logger.info(
-        "=== Deep Report Pipeline COMPLETE — %d chars, %d sections ===",
-        len(final_report), len(completed_sections),
-    )
-    return final_report
+        logger.info(
+            "=== Deep Report Pipeline COMPLETE — %d chars, %d sections ===",
+            len(final_report), len(completed_sections),
+        )
+        return final_report
+    finally:
+        _PIPELINE_LOCALE.reset(token)

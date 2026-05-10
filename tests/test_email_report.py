@@ -54,6 +54,7 @@ async def test_send_report_success(tmp_path, monkeypatch):
     monkeypatch.setenv("OPENCMO_SMTP_USER", "user@test.com")
     monkeypatch.setenv("OPENCMO_SMTP_PASS", "pass")
     monkeypatch.setenv("OPENCMO_REPORT_EMAIL", "report@test.com")
+    monkeypatch.setenv("OPENCMO_PUBLIC_BASE_URL", "https://reports.example.com")
 
     from opencmo import storage
     from opencmo.tools.email_report import send_report_impl
@@ -64,7 +65,10 @@ async def test_send_report_success(tmp_path, monkeypatch):
         "id": 1, "kind": "periodic", "audience": "human",
         "generation_status": "completed",
         "content": "# Weekly Brief\nAll good.",
-        "content_html": "<h1>Weekly Brief</h1><p>All good.</p>",
+        "content_html": (
+            "<h1>Weekly Brief</h1>"
+            '<figure><img src="/api/v1/report-assets/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.svg" alt="Chart" /></figure>'
+        ),
     }
     fake_bundle = {"human": fake_report, "agent": fake_report}
 
@@ -77,6 +81,9 @@ async def test_send_report_success(tmp_path, monkeypatch):
 
     assert result["ok"]
     assert result["recipient"] == "report@test.com"
+    sent_message = mock_server.send_message.call_args[0][0]
+    sent_html = sent_message.get_payload()[0].get_payload(decode=True).decode()
+    assert 'src="https://reports.example.com/api/v1/report-assets/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.svg"' in sent_html
 
 
 @pytest.mark.asyncio

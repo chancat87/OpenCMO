@@ -27,6 +27,9 @@ def _report_failure_message(record: dict | None) -> str:
 async def run_report_executor(ctx) -> None:
     task = ctx.task
     payload = task["payload"]
+    report_kind = payload.get("kind") or payload.get("report_kind")
+    if not report_kind:
+        raise ValueError("Report task payload is missing kind/report_kind")
     event_tasks: list[asyncio.Task] = []
 
     # Restore BYOK keys saved at enqueue time so the worker can call the LLM.
@@ -50,13 +53,15 @@ async def run_report_executor(ctx) -> None:
     try:
         result = await service.regenerate_project_report(
             payload["project_id"],
-            payload["kind"],
+            report_kind,
             source_run_id=payload.get("source_run_id"),
+            locale=payload.get("locale", "zh"),
             on_progress=on_progress,
         )
         human_report = result.get("human")
         if not _is_usable_report(human_report):
-            raise RuntimeError(_report_failure_message(human_report))
+            await ctx.fail({"message": _report_failure_message(human_report)})
+            return
     finally:
         if event_tasks:
             await asyncio.gather(*event_tasks, return_exceptions=True)
@@ -65,8 +70,9 @@ async def run_report_executor(ctx) -> None:
 
     await ctx.complete(
         {
-            "kind": payload["kind"],
-            "summary": f"{payload['kind'].title()} report completed",
+            "kind": report_kind,
+            "locale": payload.get("locale", "zh"),
+            "summary": f"{report_kind.title()} report completed",
             "human_report_id": result.get("human", {}).get("id"),
             "human_version": result.get("human", {}).get("version"),
             "agent_report_id": result.get("agent", {}).get("id"),

@@ -39,7 +39,7 @@ export function BlogGenerateButton({
   const blogGenerate = useBlogGenerate(projectId);
   const { data: task } = useTaskPoll(taskId);
   const qc = useQueryClient();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   const status = task?.status;
   const progress = task?.progress;
@@ -55,7 +55,7 @@ export function BlogGenerateButton({
   const handleGenerate = async () => {
     setShowConfig(false);
     try {
-      const result = await blogGenerate.mutateAsync({ style, skill_id: skillId, bilingual });
+      const result = await blogGenerate.mutateAsync({ style, skill_id: skillId, bilingual, language: locale });
       setTaskId(result.task_id);
     } catch {
       // mutation error handled by TanStack

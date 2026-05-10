@@ -11,13 +11,21 @@ import { useProjectSummary } from "../hooks/useProject";
 import { useLatestReports, useReports, useSendReport } from "../hooks/useReports";
 import { apiJson } from "../api/client";
 import type { ReportKind, ReportRecord } from "../types";
-import { useI18n } from "../i18n";
+import { useI18n, type TranslationKey } from "../i18n";
 import { downloadAsPDF } from "../utils/pdf";
 import { useQueryClient } from "@tanstack/react-query";
+import { utcDate } from "../utils/time";
+
+type Snapshot = {
+  bottomLine: string;
+  actions: string[];
+  confidence: TranslationKey;
+  report: ReportRecord | null;
+};
 
 function formatStamp(value: string | null | undefined) {
   if (!value) return "N/A";
-  return value.replace("T", " ").slice(0, 16);
+  return utcDate(value).toISOString().replace("T", " ").slice(0, 16);
 }
 
 function ReportCard({
@@ -101,7 +109,8 @@ function ReportCard({
                 downloadAsPDF({
                   elementId: `report-content-${report.id}`,
                   filename: `OpenCMO-${label.replace(/\s+/g, "-")}-v${report.version}.pdf`,
-                  title: `${label} (v${report.version})`
+                  title: `${label} (v${report.version})`,
+                  missingElementMessage: t("reports.pdfUnavailable"),
                 });
               }}
               className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus:outline-none"
@@ -129,9 +138,9 @@ function ReportCard({
         </div>
       ) : null}
 
-      {/* Expanded content */}
-      {isCompleted && expanded && report ? (
-        <div className="border-t border-slate-100 px-6 pb-6 pt-4">
+      {/* Full content stays mounted so PDF export also works while the card is collapsed. */}
+      {isCompleted && report ? (
+        <div className={expanded ? "border-t border-slate-100 px-6 pb-6 pt-4" : "hidden"}>
           <div id={`report-content-${report.id}`} className="premium-report">
             <ReactMarkdown>{report.content}</ReactMarkdown>
           </div>
@@ -239,6 +248,81 @@ function ReportHistory({
   );
 }
 
+function stripMarkdown(value: string): string {
+  return value
+    .replace(/!\[[^\]]*]\([^)]*\)/g, "")
+    .replace(/\[([^\]]+)]\([^)]*\)/g, "$1")
+    .replace(/^[#>*\-\d.\s]+/g, "")
+    .replace(/\*\*|__|`/g, "")
+    .trim();
+}
+
+function buildExecutiveSnapshot(
+  report: ReportRecord | null,
+  fallbackText: string,
+  defaultConfidence: TranslationKey,
+): Snapshot {
+  if (!report || report.generation_status !== "completed" || !report.content.trim()) {
+    return { bottomLine: fallbackText, actions: [], confidence: defaultConfidence, report: null };
+  }
+
+  const lines = report.content
+    .split("\n")
+    .map(stripMarkdown)
+    .filter(Boolean);
+  const bottomLine =
+    lines.find((line) => line.length >= 28 && line.length <= 240) ??
+    lines[0] ??
+    fallbackText;
+  const actions = lines
+    .filter((line) => /^(do|ship|fix|create|publish|run|launch|prioritize|回复|发布|修复|创建|推进|优先)/i.test(line))
+    .slice(0, 3);
+  const fallbackActions = lines
+    .filter((line) => line !== bottomLine && line.length >= 16 && line.length <= 160)
+    .slice(0, 3);
+
+  return {
+    bottomLine,
+    actions: actions.length ? actions : fallbackActions,
+    confidence: report.meta?.low_sample ? defaultConfidence : "reports.snapshotConfidenceReady",
+    report,
+  };
+}
+
+function ExecutiveSnapshot({ snapshot }: { snapshot: Snapshot }) {
+  const { t } = useI18n();
+
+  return (
+    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="max-w-3xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-indigo-600">
+            {t("reports.snapshotEyebrow")}
+          </p>
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
+            {t("reports.snapshotTitle")}
+          </h2>
+          <p className="mt-4 text-base leading-8 text-slate-700">{snapshot.bottomLine}</p>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          <span className="font-semibold text-slate-900">{t("reports.snapshotConfidence")}:</span>{" "}
+          {t(snapshot.confidence)}
+        </div>
+      </div>
+      <div className="mt-6 grid gap-3 md:grid-cols-3">
+        {(snapshot.actions.length ? snapshot.actions : [t("reports.snapshotNoActions")]).map((action, index) => (
+          <div key={`${action}-${index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+              {t("reports.snapshotAction")} {index + 1}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-slate-700">{action}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function ReportSection({
   title,
   description,
@@ -306,23 +390,33 @@ export function ReportsPage() {
   const { id } = useParams();
   const projectId = Number(id);
   const qc = useQueryClient();
+  const { t, locale } = useI18n();
   const summaryQuery = useProjectSummary(projectId);
-  const latestQuery = useLatestReports(projectId);
-  const reportsQuery = useReports(projectId);
-  const sendMutation = useSendReport(projectId);
-  const { t } = useI18n();
+  const latestQuery = useLatestReports(projectId, locale);
+  const reportsQuery = useReports(projectId, locale);
+  const sendMutation = useSendReport(projectId, locale);
 
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [activeTaskLocale, setActiveTaskLocale] = useState<string | null>(null);
   const [regeneratingKind, setRegeneratingKind] = useState<ReportKind | null>(null);
 
   const summary = summaryQuery.data;
-  const latest = latestQuery.data ?? summary?.latest_reports;
+  const latest = latestQuery.data;
   const allReports = reportsQuery.data ?? [];
   const latestPeriodicHuman = latest?.periodic?.human ?? null;
   const canEmailLatestReport = Boolean(
     latestPeriodicHuman &&
       latestPeriodicHuman.generation_status === "completed" &&
       latestPeriodicHuman.content.trim(),
+  );
+  const executiveSnapshot = useMemo(
+    () =>
+      buildExecutiveSnapshot(
+        latest?.strategic?.human ?? latest?.periodic?.human ?? null,
+        t("reports.snapshotEmpty"),
+        "reports.snapshotConfidenceLow",
+      ),
+    [latest?.periodic?.human, latest?.strategic?.human, t],
   );
 
   const strategicHistory = useMemo(
@@ -352,18 +446,22 @@ export function ReportsPage() {
     try {
       const result = await apiJson<{ task_id: string }>(`/projects/${projectId}/reports/${kind}/regenerate`, {
         method: "POST",
+        body: JSON.stringify({ locale }),
       });
       setActiveTaskId(result.task_id);
+      setActiveTaskLocale(locale);
     } catch {
       setRegeneratingKind(null);
     }
   };
 
   const handlePipelineComplete = () => {
+    const completedLocale = activeTaskLocale ?? locale;
     setActiveTaskId(null);
+    setActiveTaskLocale(null);
     setRegeneratingKind(null);
-    qc.invalidateQueries({ queryKey: ["reports", projectId] });
-    qc.invalidateQueries({ queryKey: ["latest-reports", projectId] });
+    qc.invalidateQueries({ queryKey: ["reports", projectId, completedLocale] });
+    qc.invalidateQueries({ queryKey: ["latest-reports", projectId, completedLocale] });
     qc.invalidateQueries({ queryKey: ["project-summary", projectId] });
   };
 
@@ -402,6 +500,8 @@ export function ReportsPage() {
             />
           </div>
         )}
+
+        <ExecutiveSnapshot snapshot={executiveSnapshot} />
 
         <ReportSection
           title={t("reports.strategic")}

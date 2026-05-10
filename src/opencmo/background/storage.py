@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+from collections.abc import Iterable
 from datetime import datetime, timedelta, timezone
 
 from opencmo.background.types import ACTIVE_STATUSES
@@ -193,64 +194,189 @@ async def update_task_status(task_id: str, status: str) -> None:
         await db.close()
 
 
-async def complete_task(task_id: str, *, result: dict) -> None:
+def _status_placeholders(statuses: Iterable[str]) -> tuple[str, tuple[str, ...]]:
+    values = tuple(statuses)
+    return ", ".join("?" for _ in values), values
+
+
+async def request_cancel_task(task_id: str) -> str | None:
     db = await get_db()
     try:
-        await db.execute(
-            """UPDATE background_tasks
-               SET status = 'completed',
-                   result_json = ?,
-                   completed_at = datetime('now'),
-                   updated_at = datetime('now')
-               WHERE task_id = ?""",
-            (json.dumps(result), task_id),
-        )
-        await db.commit()
-    finally:
-        await db.close()
-
-
-async def fail_task(task_id: str, *, error: dict) -> None:
-    db = await get_db()
-    try:
-        await db.execute(
-            """UPDATE background_tasks
-               SET status = 'failed',
-                   error_json = ?,
-                   completed_at = datetime('now'),
-                   updated_at = datetime('now')
-               WHERE task_id = ?""",
-            (json.dumps(error), task_id),
-        )
-        await db.commit()
-    finally:
-        await db.close()
-
-
-async def requeue_task(task_id: str) -> None:
-    db = await get_db()
-    try:
-        await db.execute(
-            """UPDATE background_tasks
-               SET status = 'queued',
-                   worker_id = NULL,
-                   claimed_at = NULL,
-                   heartbeat_at = NULL,
-                   started_at = NULL,
-                   attempt_count = attempt_count + 1,
-                   updated_at = datetime('now')
-               WHERE task_id = ?""",
+        await db.execute("BEGIN IMMEDIATE")
+        cursor = await db.execute(
+            "SELECT status FROM background_tasks WHERE task_id = ?",
             (task_id,),
         )
-        await db.commit()
+        row = await cursor.fetchone()
+        if row is None or row[0] in {"completed", "failed", "cancelled"}:
+            await db.execute("COMMIT")
+            return None
+        next_status = "cancelled" if row[0] == "queued" else "cancel_requested"
+        completed_at_expr = ", completed_at = datetime('now')" if next_status == "cancelled" else ""
+        await db.execute(
+            f"""UPDATE background_tasks
+                SET status = ?{completed_at_expr},
+                    updated_at = datetime('now')
+                WHERE task_id = ?
+                  AND status = ?""",
+            (next_status, task_id, row[0]),
+        )
+        await db.execute("COMMIT")
+        return next_status
+    except Exception:
+        with contextlib.suppress(Exception):
+            await db.execute("ROLLBACK")
+        raise
     finally:
         await db.close()
+
+
+async def complete_task(task_id: str, *, result: dict, worker_id: str | None = None) -> bool:
+    db = await get_db()
+    try:
+        if worker_id is None:
+            cursor = await db.execute(
+                """UPDATE background_tasks
+                   SET status = 'completed',
+                       result_json = ?,
+                       completed_at = datetime('now'),
+                       updated_at = datetime('now')
+                   WHERE task_id = ?
+                     AND status NOT IN ('completed', 'failed', 'cancelled', 'cancel_requested')""",
+                (json.dumps(result), task_id),
+            )
+        else:
+            cursor = await db.execute(
+                """UPDATE background_tasks
+                   SET status = 'completed',
+                       result_json = ?,
+                       completed_at = datetime('now'),
+                       updated_at = datetime('now')
+                   WHERE task_id = ?
+                     AND worker_id = ?
+                     AND status = 'running'""",
+                (json.dumps(result), task_id, worker_id),
+            )
+        await db.commit()
+        return cursor.rowcount > 0
+    finally:
+        await db.close()
+
+
+async def fail_task(task_id: str, *, error: dict, worker_id: str | None = None) -> bool:
+    db = await get_db()
+    try:
+        if worker_id is None:
+            cursor = await db.execute(
+                """UPDATE background_tasks
+                   SET status = 'failed',
+                       error_json = ?,
+                       completed_at = datetime('now'),
+                       updated_at = datetime('now')
+                   WHERE task_id = ?
+                     AND status NOT IN ('completed', 'failed', 'cancelled')""",
+                (json.dumps(error), task_id),
+            )
+        else:
+            cursor = await db.execute(
+                """UPDATE background_tasks
+                   SET status = 'failed',
+                       error_json = ?,
+                       completed_at = datetime('now'),
+                       updated_at = datetime('now')
+                   WHERE task_id = ?
+                     AND worker_id = ?
+                     AND status IN ('claimed', 'running', 'cancel_requested')""",
+                (json.dumps(error), task_id, worker_id),
+            )
+        await db.commit()
+        return cursor.rowcount > 0
+    finally:
+        await db.close()
+
+
+async def cancel_task(task_id: str, *, worker_id: str | None = None) -> bool:
+    db = await get_db()
+    try:
+        if worker_id is None:
+            cursor = await db.execute(
+                """UPDATE background_tasks
+                   SET status = 'cancelled',
+                       completed_at = datetime('now'),
+                       updated_at = datetime('now')
+                   WHERE task_id = ?
+                     AND status NOT IN ('completed', 'failed', 'cancelled')""",
+                (task_id,),
+            )
+        else:
+            cursor = await db.execute(
+                """UPDATE background_tasks
+                   SET status = 'cancelled',
+                       completed_at = datetime('now'),
+                       updated_at = datetime('now')
+                   WHERE task_id = ?
+                     AND worker_id = ?
+                     AND status = 'cancel_requested'""",
+                (task_id, worker_id),
+            )
+        await db.commit()
+        return cursor.rowcount > 0
+    finally:
+        await db.close()
+
+
+async def requeue_task(
+    task_id: str,
+    *,
+    worker_id: str | None = None,
+    expected_statuses: Iterable[str] = ("claimed", "running"),
+) -> bool:
+    placeholders, statuses = _status_placeholders(expected_statuses)
+    db = await get_db()
+    try:
+        if worker_id is None:
+            cursor = await db.execute(
+                f"""UPDATE background_tasks
+                   SET status = 'queued',
+                       worker_id = NULL,
+                       claimed_at = NULL,
+                       heartbeat_at = NULL,
+                       started_at = NULL,
+                       attempt_count = attempt_count + 1,
+                       updated_at = datetime('now')
+                   WHERE task_id = ?
+                     AND status IN ({placeholders})""",
+                (task_id, *statuses),
+            )
+        else:
+            cursor = await db.execute(
+                f"""UPDATE background_tasks
+                   SET status = 'queued',
+                       worker_id = NULL,
+                       claimed_at = NULL,
+                       heartbeat_at = NULL,
+                       started_at = NULL,
+                       attempt_count = attempt_count + 1,
+                       updated_at = datetime('now')
+                   WHERE task_id = ?
+                     AND worker_id = ?
+                     AND status IN ({placeholders})""",
+                (task_id, worker_id, *statuses),
+            )
+        await db.commit()
+        return cursor.rowcount > 0
+    finally:
+        await db.close()
+
+
+def stale_cutoff(*, stale_after_seconds: int) -> str:
+    return (
+        datetime.now(timezone.utc) - timedelta(seconds=stale_after_seconds)
+    ).strftime("%Y-%m-%d %H:%M:%S")
 
 
 async def list_stale_tasks(*, stale_after_seconds: int) -> list[dict]:
-    cutoff = (
-        datetime.now(timezone.utc) - timedelta(seconds=stale_after_seconds)
-    ).strftime("%Y-%m-%d %H:%M:%S")
+    cutoff = stale_cutoff(stale_after_seconds=stale_after_seconds)
     db = await get_db()
     try:
         cursor = await db.execute(
@@ -276,9 +402,7 @@ async def list_orphaned_tasks(*, stale_after_seconds: int) -> list[dict]:
     This covers the startup-recovery case where the previous worker died
     without updating the heartbeat (including tasks that never received one).
     """
-    cutoff = (
-        datetime.now(timezone.utc) - timedelta(seconds=stale_after_seconds)
-    ).strftime("%Y-%m-%d %H:%M:%S")
+    cutoff = stale_cutoff(stale_after_seconds=stale_after_seconds)
     db = await get_db()
     try:
         cursor = await db.execute(
@@ -293,6 +417,51 @@ async def list_orphaned_tasks(*, stale_after_seconds: int) -> list[dict]:
         )
         rows = await cursor.fetchall()
         return [_task_row_to_dict(row) for row in rows]
+    finally:
+        await db.close()
+
+
+async def requeue_stale_task(task_id: str, *, worker_id: str | None, stale_before: str) -> bool:
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            """UPDATE background_tasks
+               SET status = 'queued',
+                   worker_id = NULL,
+                   claimed_at = NULL,
+                   heartbeat_at = NULL,
+                   started_at = NULL,
+                   attempt_count = attempt_count + 1,
+                   updated_at = datetime('now')
+               WHERE task_id = ?
+                 AND worker_id IS ?
+                 AND status IN ('claimed', 'running')
+                 AND (heartbeat_at IS NULL OR heartbeat_at < ?)""",
+            (task_id, worker_id, stale_before),
+        )
+        await db.commit()
+        return cursor.rowcount > 0
+    finally:
+        await db.close()
+
+
+async def fail_stale_task(task_id: str, *, worker_id: str | None, stale_before: str, error: dict) -> bool:
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            """UPDATE background_tasks
+               SET status = 'failed',
+                   error_json = ?,
+                   completed_at = datetime('now'),
+                   updated_at = datetime('now')
+               WHERE task_id = ?
+                 AND worker_id IS ?
+                 AND status IN ('claimed', 'running')
+                 AND (heartbeat_at IS NULL OR heartbeat_at < ?)""",
+            (json.dumps(error), task_id, worker_id, stale_before),
+        )
+        await db.commit()
+        return cursor.rowcount > 0
     finally:
         await db.close()
 
@@ -340,35 +509,39 @@ async def claim_next_queued_task(*, worker_id: str) -> dict | None:
         await db.close()
 
 
-async def mark_task_running(task_id: str, *, worker_id: str) -> None:
+async def mark_task_running(task_id: str, *, worker_id: str) -> bool:
     db = await get_db()
     try:
-        await db.execute(
+        cursor = await db.execute(
             """UPDATE background_tasks
                SET status = 'running',
-                   worker_id = ?,
                    started_at = COALESCE(started_at, datetime('now')),
                    heartbeat_at = datetime('now'),
                    updated_at = datetime('now')
-               WHERE task_id = ?""",
-            (worker_id, task_id),
+               WHERE task_id = ?
+                 AND worker_id = ?
+                 AND status = 'claimed'""",
+            (task_id, worker_id),
         )
         await db.commit()
+        return cursor.rowcount > 0
     finally:
         await db.close()
 
 
-async def heartbeat(task_id: str, *, worker_id: str) -> None:
+async def heartbeat(task_id: str, *, worker_id: str) -> bool:
     db = await get_db()
     try:
-        await db.execute(
+        cursor = await db.execute(
             """UPDATE background_tasks
                SET heartbeat_at = datetime('now'),
-                   worker_id = ?,
                    updated_at = datetime('now')
-               WHERE task_id = ?""",
-            (worker_id, task_id),
+               WHERE task_id = ?
+                 AND worker_id = ?
+                 AND status IN ('claimed', 'running')""",
+            (task_id, worker_id),
         )
         await db.commit()
+        return cursor.rowcount > 0
     finally:
         await db.close()

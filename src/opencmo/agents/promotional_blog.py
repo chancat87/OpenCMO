@@ -104,7 +104,7 @@ write a 2000-2500 word promotional blog article.
 - The article should provide genuine value even if the reader never clicks the CTA
 - Use natural, conversational language — avoid corporate-speak and marketing jargon
 - Break up text with clear H2 headings, short paragraphs, and occasional emphasis
-- Communicate in the same language as the product profile (if the profile is in Chinese, write in Chinese)
+- Communicate in the same language as the product profile unless a target language is explicitly provided
 
 ## Output format
 
@@ -137,6 +137,7 @@ def build_promotional_blog_agent(
     style: str,
     brand_overlay: str = "",
     marketing_skill_overlay: str = "",
+    target_language: str = "",
 ) -> Agent:
     """Build a promotional blog agent configured for the given style.
 
@@ -147,6 +148,12 @@ def build_promotional_blog_agent(
     """
     style_block = _STYLE_INSTRUCTIONS.get(style, _STYLE_INSTRUCTIONS["launch"])
     base_instructions = _BASE_INSTRUCTIONS + "\n" + style_block
+    if target_language:
+        base_instructions += (
+            "\n\n## Language Requirement\n"
+            f"Write the entire output in {target_language}. Keep product names, URLs, code identifiers, "
+            "and technical terms in English when that is the natural convention."
+        )
     if marketing_skill_overlay:
         base_instructions += "\n\n" + marketing_skill_overlay
     return Agent(

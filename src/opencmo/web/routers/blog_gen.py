@@ -29,6 +29,8 @@ async def api_v1_generate_blog(project_id: int, request: Request):
     style = body.get("style", "launch")
     bilingual = body.get("bilingual", False)
     skill_id = body.get("skill_id")
+    requested_language = body.get("language") or body.get("locale")
+    language = storage.normalize_report_locale(requested_language) if requested_language else None
 
     valid_styles = {"launch", "case_study", "comparison", "thought_leadership"}
     if style not in valid_styles:
@@ -41,26 +43,28 @@ async def api_v1_generate_blog(project_id: int, request: Request):
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
 
-    # Capture BYOK keys from the current request context
-    from opencmo import llm
     payload: dict = {
         "project_id": project_id,
         "style": style,
         "bilingual": bilingual,
         "skill_id": marketing_skill.id,
     }
-    request_keys = llm.get_request_keys()
-    if request_keys:
-        payload["__user_keys"] = request_keys
+    if language:
+        payload["language"] = language
 
     # Check for existing active task (same project + style + skill + language mode)
-    dedupe_key = f"blog_generation:project:{project_id}:{style}:{marketing_skill.id}:bilingual:{int(bool(bilingual))}"
+    language_key = language or "auto"
+    dedupe_key = (
+        f"blog_generation:project:{project_id}:{style}:{marketing_skill.id}:"
+        f"language:{language_key}:bilingual:{int(bool(bilingual))}"
+    )
     existing = await bg_service.find_active_task_by_dedupe_key(dedupe_key)
     if existing is not None:
         return JSONResponse({
             "task_id": existing["task_id"],
             "project_id": project_id,
             "style": style,
+            "language": language,
             "skill_id": marketing_skill.id,
             "skill_name": marketing_skill.name,
             "status": "already_running",
@@ -78,6 +82,7 @@ async def api_v1_generate_blog(project_id: int, request: Request):
         "task_id": task["task_id"],
         "project_id": project_id,
         "style": style,
+        "language": language,
         "skill_id": marketing_skill.id,
         "skill_name": marketing_skill.name,
         "status": "pending",
@@ -85,13 +90,15 @@ async def api_v1_generate_blog(project_id: int, request: Request):
 
 
 @router.get("/projects/{project_id}/blog/drafts")
-async def api_v1_blog_drafts(project_id: int):
+async def api_v1_blog_drafts(project_id: int, language: str | None = None, locale: str | None = None):
     """List blog drafts for a project."""
     project = await storage.get_project(project_id)
     if not project:
         return JSONResponse({"error": "Not found"}, status_code=404)
 
-    drafts = await storage.list_blog_drafts(project_id)
+    requested_language = language or locale
+    normalized_language = storage.normalize_report_locale(requested_language) if requested_language else None
+    drafts = await storage.list_blog_drafts(project_id, language=normalized_language)
     # Strip full content from list view for performance
     for d in drafts:
         if d.get("content") and len(d["content"]) > 500:

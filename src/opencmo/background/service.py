@@ -72,18 +72,21 @@ async def claim_next_task(*, worker_id: str) -> dict | None:
     return await bg_storage.claim_next_queued_task(worker_id=worker_id)
 
 
-async def mark_task_running(task_id: str, *, worker_id: str) -> None:
-    await bg_storage.mark_task_running(task_id, worker_id=worker_id)
+async def mark_task_running(task_id: str, *, worker_id: str) -> bool:
+    updated = await bg_storage.mark_task_running(task_id, worker_id=worker_id)
+    if not updated:
+        return False
     await bg_storage.append_task_event(
         task_id,
         event_type="state_change",
         status="running",
         summary="Task started",
     )
+    return True
 
 
-async def heartbeat(task_id: str, *, worker_id: str) -> None:
-    await bg_storage.heartbeat(task_id, worker_id=worker_id)
+async def heartbeat(task_id: str, *, worker_id: str) -> bool:
+    return await bg_storage.heartbeat(task_id, worker_id=worker_id)
 
 
 async def append_event(
@@ -106,22 +109,23 @@ async def append_event(
 
 
 async def request_cancel(task_id: str) -> bool:
-    task = await bg_storage.get_task(task_id)
-    if task is None or task["status"] in {"completed", "failed", "cancelled"}:
+    status = await bg_storage.request_cancel_task(task_id)
+    if status is None:
         return False
 
-    await bg_storage.update_task_status(task_id, "cancel_requested")
     await bg_storage.append_task_event(
         task_id,
         event_type="state_change",
-        status="cancel_requested",
-        summary="Cancellation requested",
+        status=status,
+        summary="Task cancelled" if status == "cancelled" else "Cancellation requested",
     )
     return True
 
 
-async def complete_task(task_id: str, *, result: dict | None = None) -> None:
-    await bg_storage.complete_task(task_id, result=result or {})
+async def complete_task(task_id: str, *, result: dict | None = None, worker_id: str | None = None) -> bool:
+    updated = await bg_storage.complete_task(task_id, result=result or {}, worker_id=worker_id)
+    if not updated:
+        return False
     await bg_storage.append_task_event(
         task_id,
         event_type="state_change",
@@ -129,11 +133,14 @@ async def complete_task(task_id: str, *, result: dict | None = None) -> None:
         summary="Task completed",
         payload=result or {},
     )
+    return True
 
 
-async def fail_task(task_id: str, *, error: dict) -> None:
+async def fail_task(task_id: str, *, error: dict, worker_id: str | None = None) -> bool:
     task = await bg_storage.get_task(task_id)
-    await bg_storage.fail_task(task_id, error=error)
+    updated = await bg_storage.fail_task(task_id, error=error, worker_id=worker_id)
+    if not updated:
+        return False
     await bg_storage.append_task_event(
         task_id,
         event_type="state_change",
@@ -148,6 +155,57 @@ async def fail_task(task_id: str, *, error: dict) -> None:
             await fail_scan_run_by_task_id(task_id, error.get("message", "Task failed"))
         except Exception:
             pass
+    return True
+
+
+async def cancel_task(task_id: str, *, worker_id: str | None = None) -> bool:
+    updated = await bg_storage.cancel_task(task_id, worker_id=worker_id)
+    if not updated:
+        return False
+    await bg_storage.append_task_event(
+        task_id,
+        event_type="state_change",
+        status="cancelled",
+        summary="Task cancelled",
+    )
+    return True
+
+
+async def requeue_task(
+    task_id: str,
+    *,
+    worker_id: str | None = None,
+    summary: str = "Task requeued",
+) -> bool:
+    updated = await bg_storage.requeue_task(task_id, worker_id=worker_id)
+    if not updated:
+        return False
+    await bg_storage.append_task_event(
+        task_id,
+        event_type="state_change",
+        status="queued",
+        summary=summary,
+    )
+    return True
+
+
+async def retry_or_fail_task(task_id: str, *, worker_id: str, error: dict) -> bool:
+    task = await bg_storage.get_task(task_id)
+    if task is None:
+        return False
+
+    if task["status"] == "cancel_requested":
+        return await cancel_task(task_id, worker_id=worker_id)
+
+    next_attempt = int(task["attempt_count"]) + 1
+    if next_attempt < int(task["max_attempts"]):
+        return await requeue_task(
+            task_id,
+            worker_id=worker_id,
+            summary=f"Task failed transiently; retrying attempt {next_attempt + 1}",
+        )
+
+    return await fail_task(task_id, error=error, worker_id=worker_id)
 
 
 async def recover_orphaned_tasks(*, stale_after_seconds: int) -> int:
@@ -157,11 +215,19 @@ async def recover_orphaned_tasks(*, stale_after_seconds: int) -> int:
     this also catches tasks whose heartbeat is NULL — e.g. tasks that were
     claimed but never started before the process died.
     """
+    stale_before = bg_storage.stale_cutoff(stale_after_seconds=stale_after_seconds)
     orphaned = await bg_storage.list_orphaned_tasks(stale_after_seconds=stale_after_seconds)
     fixed = 0
     for task in orphaned:
-        if task["attempt_count"] < task["max_attempts"]:
-            await bg_storage.requeue_task(task["task_id"])
+        next_attempt = int(task["attempt_count"]) + 1
+        if next_attempt < int(task["max_attempts"]):
+            updated = await bg_storage.requeue_stale_task(
+                task["task_id"],
+                worker_id=task["worker_id"],
+                stale_before=stale_before,
+            )
+            if not updated:
+                continue
             await bg_storage.append_task_event(
                 task["task_id"],
                 event_type="state_change",
@@ -169,20 +235,39 @@ async def recover_orphaned_tasks(*, stale_after_seconds: int) -> int:
                 summary="Task requeued after worker restart recovery",
             )
         else:
-            await fail_task(
+            updated = await bg_storage.fail_stale_task(
                 task["task_id"],
+                worker_id=task["worker_id"],
+                stale_before=stale_before,
                 error={"message": "Task exceeded max attempts (recovered after restart)"},
+            )
+            if not updated:
+                continue
+            await bg_storage.append_task_event(
+                task["task_id"],
+                event_type="state_change",
+                status="failed",
+                summary="Task exceeded max attempts (recovered after restart)",
+                payload={"message": "Task exceeded max attempts (recovered after restart)"},
             )
         fixed += 1
     return fixed
 
 
 async def recover_stale_tasks(*, stale_after_seconds: int) -> int:
+    stale_before = bg_storage.stale_cutoff(stale_after_seconds=stale_after_seconds)
     stale_tasks = await bg_storage.list_stale_tasks(stale_after_seconds=stale_after_seconds)
     fixed = 0
     for task in stale_tasks:
-        if task["attempt_count"] < task["max_attempts"]:
-            await bg_storage.requeue_task(task["task_id"])
+        next_attempt = int(task["attempt_count"]) + 1
+        if next_attempt < int(task["max_attempts"]):
+            updated = await bg_storage.requeue_stale_task(
+                task["task_id"],
+                worker_id=task["worker_id"],
+                stale_before=stale_before,
+            )
+            if not updated:
+                continue
             await bg_storage.append_task_event(
                 task["task_id"],
                 event_type="state_change",
@@ -190,9 +275,20 @@ async def recover_stale_tasks(*, stale_after_seconds: int) -> int:
                 summary="Task requeued after stale heartbeat",
             )
         else:
-            await fail_task(
+            updated = await bg_storage.fail_stale_task(
                 task["task_id"],
+                worker_id=task["worker_id"],
+                stale_before=stale_before,
                 error={"message": "Task exceeded max attempts after stale heartbeat"},
+            )
+            if not updated:
+                continue
+            await bg_storage.append_task_event(
+                task["task_id"],
+                event_type="state_change",
+                status="failed",
+                summary="Task exceeded max attempts after stale heartbeat",
+                payload={"message": "Task exceeded max attempts after stale heartbeat"},
             )
         fixed += 1
     return fixed

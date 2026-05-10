@@ -22,8 +22,9 @@ logger = logging.getLogger(__name__)
 
 
 class ExecutorContext:
-    def __init__(self, task: dict):
+    def __init__(self, task: dict, *, worker_id: str):
         self.task = task
+        self.worker_id = worker_id
 
     async def emit(
         self,
@@ -43,11 +44,11 @@ class ExecutorContext:
             payload=payload or {},
         )
 
-    async def complete(self, result: dict) -> None:
-        await bg_service.complete_task(self.task["task_id"], result=result)
+    async def complete(self, result: dict) -> bool:
+        return await bg_service.complete_task(self.task["task_id"], result=result, worker_id=self.worker_id)
 
-    async def fail(self, error: dict) -> None:
-        await bg_service.fail_task(self.task["task_id"], error=error)
+    async def fail(self, error: dict) -> bool:
+        return await bg_service.fail_task(self.task["task_id"], error=error, worker_id=self.worker_id)
 
 
 class BackgroundWorker:
@@ -69,11 +70,13 @@ class BackgroundWorker:
         stale_after_seconds: int = 300,
         max_concurrency: int = 4,
         kind_concurrency: dict[str, int] | None = None,
+        heartbeat_interval: float = 5.0,
     ):
         self.poll_interval = poll_interval
         self.stale_after_seconds = stale_after_seconds
         self.worker_id = make_worker_id()
         self.max_concurrency = max_concurrency
+        self.heartbeat_interval = heartbeat_interval
         self._loop_task: asyncio.Task | None = None
         self._stop = asyncio.Event()
         self._executors: dict[str, Executor] = {}
@@ -129,14 +132,18 @@ class BackgroundWorker:
         while not self._stop.is_set():
             await bg_service.recover_stale_tasks(stale_after_seconds=self.stale_after_seconds)
 
-            # Back-pressure: wait until at least one concurrency slot is free
-            # before attempting to claim, to avoid unnecessary DB round-trips.
-            if self._global_sem is not None and self._global_sem._value == 0:
+            if self._global_sem is None:
                 await asyncio.sleep(self.poll_interval)
+                continue
+
+            try:
+                await asyncio.wait_for(self._global_sem.acquire(), timeout=self.poll_interval)
+            except asyncio.TimeoutError:
                 continue
 
             task = await bg_service.claim_next_task(worker_id=self.worker_id)
             if task is None:
+                self._global_sem.release()
                 await asyncio.sleep(self.poll_interval)
                 continue
 
@@ -147,46 +154,82 @@ class BackgroundWorker:
     async def _run_claimed_task(self, task: dict) -> None:
         kind = task["kind"]
         kind_sem = self._get_kind_sem(kind)
+        heartbeat_task = asyncio.create_task(self._heartbeat_loop(task["task_id"]))
+        cancel_watch_task = asyncio.create_task(self._cancel_watch_loop(task["task_id"], asyncio.current_task()))
+        acquired_kind_sem = False
 
-        # Acquire global + per-kind semaphores before executing
-        async with self._global_sem:
+        try:
             if kind_sem is not None:
                 await kind_sem.acquire()
-            try:
-                await self._execute_task(task)
-            finally:
-                if kind_sem is not None:
-                    kind_sem.release()
+                acquired_kind_sem = True
+            await self._execute_task(task)
+        except asyncio.CancelledError:
+            current = await bg_service.get_task(task["task_id"])
+            if current and current["status"] == "cancel_requested":
+                await bg_service.cancel_task(task["task_id"], worker_id=self.worker_id)
+            elif current and current["status"] in {"claimed", "running"}:
+                await bg_service.requeue_task(
+                    task["task_id"],
+                    worker_id=self.worker_id,
+                    summary="Task requeued after worker cancellation",
+                )
+            raise
+        finally:
+            heartbeat_task.cancel()
+            cancel_watch_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await heartbeat_task
+            with contextlib.suppress(asyncio.CancelledError):
+                await cancel_watch_task
+            if acquired_kind_sem and kind_sem is not None:
+                kind_sem.release()
+            if self._global_sem is not None:
+                self._global_sem.release()
 
     async def _execute_task(self, task: dict) -> None:
         from opencmo import llm
 
         # Inject BYOK context if present in task payload
         byok_keys = task.get("payload", {}).get("_byok_keys", {})
-        token = None
-        if byok_keys:
-            token = llm.set_request_keys(byok_keys)
+        token = llm.set_request_keys(byok_keys) if byok_keys else None
 
-        heartbeat_task = asyncio.create_task(self._heartbeat_loop(task["task_id"]))
         try:
             executor = self._executors[task["kind"]]
-            await bg_service.mark_task_running(task["task_id"], worker_id=self.worker_id)
+            marked = await bg_service.mark_task_running(task["task_id"], worker_id=self.worker_id)
+            if not marked:
+                current = await bg_service.get_task(task["task_id"])
+                if current and current["status"] == "cancel_requested":
+                    await bg_service.cancel_task(task["task_id"], worker_id=self.worker_id)
+                return
             fresh = await bg_service.get_task(task["task_id"])
-            await executor(ExecutorContext(fresh))
+            await executor(ExecutorContext(fresh, worker_id=self.worker_id))
+            current = await bg_service.get_task(task["task_id"])
+            if current and current["status"] == "cancel_requested":
+                await bg_service.cancel_task(task["task_id"], worker_id=self.worker_id)
         except Exception as exc:
-            await bg_service.fail_task(task["task_id"], error={"message": str(exc)})
+            await bg_service.retry_or_fail_task(task["task_id"], worker_id=self.worker_id, error={"message": str(exc)})
         finally:
             if token:
                 llm.reset_request_keys(token)
-            heartbeat_task.cancel()
 
-            with contextlib.suppress(asyncio.CancelledError):
-                await heartbeat_task
+    async def _cancel_watch_loop(self, task_id: str, task: asyncio.Task | None) -> None:
+        if task is None:
+            return
+        while True:
+            await asyncio.sleep(min(1.0, self.heartbeat_interval))
+            current = await bg_service.get_task(task_id)
+            if current is None or current["status"] in {"completed", "failed", "cancelled"}:
+                return
+            if current["status"] == "cancel_requested":
+                task.cancel()
+                return
 
     async def _heartbeat_loop(self, task_id: str) -> None:
         while True:
-            await asyncio.sleep(5)
-            await bg_service.heartbeat(task_id, worker_id=self.worker_id)
+            await asyncio.sleep(self.heartbeat_interval)
+            ok = await bg_service.heartbeat(task_id, worker_id=self.worker_id)
+            if not ok:
+                return
 
 
 _default_worker: BackgroundWorker | None = None

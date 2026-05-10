@@ -29,6 +29,35 @@ _SUBPAGE_PRIORITY_PATTERNS = [
     "doc", "how-it-work", "why", "benefit", "use-case",
     "integrat", "api", "overview", "getting-started",
 ]
+_SUPPORTED_CONTENT_LANGUAGES = ("en", "zh", "ja", "ko", "es")
+_LANGUAGE_NAMES = {
+    "en": "English",
+    "zh": "Chinese (Simplified, zh-CN)",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "es": "Spanish",
+}
+
+
+def _normalize_content_language(language: str | None) -> str | None:
+    if not language:
+        return None
+    value = language.strip().lower()
+    for supported in _SUPPORTED_CONTENT_LANGUAGES:
+        if value == supported or value.startswith(f"{supported}-") or value.startswith(f"{supported}_"):
+            return supported
+    if value.startswith("zh"):
+        return "zh"
+    return None
+
+
+def _detect_primary_language(project: dict) -> str:
+    brand_name = project.get("brand_name", "")
+    return "zh" if any("\u4e00" <= c <= "\u9fff" for c in brand_name) else "en"
+
+
+def _secondary_language(primary_language: str) -> str:
+    return "zh" if primary_language == "en" else "en"
 
 
 # ---------------------------------------------------------------------------
@@ -283,6 +312,7 @@ async def _phase_write_blog(
     style: str,
     project_id: int,
     marketing_skill: MarketingSkill,
+    target_language: str,
     on_progress: Callable | None = None,
 ) -> tuple[str, str]:
     """Write the blog article using the promotional agent. Returns (title, content)."""
@@ -298,10 +328,16 @@ async def _phase_write_blog(
         style,
         brand_overlay,
         marketing_skill_overlay=marketing_skill.as_prompt_block(),
+        target_language=_LANGUAGE_NAMES.get(target_language, "English"),
     )
 
     # Build the user prompt with all context
     prompt_parts = [
+        (
+            f"## Target Language\nWrite the entire markdown asset in "
+            f"{_LANGUAGE_NAMES.get(target_language, 'English')} ({target_language}). "
+            "Do not switch languages except for product names, code identifiers, URLs, and technical terms that are normally kept in English."
+        ),
         f"## Product Profile\n```json\n{json.dumps(profile, ensure_ascii=False, indent=2)}\n```",
         f"## Selected Marketing Skill\n{marketing_skill.name} ({marketing_skill.id})",
     ]
@@ -520,11 +556,8 @@ async def _phase_bilingual(
     primary_language: str,
     on_progress: Callable | None = None,
 ) -> str:
-    """Adapt the article to the other language (EN↔ZH)."""
-    if primary_language == "en":
-        target = "Chinese (Simplified, zh-CN)"
-    else:
-        target = "English"
+    """Adapt the article to the paired language."""
+    target = _LANGUAGE_NAMES[_secondary_language(primary_language)]
 
     _emit(on_progress, "translate", "running", f"Generating {target} version...")
 
@@ -548,6 +581,7 @@ async def generate_promotional_blog(
     bilingual: bool,
     task_id: str,
     skill_id: str | None = None,
+    language: str | None = None,
     on_progress: Callable | None = None,
 ) -> dict:
     """Run the full 6-phase promotional blog generation pipeline.
@@ -563,9 +597,8 @@ async def generate_promotional_blog(
     skill_meta = marketing_skill.to_public_dict()
     _emit(on_progress, "framework", "completed", f"Using {marketing_skill.name} framework")
 
-    # Determine primary language from project category/URL heuristics
-    brand_name = project.get("brand_name", "")
-    primary_language = "zh" if any("\u4e00" <= c <= "\u9fff" for c in brand_name) else "en"
+    # Prefer the UI/request language; fall back to the legacy project-name heuristic.
+    primary_language = _normalize_content_language(language) or _detect_primary_language(project)
 
     # Phase 1: Deep product crawl
     crawl_data = await _phase_deep_crawl(project["url"], on_progress)
@@ -578,7 +611,7 @@ async def generate_promotional_blog(
 
     # Phase 4: Blog writing
     title, content = await _phase_write_blog(
-        profile, research, style, project_id, marketing_skill, on_progress,
+        profile, research, style, project_id, marketing_skill, primary_language, on_progress,
     )
 
     # Create primary draft record
@@ -610,7 +643,7 @@ async def generate_promotional_blog(
 
     # Phase 6: Bilingual generation (optional)
     if bilingual:
-        secondary_language = "zh" if primary_language == "en" else "en"
+        secondary_language = _secondary_language(primary_language)
         translated_content = await _phase_bilingual(
             content, primary_language, on_progress,
         )
@@ -694,6 +727,7 @@ async def generate_promotional_blog(
     primary_scores = all_scores.get(primary_language, {})
     return {
         "draft_ids": draft_ids,
+        "language": primary_language,
         "marketing_skill": skill_meta,
         "skill_id": marketing_skill.id,
         "skill_name": marketing_skill.name,

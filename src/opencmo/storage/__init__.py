@@ -181,6 +181,7 @@ from opencmo.storage.reports import (
     get_latest_reports,
     get_report,
     list_reports,
+    normalize_report_locale,
 )
 
 # --- Scan runs / findings / recommendations ---
@@ -339,7 +340,7 @@ __all__ = [
     "save_brand_presence_scan", "get_brand_presence_history",
     # reports
     "create_report_bundle", "list_reports", "get_report",
-    "get_latest_report", "get_latest_reports",
+    "get_latest_report", "get_latest_reports", "normalize_report_locale",
     # brand_kit
     "get_brand_kit", "upsert_brand_kit", "build_brand_kit_prompt",
     # github

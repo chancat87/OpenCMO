@@ -58,22 +58,27 @@ async def _wait_for_project_report_tasks(project_id: int, timeout_seconds: float
 
 
 @router.get("/projects/{project_id}/reports")
-async def api_v1_reports(project_id: int, kind: str | None = None, audience: str | None = None):
+async def api_v1_reports(
+    project_id: int,
+    kind: str | None = None,
+    audience: str | None = None,
+    locale: str | None = None,
+):
     project = await storage.get_project(project_id)
     if not project:
         return JSONResponse({"error": "Not found"}, status_code=404)
     # Removed blocking wait for active report tasks
-    return JSONResponse(await storage.list_reports(project_id, kind=kind, audience=audience))
+    return JSONResponse(await storage.list_reports(project_id, kind=kind, audience=audience, locale=locale or "zh"))
 
 
 
 @router.get("/projects/{project_id}/reports/latest")
-async def api_v1_latest_reports(project_id: int):
+async def api_v1_latest_reports(project_id: int, locale: str | None = None):
     project = await storage.get_project(project_id)
     if not project:
         return JSONResponse({"error": "Not found"}, status_code=404)
     # Removed blocking wait for active report tasks
-    return JSONResponse(await storage.get_latest_reports(project_id))
+    return JSONResponse(await storage.get_latest_reports(project_id, locale=locale or "zh"))
 
 
 
@@ -101,25 +106,29 @@ async def api_v1_regenerate_report(project_id: int, kind: str, request: Request)
     if not project:
         return JSONResponse({"error": "Not found"}, status_code=404)
 
-    # Capture BYOK keys from the current request context so the background
-    # worker (which runs outside this request) can use them.
-    from opencmo import llm
-    payload: dict = {"project_id": project_id, "kind": kind}
-    request_keys = llm.get_request_keys()
-    if request_keys:
-        payload["__user_keys"] = request_keys
+    body: dict = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    locale = storage.normalize_report_locale(
+        request.query_params.get("locale") or body.get("locale")
+    )
+
+    payload: dict = {"project_id": project_id, "kind": kind, "locale": locale}
 
     task = await bg_service.enqueue_task(
         kind="report",
         project_id=project_id,
         payload=payload,
-        dedupe_key=f"report:project:{project_id}:{kind}",
+        dedupe_key=f"report:project:{project_id}:{kind}:{locale}",
     )
 
     return JSONResponse({
         "task_id": task["task_id"],
         "project_id": project_id,
         "kind": kind,
+        "locale": locale,
         "status": "pending",
     })
 
@@ -135,6 +144,7 @@ async def api_v1_report_task(task_id: str):
                 "task_id": detail["task_id"],
                 "project_id": detail["project_id"],
                 "kind": detail["report_kind"],
+                "locale": detail.get("locale"),
                 "status": detail["status"],
                 "progress": detail["progress"],
                 "error": detail["error"],
@@ -148,12 +158,20 @@ async def api_v1_report_task(task_id: str):
 
 
 @router.post("/projects/{project_id}/report")
-async def api_v1_report(project_id: int):
+async def api_v1_report(project_id: int, request: Request):
     from opencmo import service
     project = await storage.get_project(project_id)
     if not project:
         return JSONResponse({"error": "Not found"}, status_code=404)
-    result = await service.send_project_report(project_id)
+    body: dict = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    locale = storage.normalize_report_locale(
+        request.query_params.get("locale") or body.get("locale")
+    )
+    result = await service.send_project_report(project_id, locale=locale)
     if result["ok"]:
         return JSONResponse(result)
     return JSONResponse(result, status_code=500)

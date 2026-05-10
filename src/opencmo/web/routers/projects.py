@@ -176,7 +176,7 @@ async def api_v1_overview():
 
 
 @router.get("/projects/{project_id}/summary")
-async def api_v1_project_summary(project_id: int):
+async def api_v1_project_summary(project_id: int, locale: str | None = None):
     project = await storage.get_project(project_id)
     if not project:
         return JSONResponse({"error": "Not found"}, status_code=404)
@@ -188,7 +188,7 @@ async def api_v1_project_summary(project_id: int):
     latest = await storage.get_latest_scans(project_id)
     previous = await storage.get_previous_scans(project_id)
     monitoring = await storage.get_latest_monitoring_summary(project_id)
-    latest_reports = await storage.get_latest_reports(project_id)
+    latest_reports = await storage.get_latest_reports(project_id, locale=locale or "zh")
     keyword_count = len(await storage.list_tracked_keywords(project_id))
     competitor_count = len(await storage.list_competitors(project_id))
     pending_approvals = len(

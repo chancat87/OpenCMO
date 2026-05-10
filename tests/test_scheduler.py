@@ -173,10 +173,12 @@ async def test_run_scheduled_scan_generates_periodic_report_on_cron_full(tmp_pat
              patch("opencmo.tools.community._scan_community_impl", new_callable=AsyncMock, return_value='{"hits": []}'), \
              patch("opencmo.insights.detect_insights", new_callable=AsyncMock, return_value=[]), \
              patch("opencmo.autopilot.execute_autopilot", new_callable=AsyncMock, return_value=[]), \
+             patch("opencmo.reports.generate_strategic_report_bundle", new_callable=AsyncMock) as mock_strategic, \
              patch("opencmo.reports.generate_periodic_report_bundle", new_callable=AsyncMock) as mock_periodic:
             await run_scheduled_scan(pid, "full", triggered_by="cron")
 
-        mock_periodic.assert_awaited_once_with(pid, source_run_id=None)
+        mock_strategic.assert_awaited_once_with(pid, source_run_id=None, locale="zh")
+        mock_periodic.assert_awaited_once_with(pid, source_run_id=None, locale="zh")
 
 
 @pytest.mark.asyncio

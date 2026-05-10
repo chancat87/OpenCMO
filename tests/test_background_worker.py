@@ -7,6 +7,7 @@ import pytest
 
 from opencmo.background import service as bg_service
 from opencmo.background import storage as bg_storage
+from opencmo.background.executors.report import run_report_executor
 from opencmo.background.worker import BackgroundWorker
 
 
@@ -177,6 +178,238 @@ async def test_worker_respects_kind_concurrency(tmp_path, monkeypatch):
     await worker.stop()
 
     assert peak_report <= 1
+
+
+@pytest.mark.asyncio
+async def test_claimed_task_waiting_for_kind_slot_keeps_heartbeat(tmp_path, monkeypatch):
+    from opencmo import storage
+
+    db_path = tmp_path / "test.db"
+    monkeypatch.setattr(storage, "_DB_PATH", db_path, raising=False)
+    await storage.ensure_db()
+    project_id = await storage.ensure_project("Heartbeat", "https://heartbeat.test", "saas")
+
+    first = await bg_service.enqueue_task(
+        kind="report",
+        project_id=project_id,
+        payload={"i": 1},
+        dedupe_key=None,
+    )
+    second = await bg_service.enqueue_task(
+        kind="report",
+        project_id=project_id,
+        payload={"i": 2},
+        dedupe_key=None,
+    )
+
+    first_started = asyncio.Event()
+    release_first = asyncio.Event()
+    running_task_id: str | None = None
+
+    async def _report_executor(ctx):
+        nonlocal running_task_id
+        if running_task_id is None:
+            running_task_id = ctx.task["task_id"]
+            first_started.set()
+            await asyncio.wait_for(release_first.wait(), timeout=3.0)
+        await ctx.complete({"ok": True})
+
+    worker = BackgroundWorker(
+        poll_interval=0.01,
+        stale_after_seconds=1,
+        max_concurrency=2,
+        kind_concurrency={"report": 1},
+        heartbeat_interval=0.05,
+    )
+    worker.register_executor("report", _report_executor)
+
+    await worker.start()
+    await asyncio.wait_for(first_started.wait(), timeout=1.0)
+    waiting_task_id = second["task_id"] if running_task_id == first["task_id"] else first["task_id"]
+    await asyncio.sleep(1.3)
+
+    waiting = await bg_service.get_task(waiting_task_id)
+    assert waiting["status"] == "claimed"
+    assert waiting["attempt_count"] == 0
+    assert waiting["heartbeat_at"] is not None
+
+    release_first.set()
+    await asyncio.sleep(0.2)
+    await worker.stop()
+
+
+@pytest.mark.asyncio
+async def test_worker_retries_transient_executor_exception(tmp_path, monkeypatch):
+    from opencmo import storage
+
+    db_path = tmp_path / "test.db"
+    monkeypatch.setattr(storage, "_DB_PATH", db_path, raising=False)
+    await storage.ensure_db()
+    project_id = await storage.ensure_project("Retry", "https://retry.test", "saas")
+
+    task = await bg_service.enqueue_task(
+        kind="scan",
+        project_id=project_id,
+        payload={"project_id": project_id},
+        dedupe_key=None,
+        max_attempts=2,
+    )
+
+    calls = 0
+
+    async def _flaky_executor(ctx):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("temporary")
+        await ctx.complete({"ok": True})
+
+    worker = BackgroundWorker(poll_interval=0.01, stale_after_seconds=60, heartbeat_interval=0.05)
+    worker.register_executor("scan", _flaky_executor)
+
+    await worker.start()
+    for _ in range(100):
+        updated = await bg_service.get_task(task["task_id"])
+        if updated["status"] == "completed":
+            break
+        await asyncio.sleep(0.02)
+    await worker.stop()
+
+    updated = await bg_service.get_task(task["task_id"])
+    assert calls == 2
+    assert updated["status"] == "completed"
+    assert updated["attempt_count"] == 1
+    assert updated["result"]["ok"] is True
+
+
+@pytest.mark.asyncio
+async def test_worker_fails_transient_exception_after_max_attempts(tmp_path, monkeypatch):
+    from opencmo import storage
+
+    db_path = tmp_path / "test.db"
+    monkeypatch.setattr(storage, "_DB_PATH", db_path, raising=False)
+    await storage.ensure_db()
+    project_id = await storage.ensure_project("RetryFail", "https://retryfail.test", "saas")
+
+    task = await bg_service.enqueue_task(
+        kind="scan",
+        project_id=project_id,
+        payload={"project_id": project_id},
+        dedupe_key=None,
+        max_attempts=2,
+    )
+
+    calls = 0
+
+    async def _always_fails(_ctx):
+        nonlocal calls
+        calls += 1
+        raise RuntimeError("still temporary")
+
+    worker = BackgroundWorker(poll_interval=0.01, stale_after_seconds=60, heartbeat_interval=0.05)
+    worker.register_executor("scan", _always_fails)
+
+    await worker.start()
+    for _ in range(100):
+        updated = await bg_service.get_task(task["task_id"])
+        if updated["status"] == "failed":
+            break
+        await asyncio.sleep(0.02)
+    await worker.stop()
+
+    updated = await bg_service.get_task(task["task_id"])
+    assert calls == 2
+    assert updated["status"] == "failed"
+    assert updated["attempt_count"] == 1
+    assert updated["error"]["message"] == "still temporary"
+
+
+@pytest.mark.asyncio
+async def test_report_executor_accepts_legacy_report_kind_payload(monkeypatch):
+    from opencmo import service
+
+    async def _regenerate(project_id, kind, **_kwargs):
+        return {
+            "human": {
+                "id": 11,
+                "version": 1,
+                "generation_status": "completed",
+                "content": "# Done",
+            },
+            "agent": {"id": 12, "version": 1},
+            "project_id": project_id,
+            "kind": kind,
+        }
+
+    monkeypatch.setattr(service, "regenerate_project_report", _regenerate)
+    completed: dict = {}
+
+    class _Ctx:
+        task = {
+            "task_id": "report-task",
+            "payload": {"project_id": 7, "report_kind": "strategic", "locale": "en"},
+        }
+
+        async def emit(self, **_kwargs):
+            return None
+
+        async def complete(self, result):
+            completed.update(result)
+            return True
+
+        async def fail(self, error):
+            raise AssertionError(error)
+
+    await run_report_executor(_Ctx())
+
+    assert completed["kind"] == "strategic"
+    assert completed["human_report_id"] == 11
+
+
+@pytest.mark.asyncio
+async def test_worker_cancels_running_task_when_cancel_requested(tmp_path, monkeypatch):
+    from opencmo import storage
+
+    db_path = tmp_path / "test.db"
+    monkeypatch.setattr(storage, "_DB_PATH", db_path, raising=False)
+    await storage.ensure_db()
+    project_id = await storage.ensure_project("Cancel", "https://cancel.test", "saas")
+
+    task = await bg_service.enqueue_task(
+        kind="scan",
+        project_id=project_id,
+        payload={"project_id": project_id},
+        dedupe_key=None,
+    )
+
+    started = asyncio.Event()
+    cancelled = asyncio.Event()
+
+    async def _executor(_ctx):
+        started.set()
+        try:
+            await asyncio.Future()
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+
+    worker = BackgroundWorker(poll_interval=0.01, stale_after_seconds=60, heartbeat_interval=0.02)
+    worker.register_executor("scan", _executor)
+
+    await worker.start()
+    await asyncio.wait_for(started.wait(), timeout=1.0)
+    assert await bg_service.request_cancel(task["task_id"]) is True
+    await asyncio.wait_for(cancelled.wait(), timeout=1.0)
+
+    for _ in range(100):
+        updated = await bg_service.get_task(task["task_id"])
+        if updated["status"] == "cancelled":
+            break
+        await asyncio.sleep(0.02)
+    await worker.stop()
+
+    updated = await bg_service.get_task(task["task_id"])
+    assert updated["status"] == "cancelled"
 
 
 def test_get_background_worker_uses_env_backed_limits(monkeypatch):

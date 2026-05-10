@@ -1,6 +1,7 @@
 """Tests for the AI CMO report system."""
 
 import asyncio
+from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -109,6 +110,49 @@ async def test_report_version_history_tracks_latest_per_kind_and_audience():
     assert [item["version"] for item in history] == [2, 1]
     assert history[0]["is_latest"] is True
     assert history[1]["is_latest"] is False
+
+
+@pytest.mark.asyncio
+async def test_report_latest_is_scoped_by_locale():
+    project_id = await _seed_project()
+
+    zh = await storage.create_report_bundle(
+        project_id=project_id,
+        kind="strategic",
+        locale="zh",
+        source_run_id=None,
+        window_start=None,
+        window_end=None,
+        records={
+            "human": {
+                "generation_status": "completed",
+                "content": "中文报告",
+                "content_html": "<p>中文报告</p>",
+                "meta": {},
+            },
+        },
+    )
+    en = await storage.create_report_bundle(
+        project_id=project_id,
+        kind="strategic",
+        locale="en",
+        source_run_id=None,
+        window_start=None,
+        window_end=None,
+        records={
+            "human": {
+                "generation_status": "completed",
+                "content": "English report",
+                "content_html": "<p>English report</p>",
+                "meta": {},
+            },
+        },
+    )
+
+    assert zh[0]["version"] == 1
+    assert en[0]["version"] == 1
+    assert (await storage.get_latest_reports(project_id, locale="zh"))["strategic"]["human"]["content"] == "中文报告"
+    assert (await storage.get_latest_reports(project_id, locale="en"))["strategic"]["human"]["content"] == "English report"
 
 
 @pytest.mark.asyncio
@@ -226,6 +270,137 @@ async def test_generate_periodic_report_bundle_marks_sparse_samples():
     assert "样本稀疏" in report["human"]["content"]
     assert mock_pipeline.await_count == 1  # human via pipeline
     assert mock_llm.await_count == 1       # agent via single-call
+
+
+@pytest.mark.asyncio
+async def test_periodic_facts_filters_windowed_sources_and_exposes_pipeline_aliases():
+    from opencmo.reports import _build_periodic_facts
+
+    now = datetime(2026, 5, 10, 12, 0, 0)
+    fresh = "2026-05-09T12:00:00"
+    stale = "2026-04-20T12:00:00"
+    future = "2026-05-11T12:00:00"
+    project = {"id": 99, "brand_name": "Windowed", "category": "saas", "url": "https://windowed.test"}
+
+    with patch("opencmo.reports.storage.get_project", AsyncMock(return_value=project)), \
+         patch("opencmo.reports.storage.list_tracked_keywords", AsyncMock(return_value=[{"keyword": "windowed"}])), \
+         patch("opencmo.reports.storage.get_seo_history", AsyncMock(return_value=[
+             {"scanned_at": future, "score_performance": 0.9},
+             {"scanned_at": fresh, "score_performance": 0.8},
+             {"scanned_at": stale, "score_performance": 0.5},
+         ])), \
+         patch("opencmo.reports.storage.get_geo_history", AsyncMock(return_value=[
+             {"scanned_at": fresh, "geo_score": 60},
+             {"scanned_at": stale, "geo_score": 40},
+         ])), \
+         patch("opencmo.reports.storage.get_community_history", AsyncMock(return_value=[
+             {"scanned_at": fresh, "total_hits": 7},
+             {"scanned_at": stale, "total_hits": 2},
+         ])), \
+         patch("opencmo.reports.storage.get_tracked_discussions", AsyncMock(return_value=[
+             {"last_checked_at": fresh, "title": "fresh discussion"},
+             {"last_checked_at": stale, "title": "stale discussion"},
+         ])), \
+         patch("opencmo.reports._get_recent_approvals", AsyncMock(return_value=[])), \
+         patch("opencmo.reports._get_recent_recommendations", AsyncMock(return_value=[])), \
+         patch("opencmo.reports._get_recent_findings", AsyncMock(return_value=[])), \
+         patch("opencmo.reports.storage.get_all_serp_latest", AsyncMock(return_value=[
+             {"checked_at": fresh, "keyword": "fresh serp"},
+             {"checked_at": stale, "keyword": "stale serp"},
+         ])), \
+         patch("opencmo.reports.storage.list_insights", AsyncMock(return_value=[
+             {"created_at": fresh, "title": "fresh insight"},
+             {"created_at": stale, "title": "stale insight"},
+         ])), \
+         patch("opencmo.reports.storage.get_citability_history", AsyncMock(return_value=[
+             {"scanned_at": fresh, "avg_score": 0.7},
+             {"scanned_at": stale, "avg_score": 0.3},
+         ])), \
+         patch("opencmo.reports.storage.get_ai_crawler_history", AsyncMock(return_value=[
+             {"scanned_at": fresh, "blocked_count": 1},
+             {"scanned_at": stale, "blocked_count": 8},
+         ])), \
+         patch("opencmo.reports.storage.get_brand_presence_history", AsyncMock(return_value=[
+             {"scanned_at": fresh, "footprint_score": 50},
+             {"scanned_at": stale, "footprint_score": 10},
+         ])), \
+         patch("opencmo.reports.build_project_opportunity_snapshot", AsyncMock(return_value={
+             "opportunities": [],
+             "cluster_summary": {},
+         })):
+        facts, meta = await _build_periodic_facts(99, now=now, window_days=7)
+
+    assert [item["scanned_at"] for item in facts["seo_history"]] == [fresh]
+    assert facts["geo_history"] == [{"scanned_at": fresh, "geo_score": 60}]
+    assert facts["community_history"] == [{"scanned_at": fresh, "total_hits": 7}]
+    assert [item["title"] for item in facts["discussions"]] == ["fresh discussion"]
+    assert [item["keyword"] for item in facts["serp_latest"]] == ["fresh serp"]
+    assert [item["title"] for item in facts["insights"]] == ["fresh insight"]
+    assert facts["citability"] == [{"scanned_at": fresh, "avg_score": 0.7}]
+    assert facts["ai_crawler"] == [{"scanned_at": fresh, "blocked_count": 1}]
+    assert facts["brand_presence"] == [{"scanned_at": fresh, "footprint_score": 50}]
+    assert facts["seo_latest"] == facts["seo_history"][0]
+    assert facts["geo_latest"] == facts["geo_history"][0]
+    assert facts["community_latest"] == facts["community_history"][0]
+    assert facts["serp_snapshots"] == facts["serp_latest"]
+    assert facts["insights_history"] == facts["insights"]
+    assert meta["sample_count"] == 8
+
+
+@pytest.mark.asyncio
+async def test_recent_findings_and_recommendations_respect_window():
+    from opencmo.reports import _get_recent_findings, _get_recent_recommendations
+
+    project_id = await storage.ensure_project("Window DB", "https://window-db.test", "saas")
+    run_id = await storage.create_scan_run("window-db-run", None, project_id, "full")
+    await storage.replace_scan_artifacts(
+        run_id,
+        findings=[
+            {"domain": "seo", "severity": "critical", "title": "fresh finding", "summary": "fresh"},
+            {"domain": "seo", "severity": "warning", "title": "stale finding", "summary": "stale"},
+        ],
+        recommendations=[
+            {
+                "domain": "seo",
+                "priority": "high",
+                "owner_type": "engineering",
+                "action_type": "fix",
+                "title": "fresh rec",
+                "summary": "fresh",
+                "rationale": "fresh",
+            },
+            {
+                "domain": "seo",
+                "priority": "medium",
+                "owner_type": "engineering",
+                "action_type": "fix",
+                "title": "stale rec",
+                "summary": "stale",
+                "rationale": "stale",
+            },
+        ],
+    )
+    db = await storage.get_db()
+    try:
+        await db.execute(
+            "UPDATE scan_findings SET created_at = CASE title WHEN 'fresh finding' THEN ? ELSE ? END WHERE run_id = ?",
+            ("2026-05-09T12:00:00", "2026-04-20T12:00:00", run_id),
+        )
+        await db.execute(
+            "UPDATE scan_recommendations SET created_at = CASE title WHEN 'fresh rec' THEN ? ELSE ? END WHERE run_id = ?",
+            ("2026-05-09T12:00:00", "2026-04-20T12:00:00", run_id),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+
+    start = datetime(2026, 5, 1, 0, 0, 0)
+    end = datetime(2026, 5, 10, 0, 0, 0)
+    findings = await _get_recent_findings(project_id, limit=10, start=start, end=end)
+    recommendations = await _get_recent_recommendations(project_id, limit=10, start=start, end=end)
+
+    assert [item["title"] for item in findings] == ["fresh finding"]
+    assert [item["title"] for item in recommendations] == ["fresh rec"]
 
 
 @pytest.mark.asyncio
@@ -392,10 +567,34 @@ def test_report_prompt_fragments_preserve_truth_rules_across_audiences():
     human_system, _ = _prompts("strategic", "human", facts, meta, previous_exists=False)
     agent_system, _ = _prompts("strategic", "agent", facts, meta, previous_exists=False)
 
+    assert "第一个一级章节必须是 `## 先说结论`" in human_system
+    assert "第二个一级章节必须是 `## 目录`" in human_system
+    assert "必须放在 `## 目录` 后" in human_system
+
     for prompt in (human_system, agent_system):
         assert "事实 / 推断 / 建议" in prompt
         assert "缺失时必须明确标注" in prompt
         assert "不得补造数字" in prompt
+
+
+def test_human_report_prompt_uses_locale_specific_structure_labels():
+    from opencmo.reports import _prompts
+
+    facts = {
+        "project": {
+            "brand_name": "Acme",
+            "category": "saas",
+            "url": "https://acme.test",
+        }
+    }
+    meta = {"sample_count": 1, "total_data_sources": 8}
+
+    system, _ = _prompts("strategic", "human", facts, meta, previous_exists=False, locale="en")
+
+    assert "第一个一级章节必须是 `## Bottom Line`" in system
+    assert "第二个一级章节必须是 `## Table of Contents`" in system
+    assert "必须包含 `## Charts at a Glance`" in system
+    assert "## 先说结论" not in system
 
 
 def test_report_prompt_distinguishes_facts_from_recommendations_when_data_is_sparse():
@@ -414,3 +613,5 @@ def test_report_prompt_distinguishes_facts_from_recommendations_when_data_is_spa
 
     assert "先写已确认事实，再写推断，最后写建议" in system
     assert "样本稀疏时" in system
+    assert "第一个一级章节必须是 `## 先说结论`" in system
+    assert "第二个一级章节必须是 `## 目录`" in system

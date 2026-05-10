@@ -8,6 +8,18 @@ from opencmo.storage._db import get_db
 
 REPORT_KINDS = ("strategic", "periodic")
 REPORT_AUDIENCES = ("human", "agent")
+REPORT_LOCALES = ("en", "zh", "ja", "ko", "es")
+REPORT_DEFAULT_LOCALE = "zh"
+
+
+def normalize_report_locale(locale: str | None) -> str:
+    value = (locale or REPORT_DEFAULT_LOCALE).strip().lower()
+    for supported in REPORT_LOCALES:
+        if value == supported or value.startswith(f"{supported}-") or value.startswith(f"{supported}_"):
+            return supported
+    if value.startswith("zh"):
+        return "zh"
+    return REPORT_DEFAULT_LOCALE
 
 
 def _record_is_usable(record: dict) -> bool:
@@ -20,17 +32,18 @@ def _row_to_dict(row) -> dict:
         "project_id": row[1],
         "kind": row[2],
         "audience": row[3],
-        "version": row[4],
-        "is_latest": bool(row[5]),
-        "source_run_id": row[6],
-        "window_start": row[7],
-        "window_end": row[8],
-        "generation_status": row[9],
-        "status": row[9],
-        "content": row[10],
-        "content_html": row[11],
-        "meta": json.loads(row[12] or "{}"),
-        "created_at": row[13],
+        "locale": row[4],
+        "version": row[5],
+        "is_latest": bool(row[6]),
+        "source_run_id": row[7],
+        "window_start": row[8],
+        "window_end": row[9],
+        "generation_status": row[10],
+        "status": row[10],
+        "content": row[11],
+        "content_html": row[12],
+        "meta": json.loads(row[13] or "{}"),
+        "created_at": row[14],
     }
 
 
@@ -42,10 +55,12 @@ async def create_report_bundle(
     window_start: str | None,
     window_end: str | None,
     records: dict[str, dict],
+    locale: str = REPORT_DEFAULT_LOCALE,
 ) -> list[dict]:
     """Persist a versioned human+agent report bundle and mark it latest."""
     if kind not in REPORT_KINDS:
         raise ValueError(f"Unsupported report kind: {kind}")
+    locale = normalize_report_locale(locale)
 
     audiences = [aud for aud in REPORT_AUDIENCES if aud in records]
     if not audiences:
@@ -54,8 +69,8 @@ async def create_report_bundle(
     db = await get_db()
     try:
         cursor = await db.execute(
-            "SELECT COALESCE(MAX(version), 0) FROM reports WHERE project_id = ? AND kind = ?",
-            (project_id, kind),
+            "SELECT COALESCE(MAX(version), 0) FROM reports WHERE project_id = ? AND kind = ? AND locale = ?",
+            (project_id, kind, locale),
         )
         version_row = await cursor.fetchone()
         version = int(version_row[0] or 0) + 1
@@ -68,18 +83,19 @@ async def create_report_bundle(
                 await db.execute(
                     """UPDATE reports
                        SET is_latest = 0
-                       WHERE project_id = ? AND kind = ? AND audience = ?""",
-                    (project_id, kind, audience),
+                       WHERE project_id = ? AND kind = ? AND audience = ? AND locale = ?""",
+                    (project_id, kind, audience, locale),
                 )
             insert = await db.execute(
                 """INSERT INTO reports (
-                       project_id, kind, audience, version, is_latest, source_run_id,
+                       project_id, kind, audience, locale, version, is_latest, source_run_id,
                        window_start, window_end, generation_status, content, content_html, meta_json
-                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     project_id,
                     kind,
                     audience,
+                    locale,
                     version,
                     1 if mark_latest else 0,
                     source_run_id,
@@ -111,6 +127,7 @@ async def list_reports(
     *,
     kind: str | None = None,
     audience: str | None = None,
+    locale: str | None = None,
     limit: int = 100,
 ) -> list[dict]:
     """List report records for a project, newest first."""
@@ -124,9 +141,12 @@ async def list_reports(
         if audience:
             where.append("audience = ?")
             params.append(audience)
+        if locale:
+            where.append("locale = ?")
+            params.append(normalize_report_locale(locale))
         params.append(limit)
         cursor = await db.execute(
-            f"""SELECT id, project_id, kind, audience, version, is_latest, source_run_id,
+            f"""SELECT id, project_id, kind, audience, locale, version, is_latest, source_run_id,
                        window_start, window_end, generation_status, content, content_html,
                        meta_json, created_at
                 FROM reports
@@ -146,7 +166,7 @@ async def get_report(report_id: int) -> dict | None:
     db = await get_db()
     try:
         cursor = await db.execute(
-            """SELECT id, project_id, kind, audience, version, is_latest, source_run_id,
+            """SELECT id, project_id, kind, audience, locale, version, is_latest, source_run_id,
                       window_start, window_end, generation_status, content, content_html,
                       meta_json, created_at
                FROM reports
@@ -159,19 +179,25 @@ async def get_report(report_id: int) -> dict | None:
         await db.close()
 
 
-async def get_latest_report(project_id: int, kind: str, audience: str) -> dict | None:
+async def get_latest_report(
+    project_id: int,
+    kind: str,
+    audience: str,
+    locale: str = REPORT_DEFAULT_LOCALE,
+) -> dict | None:
     """Return the latest report for one kind+audience pair."""
+    locale = normalize_report_locale(locale)
     db = await get_db()
     try:
         cursor = await db.execute(
-            """SELECT id, project_id, kind, audience, version, is_latest, source_run_id,
+            """SELECT id, project_id, kind, audience, locale, version, is_latest, source_run_id,
                       window_start, window_end, generation_status, content, content_html,
                       meta_json, created_at
                FROM reports
-               WHERE project_id = ? AND kind = ? AND audience = ? AND is_latest = 1
+               WHERE project_id = ? AND kind = ? AND audience = ? AND locale = ? AND is_latest = 1
                ORDER BY id DESC
                LIMIT 1""",
-            (project_id, kind, audience),
+            (project_id, kind, audience, locale),
         )
         row = await cursor.fetchone()
         return _row_to_dict(row) if row else None
@@ -179,8 +205,9 @@ async def get_latest_report(project_id: int, kind: str, audience: str) -> dict |
         await db.close()
 
 
-async def get_latest_reports(project_id: int) -> dict:
+async def get_latest_reports(project_id: int, locale: str = REPORT_DEFAULT_LOCALE) -> dict:
     """Return the latest report pointer for each kind+audience pair."""
+    locale = normalize_report_locale(locale)
     latest = {
         kind: {audience: None for audience in REPORT_AUDIENCES}
         for kind in REPORT_KINDS
@@ -188,13 +215,13 @@ async def get_latest_reports(project_id: int) -> dict:
     db = await get_db()
     try:
         cursor = await db.execute(
-            """SELECT id, project_id, kind, audience, version, is_latest, source_run_id,
+            """SELECT id, project_id, kind, audience, locale, version, is_latest, source_run_id,
                       window_start, window_end, generation_status, content, content_html,
                       meta_json, created_at
                FROM reports
-               WHERE project_id = ? AND is_latest = 1
+               WHERE project_id = ? AND locale = ? AND is_latest = 1
                ORDER BY id DESC""",
-            (project_id,),
+            (project_id, locale),
         )
         rows = await cursor.fetchall()
         for row in rows:

@@ -50,4 +50,29 @@ async def test_request_cancel_marks_active_task(tmp_path, monkeypatch):
     updated = await bg_service.get_task(task["task_id"])
 
     assert ok is True
+    assert updated["status"] == "cancelled"
+
+
+@pytest.mark.asyncio
+async def test_request_cancel_marks_claimed_task_for_worker_cancellation(tmp_path, monkeypatch):
+    from opencmo import storage
+    from opencmo.background import storage as bg_storage
+
+    db_path = tmp_path / "test.db"
+    monkeypatch.setattr(storage, "_DB_PATH", db_path, raising=False)
+    await storage.ensure_db()
+    project_id = await storage.ensure_project("Claimed", "https://claimed.test", "saas")
+
+    task = await bg_service.enqueue_task(
+        kind="graph_expansion",
+        project_id=project_id,
+        payload={"project_id": project_id, "resume": True},
+        dedupe_key=f"graph:project:{project_id}",
+    )
+    await bg_storage.claim_next_queued_task(worker_id="worker-a")
+
+    ok = await bg_service.request_cancel(task["task_id"])
+    updated = await bg_service.get_task(task["task_id"])
+
+    assert ok is True
     assert updated["status"] == "cancel_requested"

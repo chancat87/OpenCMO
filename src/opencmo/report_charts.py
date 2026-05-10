@@ -10,6 +10,153 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
+_SUPPORTED_LOCALES = {"en", "zh", "ja", "ko", "es"}
+_CHART_COPY = {
+    "en": {
+        "empty": "Insufficient data; no chart was generated.",
+        "chart_note": "Chart note",
+        "data_source": "Data source",
+        "data_points": "data points",
+        "data_limit": "Data limitation: charts use only real collected system data; missing values are not fabricated.",
+        "kpi_snapshot": "Key Metrics Snapshot",
+        "kpi_snapshot_desc": "Current snapshot of SEO, GEO, AI citation trust, brand footprint, and community hits.",
+        "serp_rank": "Current SERP Rankings (Lower Is Better)",
+        "serp_rank_desc": "Current organic search positions for tracked keywords.",
+        "coverage": "Data Coverage",
+        "coverage_available": "Available",
+        "coverage_total": "Total sources",
+        "coverage_desc": "Coverage of available sources in this report fact package.",
+        "risk_distribution": "Risk and Recommendation Distribution",
+        "risk_distribution_desc": "Action pressure aggregated by normalized priority.",
+        "weekly_risk_distribution": "Weekly Risk and Recommendation Distribution",
+        "weekly_risk_distribution_desc": "Distribution of actionable issues in this reporting period.",
+        "trend": "{metric} Trend",
+        "trend_desc": "{metric} trend from real samples inside this report window.",
+        "citability_trend": "AI Citation Trust Trend",
+        "citability_trend_desc": "AI citation trust trend across recent samples.",
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low",
+        "unknown": "Unknown",
+    },
+    "zh": {
+        "empty": "当前数据不足，未生成图表。",
+        "chart_note": "图表说明",
+        "data_source": "数据来源",
+        "data_points": "数据点",
+        "data_limit": "数据限制：图表只使用系统已采集到的真实数据，缺失值不会被补造。",
+        "kpi_snapshot": "关键指标快照",
+        "kpi_snapshot_desc": "SEO、GEO、AI 引文可信度、品牌足迹与社区命中的当前快照。",
+        "serp_rank": "SERP 当前排名（数字越小越靠前）",
+        "serp_rank_desc": "已跟踪关键词的当前自然搜索排名。",
+        "coverage": "数据覆盖度",
+        "coverage_available": "有数据",
+        "coverage_total": "总数据源",
+        "coverage_desc": "本报告事实包的数据源覆盖情况。",
+        "risk_distribution": "风险与建议分布",
+        "risk_distribution_desc": "近期发现与建议按优先级聚合后的执行压力。",
+        "weekly_risk_distribution": "本周风险与建议分布",
+        "weekly_risk_distribution_desc": "本周期可行动问题按优先级聚合后的分布。",
+        "trend": "{metric} 趋势",
+        "trend_desc": "{metric} 在本报告窗口内的真实历史走势。",
+        "citability_trend": "AI 引文可信度趋势",
+        "citability_trend_desc": "AI 引文可信度在最近样本中的走势。",
+        "high": "高优先级",
+        "medium": "中优先级",
+        "low": "低优先级",
+        "unknown": "未知",
+    },
+    "ja": {
+        "empty": "データが不足しているため、チャートは生成されませんでした。",
+        "chart_note": "チャート注記",
+        "data_source": "データソース",
+        "data_points": "データ点",
+        "data_limit": "データ制約: チャートは収集済みの実データのみを使用し、欠損値は補完しません。",
+        "kpi_snapshot": "主要指標スナップショット",
+        "kpi_snapshot_desc": "SEO、GEO、AI引用信頼度、ブランド露出、コミュニティ反応の現状です。",
+        "serp_rank": "現在のSERP順位（小さいほど良い）",
+        "serp_rank_desc": "追跡キーワードの現在の自然検索順位です。",
+        "coverage": "データカバレッジ",
+        "coverage_available": "利用可能",
+        "coverage_total": "総データソース",
+        "coverage_desc": "このレポート事実パッケージのデータソース網羅状況です。",
+        "risk_distribution": "リスクと推奨事項の分布",
+        "risk_distribution_desc": "優先度別に集計した実行圧力です。",
+        "weekly_risk_distribution": "週間リスクと推奨事項の分布",
+        "weekly_risk_distribution_desc": "この期間の実行可能な課題分布です。",
+        "trend": "{metric}トレンド",
+        "trend_desc": "このレポート期間内の実サンプルに基づく{metric}の推移です。",
+        "citability_trend": "AI引用信頼度トレンド",
+        "citability_trend_desc": "最近のサンプルにおけるAI引用信頼度の推移です。",
+        "high": "高",
+        "medium": "中",
+        "low": "低",
+        "unknown": "不明",
+    },
+    "ko": {
+        "empty": "현재 데이터가 부족하여 차트를 생성하지 못했습니다.",
+        "chart_note": "차트 설명",
+        "data_source": "데이터 출처",
+        "data_points": "데이터 포인트",
+        "data_limit": "데이터 제한: 차트는 시스템이 수집한 실제 데이터만 사용하며 누락값은 만들지 않습니다.",
+        "kpi_snapshot": "핵심 지표 스냅샷",
+        "kpi_snapshot_desc": "SEO, GEO, AI 인용 신뢰도, 브랜드 발자취, 커뮤니티 반응의 현재 스냅샷입니다.",
+        "serp_rank": "현재 SERP 순위(낮을수록 좋음)",
+        "serp_rank_desc": "추적 키워드의 현재 자연 검색 순위입니다.",
+        "coverage": "데이터 커버리지",
+        "coverage_available": "사용 가능",
+        "coverage_total": "전체 데이터 소스",
+        "coverage_desc": "이 보고서 사실 패키지의 데이터 소스 커버리지입니다.",
+        "risk_distribution": "리스크 및 권고 분포",
+        "risk_distribution_desc": "정규화된 우선순위별 실행 압력입니다.",
+        "weekly_risk_distribution": "주간 리스크 및 권고 분포",
+        "weekly_risk_distribution_desc": "이번 보고 기간의 실행 가능한 이슈 분포입니다.",
+        "trend": "{metric} 추세",
+        "trend_desc": "이번 보고 기간 내 실제 샘플 기반 {metric} 추세입니다.",
+        "citability_trend": "AI 인용 신뢰도 추세",
+        "citability_trend_desc": "최근 샘플의 AI 인용 신뢰도 추세입니다.",
+        "high": "높음",
+        "medium": "중간",
+        "low": "낮음",
+        "unknown": "알 수 없음",
+    },
+    "es": {
+        "empty": "No se generó ningún gráfico porque los datos son insuficientes.",
+        "chart_note": "Nota del gráfico",
+        "data_source": "Fuente de datos",
+        "data_points": "puntos de datos",
+        "data_limit": "Limitación de datos: los gráficos usan solo datos reales recopilados; no se inventan valores faltantes.",
+        "kpi_snapshot": "Instantánea de Métricas Clave",
+        "kpi_snapshot_desc": "Instantánea actual de SEO, GEO, confianza de citas de IA, huella de marca y señales de comunidad.",
+        "serp_rank": "Ranking SERP Actual (Menor Es Mejor)",
+        "serp_rank_desc": "Posiciones orgánicas actuales de las palabras clave monitorizadas.",
+        "coverage": "Cobertura de Datos",
+        "coverage_available": "Disponible",
+        "coverage_total": "Fuentes totales",
+        "coverage_desc": "Cobertura de fuentes disponibles en este paquete de hechos del informe.",
+        "risk_distribution": "Distribución de Riesgos y Recomendaciones",
+        "risk_distribution_desc": "Presión de ejecución agregada por prioridad normalizada.",
+        "weekly_risk_distribution": "Distribución Semanal de Riesgos y Recomendaciones",
+        "weekly_risk_distribution_desc": "Distribución de problemas accionables en este periodo.",
+        "trend": "Tendencia de {metric}",
+        "trend_desc": "Tendencia de {metric} con muestras reales dentro de la ventana del informe.",
+        "citability_trend": "Tendencia de Confianza de Citas de IA",
+        "citability_trend_desc": "Tendencia de confianza de citas de IA en muestras recientes.",
+        "high": "Alta",
+        "medium": "Media",
+        "low": "Baja",
+        "unknown": "Desconocida",
+    },
+}
+_PRIORITY_ALIASES = {
+    "critical": "high",
+    "high": "high",
+    "warning": "medium",
+    "medium": "medium",
+    "info": "low",
+    "low": "low",
+}
+
 
 @dataclass(frozen=True)
 class ReportChart:
@@ -54,9 +201,19 @@ def delete_chart_assets(asset_ids: Iterable[str]) -> None:
             continue
 
 
-def charts_to_markdown(charts: list[ReportChart]) -> str:
+def _normalize_locale(locale: str | None) -> str:
+    normalized = (locale or "zh").split("-", 1)[0].lower()
+    return normalized if normalized in _SUPPORTED_LOCALES else "zh"
+
+
+def _copy(locale: str | None) -> dict[str, str]:
+    return _CHART_COPY[_normalize_locale(locale)]
+
+
+def charts_to_markdown(charts: list[ReportChart], *, locale: str = "zh") -> str:
+    copy = _copy(locale)
     if not charts:
-        return "当前数据不足，未生成图表。"
+        return copy["empty"]
     blocks = []
     for chart in charts:
         blocks.append(
@@ -64,18 +221,18 @@ def charts_to_markdown(charts: list[ReportChart]) -> str:
                 [
                     f"### {chart.title}",
                     chart.markdown,
-                    f"图表说明：{chart.description}",
-                    f"数据来源：`{chart.data_source}`；数据点：{chart.points_count}。",
-                    "数据限制：图表只使用系统已采集到的真实数据，缺失值不会被补造。",
+                    f"{copy['chart_note']}: {chart.description}",
+                    f"{copy['data_source']}: `{chart.data_source}`; {copy['data_points']}: {chart.points_count}.",
+                    copy["data_limit"],
                 ]
             )
         )
     return "\n\n".join(blocks)
 
 
-def build_report_charts(kind: str, facts: dict, meta: dict) -> list[ReportChart]:
+def build_report_charts(kind: str, facts: dict, meta: dict, *, locale: str = "zh") -> list[ReportChart]:
     charts: list[ReportChart] = []
-    charts.extend(_strategic_charts(facts, meta) if kind == "strategic" else _periodic_charts(facts, meta))
+    charts.extend(_strategic_charts(facts, meta, locale) if kind == "strategic" else _periodic_charts(facts, meta, locale))
     return charts[:4]
 
 
@@ -118,7 +275,8 @@ def _latest_first(items: list[dict], date_key: str) -> list[dict]:
     return sorted(items or [], key=lambda item: str(item.get(date_key) or ""), reverse=True)
 
 
-def _strategic_charts(facts: dict, meta: dict) -> list[ReportChart]:
+def _strategic_charts(facts: dict, meta: dict, locale: str) -> list[ReportChart]:
+    copy = _copy(locale)
     charts: list[ReportChart] = []
     latest = facts.get("latest_scans") or {}
     kpis = [
@@ -130,7 +288,7 @@ def _strategic_charts(facts: dict, meta: dict) -> list[ReportChart]:
     ]
     kpis = [(label, value) for label, value in kpis if value is not None]
     if kpis:
-        charts.append(_bar_chart("关键指标快照", kpis, "latest_scans/citability/brand_presence", "SEO、GEO、AI 引文可信度、品牌足迹与社区命中的当前快照。"))
+        charts.append(_bar_chart(copy["kpi_snapshot"], kpis, "latest_scans/citability/brand_presence", copy["kpi_snapshot_desc"]))
 
     serp = [
         (str(item.get("keyword") or "keyword")[:24], _number(item.get("position")))
@@ -138,22 +296,23 @@ def _strategic_charts(facts: dict, meta: dict) -> list[ReportChart]:
         if item.get("position") is not None
     ][:8]
     if serp:
-        charts.append(_bar_chart("SERP 当前排名（数字越小越靠前）", serp, "serp_latest.position", "已跟踪关键词的当前自然搜索排名。"))
+        charts.append(_bar_chart(copy["serp_rank"], serp, "serp_latest.position", copy["serp_rank_desc"]))
 
     coverage = [
-        ("有数据", _number(meta.get("sample_count"))),
-        ("总数据源", _number(meta.get("total_data_sources"))),
+        (copy["coverage_available"], _number(meta.get("sample_count"))),
+        (copy["coverage_total"], _number(meta.get("total_data_sources"))),
     ]
     if all(value is not None for _, value in coverage):
-        charts.append(_bar_chart("数据覆盖度", coverage, "meta.sample_count/meta.total_data_sources", "本报告事实包的数据源覆盖情况。"))
+        charts.append(_bar_chart(copy["coverage"], coverage, "meta.sample_count/meta.total_data_sources", copy["coverage_desc"]))
 
-    distribution = _finding_distribution(facts)
+    distribution = _finding_distribution(facts, locale=locale)
     if distribution:
-        charts.append(_bar_chart("风险与建议分布", distribution, "findings/recommendations", "近期发现与建议按优先级聚合后的执行压力。"))
+        charts.append(_bar_chart(copy["risk_distribution"], distribution, "findings/recommendations", copy["risk_distribution_desc"]))
     return charts
 
 
-def _periodic_charts(facts: dict, meta: dict) -> list[ReportChart]:
+def _periodic_charts(facts: dict, meta: dict, locale: str) -> list[ReportChart]:
+    copy = _copy(locale)
     charts: list[ReportChart] = []
     trend_series = [
         ("SEO", [(item.get("scanned_at"), _to_percent(item.get("score_performance"))) for item in _latest_first(facts.get("seo_history") or [], "scanned_at")]),
@@ -163,28 +322,29 @@ def _periodic_charts(facts: dict, meta: dict) -> list[ReportChart]:
     for title, series in trend_series:
         points = [(label, value) for label, value in reversed(series) if value is not None]
         if len(points) >= 2:
-            charts.append(_line_chart(f"{title} 趋势", points[-10:], f"{title.lower()}_history", f"{title} 在本报告窗口内的真实历史走势。"))
+            charts.append(_line_chart(copy["trend"].format(metric=title), points[-10:], f"{title.lower()}_history", copy["trend_desc"].format(metric=title)))
 
     citability = [(item.get("created_at") or item.get("scanned_at"), _to_percent(item.get("avg_score"))) for item in _latest_first(facts.get("citability") or [], "created_at")]
     citability_points = [(label, value) for label, value in reversed(citability) if value is not None]
     if len(citability_points) >= 2:
-        charts.append(_line_chart("AI 引文可信度趋势", citability_points[-10:], "citability.avg_score", "AI 引文可信度在最近样本中的走势。"))
+        charts.append(_line_chart(copy["citability_trend"], citability_points[-10:], "citability.avg_score", copy["citability_trend_desc"]))
 
-    distribution = _finding_distribution(facts)
+    distribution = _finding_distribution(facts, locale=locale)
     if distribution:
-        charts.append(_bar_chart("本周风险与建议分布", distribution, "findings/recommendations", "本周期可行动问题按优先级聚合后的分布。"))
+        charts.append(_bar_chart(copy["weekly_risk_distribution"], distribution, "findings/recommendations", copy["weekly_risk_distribution_desc"]))
     return charts
 
 
-def _finding_distribution(facts: dict) -> list[tuple[str, float]]:
+def _finding_distribution(facts: dict, *, locale: str = "zh") -> list[tuple[str, float]]:
+    copy = _copy(locale)
     counts = {"high": 0, "medium": 0, "low": 0, "unknown": 0}
     for item in facts.get("findings") or []:
-        priority = str((item.get("severity") or item.get("priority") or "unknown")).lower()
+        priority = _PRIORITY_ALIASES.get(str((item.get("severity") or item.get("priority") or "unknown")).lower(), "unknown")
         counts[priority if priority in counts else "unknown"] += 1
     for item in facts.get("recommendations") or []:
-        priority = str(item.get("priority") or "unknown").lower()
+        priority = _PRIORITY_ALIASES.get(str(item.get("priority") or "unknown").lower(), "unknown")
         counts[priority if priority in counts else "unknown"] += 1
-    return [(label, count) for label, count in counts.items() if count]
+    return [(copy[label], count) for label, count in counts.items() if count]
 
 
 def _bar_chart(title: str, values: list[tuple[str, float | None]], source: str, description: str) -> ReportChart:

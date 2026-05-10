@@ -89,7 +89,7 @@ async def run_monitor(job_id: int) -> dict:
     from opencmo.scheduler import run_scheduled_scan
 
     await run_scheduled_scan(
-        job["project_id"], job["job_type"], job_id, triggered_by="manual"
+        job["project_id"], job["job_type"], job_id, triggered_by="manual", locale=job.get("locale", "zh")
     )
     return {"ok": True, "job": job}
 
@@ -139,15 +139,20 @@ async def manage_keywords(
     return {"action": action, "error": f"Unknown action: {action}"}
 
 
-async def send_project_report(project_id: int) -> dict:
+async def send_project_report(project_id: int, *, locale: str = "zh") -> dict:
     """Send email report for a project."""
     from opencmo.tools.email_report import send_report_impl
 
-    return await send_report_impl(project_id)
+    return await send_report_impl(project_id, locale=locale)
 
 
 async def regenerate_project_report(
-    project_id: int, kind: str, source_run_id: int | None = None, on_progress=None
+    project_id: int,
+    kind: str,
+    source_run_id: int | None = None,
+    *,
+    locale: str = "zh",
+    on_progress=None,
 ) -> dict:
     """Generate and persist a strategic or periodic report bundle."""
     project = await storage.get_project(project_id)
@@ -158,11 +163,11 @@ async def regenerate_project_report(
 
     if kind == "strategic":
         return await reports.generate_strategic_report_bundle(
-            project_id, source_run_id=source_run_id, on_progress=on_progress
+            project_id, source_run_id=source_run_id, locale=locale, on_progress=on_progress
         )
     if kind == "periodic":
         return await reports.generate_periodic_report_bundle(
-            project_id, source_run_id=source_run_id, on_progress=on_progress
+            project_id, source_run_id=source_run_id, locale=locale, on_progress=on_progress
         )
     raise ValueError(f"Unsupported report kind: {kind}")
 

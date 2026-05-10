@@ -19,6 +19,62 @@ _PERIODIC_WINDOW_DAYS = 7
 _REPORT_LLM_TIMEOUT_SECONDS = 300.0
 _CHART_ASSET_SRC_RE = re.compile(r"^/api/v1/report-assets/[a-f0-9]{32}\.svg$")
 _CHART_ASSET_REF_RE = re.compile(r"/api/v1/report-assets/[a-f0-9]{32}\.svg")
+_REPORT_LANGUAGE_INSTRUCTIONS = {
+    "en": "Language requirement: write the final report in English.",
+    "zh": "语言要求：最终报告必须使用简体中文。",
+    "ja": "Language requirement: write the final report in Japanese.",
+    "ko": "Language requirement: write the final report in Korean.",
+    "es": "Language requirement: write the final report in Spanish.",
+}
+_REPORT_STRUCTURE_LABELS = {
+    "en": {
+        "conclusion": "Bottom Line",
+        "toc": "Table of Contents",
+        "charts": "Charts at a Glance",
+        "background": "Context and Decision Criteria",
+        "strategy": "Strategic Recommendations and Action Roadmap",
+        "title_suffix": "Strategic Analysis",
+    },
+    "zh": {
+        "conclusion": "先说结论",
+        "toc": "目录",
+        "charts": "数据图表速览",
+        "background": "背景与判断口径",
+        "strategy": "战略建议与行动路线图",
+        "title_suffix": "深度战略分析",
+    },
+    "ja": {
+        "conclusion": "まず結論",
+        "toc": "目次",
+        "charts": "データチャート概観",
+        "background": "背景と判断基準",
+        "strategy": "戦略提言とアクションロードマップ",
+        "title_suffix": "戦略分析",
+    },
+    "ko": {
+        "conclusion": "결론 먼저",
+        "toc": "목차",
+        "charts": "데이터 차트 한눈에 보기",
+        "background": "배경과 판단 기준",
+        "strategy": "전략 제안 및 실행 로드맵",
+        "title_suffix": "전략 분석",
+    },
+    "es": {
+        "conclusion": "Conclusión Primero",
+        "toc": "Índice",
+        "charts": "Resumen Visual de Datos",
+        "background": "Contexto y Criterios de Evaluación",
+        "strategy": "Recomendaciones Estratégicas y Hoja de Ruta",
+        "title_suffix": "Análisis Estratégico",
+    },
+}
+_REPORT_EMPTY_CHARTS_TEXT = {
+    "en": "Insufficient data; no chart was generated.",
+    "zh": "当前数据不足，未生成图表。",
+    "ja": "データが不足しているため、チャートは生成されませんでした。",
+    "ko": "현재 데이터가 부족하여 차트를 생성하지 못했습니다.",
+    "es": "No se generó ningún gráfico porque los datos son insuficientes.",
+}
 _REPORT_SYSTEM_COMMON = (
     "你是 AI CMO（首席营销官），拥有完整的多智能体营销系统：SEO审计专家、GEO(AI搜索可见性)分析师、"
     "SERP排名追踪器、社区舆情监控(Reddit/HN/Dev.to/知乎/V2EX/掘金等)、AI引文可信度(Citability)评估引擎、"
@@ -35,7 +91,7 @@ _REPORT_SYSTEM_COMMON = (
     "2. 不要使用含糊的“分数”表述，必须明确说是“SEO百分制健康度”、“社区原始流量表现”等，且不可偏离事实数据。\n"
     "3. 不是简单罗列数据，而是像真正的 CMO 那样做业务推演——高流量为何不能转化为高排名？对增长有什么影响？应该怎么做？\n"
     "4. 不要虚构数据；某个维度数据缺失时，明确标注并说明获取方法。\n"
-    "5. 必须使用中文输出，报告要足够深入和详实，像一份面向CEO/投资人级别的商业分析文档。\n"
+    "5. 报告要足够深入和详实，像一份面向CEO/投资人级别的商业分析文档。\n"
 )
 _REPORT_EVIDENCE_DISCIPLINE = (
     "【事实纪律】\n"
@@ -46,8 +102,28 @@ _REPORT_EVIDENCE_DISCIPLINE = (
 )
 
 
-def _compose_report_system_prompt(*sections: str) -> str:
-    return "".join((_REPORT_SYSTEM_COMMON, _REPORT_EVIDENCE_DISCIPLINE, *sections))
+def _normalize_report_locale(locale: str | None) -> str:
+    return storage.normalize_report_locale(locale)
+
+
+def _report_language_instruction(locale: str | None) -> str:
+    normalized = _normalize_report_locale(locale)
+    return _REPORT_LANGUAGE_INSTRUCTIONS.get(normalized, _REPORT_LANGUAGE_INSTRUCTIONS["zh"])
+
+
+def _report_structure_labels(locale: str | None) -> dict[str, str]:
+    normalized = _normalize_report_locale(locale)
+    return _REPORT_STRUCTURE_LABELS.get(normalized, _REPORT_STRUCTURE_LABELS["zh"])
+
+
+def _empty_report_charts_text(locale: str | None) -> str:
+    normalized = _normalize_report_locale(locale)
+    return _REPORT_EMPTY_CHARTS_TEXT.get(normalized, _REPORT_EMPTY_CHARTS_TEXT["zh"])
+
+
+def _compose_report_system_prompt(*sections: str, locale: str = "zh") -> str:
+    language_instruction = _report_language_instruction(locale)
+    return "".join((_REPORT_SYSTEM_COMMON, _REPORT_EVIDENCE_DISCIPLINE, language_instruction, "\n\n", *sections))
 
 
 def _json_dump(data: object) -> str:
@@ -69,11 +145,11 @@ def _parse_ts(value: str | None) -> datetime | None:
             return None
 
 
-def _filter_window(items: list[dict], field: str, start: datetime) -> list[dict]:
+def _filter_window(items: list[dict], field: str, start: datetime, end: datetime | None = None) -> list[dict]:
     result: list[dict] = []
     for item in items:
         timestamp = _parse_ts(item.get(field))
-        if timestamp and timestamp >= start:
+        if timestamp and timestamp >= start and (end is None or timestamp <= end):
             result.append(item)
     return result
 
@@ -180,35 +256,53 @@ def _normalize_report_headings(markdown_text: str) -> str:
     return "\n".join(lines).strip()
 
 
-def _insert_after_first_section(markdown_text: str, section: str) -> str:
+def _insert_after_named_section(markdown_text: str, section_name: str, section: str) -> str:
+    """Insert section after a named H2 block, falling back to after the first H2."""
     lines = markdown_text.splitlines()
     h2_indices = [idx for idx, line in enumerate(lines) if line.startswith("## ")]
-    if len(h2_indices) >= 2:
+    insert_at = None
+    for position, idx in enumerate(h2_indices):
+        title = lines[idx][3:].strip()
+        if title == section_name or title.startswith(f"{section_name} "):
+            insert_at = h2_indices[position + 1] if position + 1 < len(h2_indices) else len(lines)
+            break
+    if insert_at is None and len(h2_indices) >= 2:
         insert_at = h2_indices[1]
-    elif len(lines) >= 1 and lines[0].startswith("# "):
+    elif insert_at is None and len(lines) >= 1 and lines[0].startswith("# "):
         insert_at = 1
-    else:
+    elif insert_at is None:
         insert_at = 0
     return "\n".join([*lines[:insert_at], "", section.strip(), "", *lines[insert_at:]]).strip()
 
 
-def _postprocess_human_report_content(content: str, charts_markdown: str) -> str:
+def _insert_after_first_section(markdown_text: str, section: str) -> str:
+    return _insert_after_named_section(markdown_text, "", section)
+
+
+def _postprocess_human_report_content(content: str, charts_markdown: str, *, locale: str = "zh") -> str:
     content = _normalize_report_headings(content)
     if _CHART_ASSET_REF_RE.search(content):
         return content
-    chart_section = f"## 2. 数据图表速览\n\n{charts_markdown or '当前数据不足，未生成图表。'}"
-    return _insert_after_first_section(content, chart_section)
+    labels = _report_structure_labels(locale)
+    chart_body = charts_markdown or _empty_report_charts_text(locale)
+    lines = content.splitlines()
+    chart_section_names = {labels["charts"], _REPORT_STRUCTURE_LABELS["zh"]["charts"]}
+    for idx, line in enumerate(lines):
+        if line.startswith("## ") and any(section_name in line for section_name in chart_section_names):
+            return "\n".join([*lines[: idx + 1], "", chart_body.strip(), "", *lines[idx + 1 :]]).strip()
+    chart_section = f"## {labels['charts']}\n\n{chart_body}"
+    return _insert_after_named_section(content, labels["toc"], chart_section)
 
 
-def _prepare_report_charts(kind: str, facts: dict, meta: dict) -> tuple[dict, dict, str]:
+def _prepare_report_charts(kind: str, facts: dict, meta: dict, *, locale: str = "zh") -> tuple[dict, dict, str]:
     """Generate deterministic charts and return facts/meta copies enriched for prompts."""
     enriched_facts = dict(facts)
     enriched_meta = dict(meta)
     try:
         from opencmo.report_charts import build_report_charts, charts_to_markdown
 
-        charts = build_report_charts(kind, facts, meta)
-        charts_markdown = charts_to_markdown(charts)
+        charts = build_report_charts(kind, facts, meta, locale=locale)
+        charts_markdown = charts_to_markdown(charts, locale=locale) if charts else _empty_report_charts_text(locale)
         enriched_facts["report_charts"] = [chart.to_meta() | {"markdown": chart.markdown} for chart in charts]
         enriched_facts["report_charts_markdown"] = charts_markdown
         enriched_meta["charts"] = [chart.to_meta() for chart in charts]
@@ -217,7 +311,7 @@ def _prepare_report_charts(kind: str, facts: dict, meta: dict) -> tuple[dict, di
     except Exception as exc:
         logger.exception("Report chart generation failed for %s", kind)
         enriched_meta["chart_error"] = str(exc) or exc.__class__.__name__
-        charts_markdown = "当前数据不足或图表生成失败，未生成图表。"
+        charts_markdown = _empty_report_charts_text(locale)
         enriched_facts["report_charts"] = []
         enriched_facts["report_charts_markdown"] = charts_markdown
         enriched_meta["charts"] = []
@@ -285,15 +379,30 @@ async def _get_report_timeout_seconds() -> float:
     return max(1.0, timeout)
 
 
-async def _get_recent_recommendations(project_id: int, limit: int = 6) -> list[dict]:
+async def _get_recent_recommendations(
+    project_id: int,
+    limit: int = 6,
+    *,
+    start: datetime | None = None,
+    end: datetime | None = None,
+) -> list[dict]:
     db = await storage.get_db()
     try:
+        where = ["r.project_id = ?"]
+        params: list[object] = [project_id]
+        if start is not None:
+            where.append("rec.created_at >= ?")
+            params.append(start.isoformat(timespec="seconds"))
+        if end is not None:
+            where.append("rec.created_at <= ?")
+            params.append(end.isoformat(timespec="seconds"))
+        params.append(limit)
         cursor = await db.execute(
             """SELECT rec.domain, rec.priority, rec.owner_type, rec.action_type,
-                      rec.title, rec.summary, rec.rationale
+                      rec.title, rec.summary, rec.rationale, rec.created_at
                FROM scan_recommendations rec
                JOIN scan_runs r ON r.id = rec.run_id
-               WHERE r.project_id = ?
+               WHERE """ + " AND ".join(where) + """
                ORDER BY r.id DESC,
                  CASE rec.priority
                    WHEN 'high' THEN 0
@@ -302,7 +411,7 @@ async def _get_recent_recommendations(project_id: int, limit: int = 6) -> list[d
                  END,
                  rec.id
                LIMIT ?""",
-            (project_id, limit),
+            tuple(params),
         )
         rows = await cursor.fetchall()
         return [
@@ -314,6 +423,7 @@ async def _get_recent_recommendations(project_id: int, limit: int = 6) -> list[d
                 "title": row[4],
                 "summary": row[5],
                 "rationale": row[6],
+                "created_at": row[7],
             }
             for row in rows
         ]
@@ -321,7 +431,56 @@ async def _get_recent_recommendations(project_id: int, limit: int = 6) -> list[d
         await db.close()
 
 
-async def _get_recent_approvals(project_id: int, start: datetime) -> list[dict]:
+async def _get_recent_findings(
+    project_id: int,
+    limit: int = 6,
+    *,
+    start: datetime | None = None,
+    end: datetime | None = None,
+) -> list[dict]:
+    db = await storage.get_db()
+    try:
+        where = ["r.project_id = ?"]
+        params: list[object] = [project_id]
+        if start is not None:
+            where.append("f.created_at >= ?")
+            params.append(start.isoformat(timespec="seconds"))
+        if end is not None:
+            where.append("f.created_at <= ?")
+            params.append(end.isoformat(timespec="seconds"))
+        params.append(limit)
+        cursor = await db.execute(
+            """SELECT f.domain, f.severity, f.title, f.summary, f.metadata_json, f.created_at
+               FROM scan_findings f
+               JOIN scan_runs r ON r.id = f.run_id
+               WHERE """ + " AND ".join(where) + """
+               ORDER BY r.id DESC,
+                 CASE f.severity
+                   WHEN 'critical' THEN 0
+                   WHEN 'warning' THEN 1
+                   ELSE 2
+                 END,
+                 f.id
+               LIMIT ?""",
+            tuple(params),
+        )
+        rows = await cursor.fetchall()
+        return [
+            {
+                "domain": row[0],
+                "severity": row[1],
+                "title": row[2],
+                "summary": row[3],
+                "metadata": json.loads(row[4] or "{}"),
+                "created_at": row[5],
+            }
+            for row in rows
+        ]
+    finally:
+        await db.close()
+
+
+async def _get_recent_approvals(project_id: int, start: datetime, end: datetime | None = None) -> list[dict]:
     db = await storage.get_db()
     try:
         cursor = await db.execute(
@@ -347,10 +506,10 @@ async def _get_recent_approvals(project_id: int, start: datetime) -> list[dict]:
         ]
     finally:
         await db.close()
-    return _filter_window(approvals, "created_at", start)
+    return _filter_window(approvals, "created_at", start, end)
 
 
-async def _build_strategic_facts(project_id: int) -> tuple[dict, dict]:
+async def _build_strategic_facts(project_id: int, *, locale: str = "zh") -> tuple[dict, dict]:
     project = await storage.get_project(project_id)
     if not project:
         raise ValueError(f"Project {project_id} not found.")
@@ -380,7 +539,7 @@ async def _build_strategic_facts(project_id: int) -> tuple[dict, dict]:
         storage.get_latest_monitoring_summary(project_id),
         storage.get_task_findings_by_project(project_id, limit=15),
         _get_recent_recommendations(project_id, limit=12),
-        storage.get_latest_report(project_id, "strategic", "human"),
+        storage.get_latest_report(project_id, "strategic", "human", locale=locale),
         storage.list_insights(project_id=project_id, limit=15),
         storage.get_citability_history(project_id, limit=3),
         storage.get_ai_crawler_history(project_id, limit=3),
@@ -389,7 +548,6 @@ async def _build_strategic_facts(project_id: int) -> tuple[dict, dict]:
         storage.get_all_serp_latest(project_id),
         build_project_opportunity_snapshot(project_id),
     )
-    findings, environment_limitations, hypothesis_findings = _classify_findings(findings)
     findings, environment_limitations, hypothesis_findings = _classify_findings(findings)
 
     # Fetch competitor keywords in parallel using batch query
@@ -557,6 +715,7 @@ async def _build_strategic_facts(project_id: int) -> tuple[dict, dict]:
             f"{len(brand_presence_history)} 条品牌存在感分析"
         ),
         "change_count": len(change_lines),
+        "locale": _normalize_report_locale(locale),
     }
     return facts, meta
 
@@ -581,27 +740,29 @@ async def _build_periodic_facts(
 
     # Parallel data aggregation - Phase 1 optimization
     (
+        keywords,
         seo_history_raw,
         geo_history_raw,
         community_history_raw,
-        discussions,
+        discussions_raw,
         recent_approvals,
         recommendations,
         findings,
-        serp_latest,
-        insights,
-        citability_history,
-        ai_crawler_history,
-        brand_presence_history,
+        serp_latest_raw,
+        insights_raw,
+        citability_history_raw,
+        ai_crawler_history_raw,
+        brand_presence_history_raw,
         opportunity_snapshot,
     ) = await asyncio.gather(
+        storage.list_tracked_keywords(project_id),
         storage.get_seo_history(project_id, limit=30),
         storage.get_geo_history(project_id, limit=30),
         storage.get_community_history(project_id, limit=30),
         storage.get_tracked_discussions(project_id),
-        _get_recent_approvals(project_id, window_start_dt),
-        _get_recent_recommendations(project_id, limit=12),
-        storage.get_task_findings_by_project(project_id, limit=15),
+        _get_recent_approvals(project_id, window_start_dt, now),
+        _get_recent_recommendations(project_id, limit=12, start=window_start_dt, end=now),
+        _get_recent_findings(project_id, limit=15, start=window_start_dt, end=now),
         storage.get_all_serp_latest(project_id),
         storage.list_insights(project_id=project_id, limit=15),
         storage.get_citability_history(project_id, limit=5),
@@ -612,9 +773,15 @@ async def _build_periodic_facts(
     findings, environment_limitations, hypothesis_findings = _classify_findings(findings)
 
     # Apply time window filtering
-    seo_history = _filter_window(seo_history_raw, "scanned_at", window_start_dt)
-    geo_history = _filter_window(geo_history_raw, "scanned_at", window_start_dt)
-    community_history = _filter_window(community_history_raw, "scanned_at", window_start_dt)
+    seo_history = _filter_window(seo_history_raw, "scanned_at", window_start_dt, now)
+    geo_history = _filter_window(geo_history_raw, "scanned_at", window_start_dt, now)
+    community_history = _filter_window(community_history_raw, "scanned_at", window_start_dt, now)
+    discussions = _filter_window(discussions_raw, "last_checked_at", window_start_dt, now)
+    serp_latest = _filter_window(serp_latest_raw, "checked_at", window_start_dt, now)
+    insights = _filter_window(insights_raw, "created_at", window_start_dt, now)
+    citability_history = _filter_window(citability_history_raw, "scanned_at", window_start_dt, now)
+    ai_crawler_history = _filter_window(ai_crawler_history_raw, "scanned_at", window_start_dt, now)
+    brand_presence_history = _filter_window(brand_presence_history_raw, "scanned_at", window_start_dt, now)
 
     data_sources = [seo_history, geo_history, community_history, serp_latest,
                     insights, citability_history, ai_crawler_history, brand_presence_history]
@@ -671,6 +838,7 @@ async def _build_periodic_facts(
         "project": project,
         "window_start": window_start,
         "window_end": window_end,
+        "keywords": keywords,
         "seo_history": seo_history,
         "geo_history": geo_history,
         "community_history": community_history,
@@ -688,6 +856,16 @@ async def _build_periodic_facts(
         "brand_presence": brand_presence_history,
         "recent_approvals": recent_approvals,
         "top_changes": top_changes[:5],
+        # Aliases consumed by report_pipeline._DIMENSIONS.
+        "seo_latest": seo_history[0] if seo_history else None,
+        "geo_latest": geo_history[0] if geo_history else None,
+        "community_latest": community_history[0] if community_history else None,
+        "serp_snapshots": serp_latest,
+        "citability_history": citability_history,
+        "ai_crawler_history": ai_crawler_history,
+        "brand_presence_history": brand_presence_history,
+        "insights_history": insights,
+        "approvals": recent_approvals,
     }
     meta = {
         "sample_count": sample_count,
@@ -696,6 +874,7 @@ async def _build_periodic_facts(
         "facts_summary": (
             f"SEO 样本 {len(seo_history)}, GEO 样本 {len(geo_history)}, "
             f"Community 样本 {len(community_history)}, SERP 关键词 {len(serp_latest)}, "
+            f"跟踪关键词 {len(keywords)} 个, "
             f"已验证发现 {len(findings)} 条, 环境限制 {len(environment_limitations)} 条, "
             f"洞察 {len(insights)} 条, 引文分析 {len(citability_history)} 条, "
             f"爬虫检测 {len(ai_crawler_history)} 条, 品牌存在感 {len(brand_presence_history)} 条"
@@ -725,47 +904,70 @@ def _failed_report_payload(meta: dict, model: str, *, used_pipeline: bool, llm_e
     }
 
 
-def _prompts(kind: str, audience: str, facts: dict, meta: dict, previous_exists: bool) -> tuple[str, str]:
+def _prompts(
+    kind: str,
+    audience: str,
+    facts: dict,
+    meta: dict,
+    previous_exists: bool,
+    *,
+    locale: str = "zh",
+) -> tuple[str, str]:
     project = facts["project"]
+    locale = _normalize_report_locale(locale)
+    labels = _report_structure_labels(locale)
     if kind == "strategic" and audience == "human":
         system = _compose_report_system_prompt(
             "你的任务是生成一份极其深入的战略分析报告。输出 Markdown，报告总长度应在 2000-4000 字之间。\n\n"
             "【标题与可视化硬性要求】\n"
             "- `#` 只用于报告总标题，`##` 只用于一级章节，`###` 只用于二级小节，禁止使用 `####` 或更深标题。\n"
+            f"- 报告开头必须先给结论：`# 报告标题` 后第一个一级章节必须是 `## {labels['conclusion']}`。\n"
+            f"- `## {labels['conclusion']}` 必须用 3-5 条短段落或 bullet 直接说明核心判断、最大风险、第一优先级行动；不要写背景铺垫。\n"
+            f"- 第二个一级章节必须是 `## {labels['toc']}`，列出后续章节标题，让读者先知道报告结构。\n"
+            f"- `## {labels['toc']}` 后再进入图表、背景、诊断和行动计划。\n"
             "- 必须保留并解释输入中提供的真实图表 Markdown，不能修改图表链接、标题或图表数字。\n"
-            "- 必须包含 `## 数据图表速览`，每张图后解释：图表说明、业务含义、数据限制。\n"
+            f"- 必须包含 `## {labels['charts']}`，且必须放在 `## {labels['toc']}` 后；每张图后解释：图表说明、业务含义、数据限制。\n"
             "- 一级章节标题要清晰可扫读，二级标题必须是结论型标题，不要写空泛标题。\n\n"
-            "严格按以下 6 大模块结构生成，每个模块都必须展开详细论述，不能用简短的一两句话敷衍：\n\n"
-            "## 1. 执行摘要与项目定性 (Executive Summary)\n"
-            "  - 一句话定义项目当前所处的增长阶段\n"
-            "  - 从 SEO分数、GEO分数、品牌足迹分、AI引文可信度等多维指标综合评估项目的「数字化健康度」\n"
+            "严格按以下阅读顺序生成，先让读者抓结论，再展开论证：\n\n"
+            f"## {labels['conclusion']}\n"
+            "  - 一句话定义项目当前所处的增长阶段和最关键业务影响\n"
+            "  - 给出 3-5 个最高价值判断，每条必须区分事实 / 推断 / 建议\n"
+            "  - 最后点明第一优先级行动\n\n"
+            f"## {labels['toc']}\n"
+            "  - 列出后续一级章节\n\n"
+            f"## {labels['charts']}\n"
+            "  - 引用输入中的图表，并解释每张图的业务含义与限制\n\n"
+            f"## {labels['background']}\n"
+            "  - 从 SEO分数、GEO分数、品牌足迹分、AI引文可信度等多维指标定义判断框架\n"
             "  - 如果有历史报告，对比版本差异并给出趋势判断\n\n"
-            "## 2. 核心竞争力与优势护城河解析 (Core Competencies)\n"
+            "## 核心竞争力与优势护城河解析 (Core Competencies)\n"
             "  - 逐一解读每个优势信号背后的商业含义\n"
             "  - 分析 AI 引文可信度(Citability)和 AI爬虫放行状态对「被AI推荐」的影响\n"
             "  - 社区讨论中的正面信号与品牌数字足迹的协同效应\n"
             "  - SERP排名中已拿下的关键词意味着什么流量机会\n\n"
-            "## 3. 风险扫描与增长短板预警 (Risk Scanning)\n"
+            "## 风险扫描与增长短板预警 (Risk Scanning)\n"
             "  - 逐一深入解读每个风险信号的根因和潜在影响\n"
             "  - 结合 Insights 洞察系统中的 warning/critical 级别告警做交叉验证\n"
             "  - 评估哪些风险会直接影响获客转化，哪些是长期隐患\n"
             "  - 给出风险优先级排序\n\n"
-            "## 4. 竞品全景与流量抢占分析 (Competitive Landscape)\n"
+            "## 竞品全景与流量抢占分析 (Competitive Landscape)\n"
             "  - 如果有竞品数据和知识图谱数据，做详细的竞品对比分析\n"
             "  - 关键词重叠与差异化机会\n"
             "  - SERP中的直接竞争态势\n"
             "  - 在AI搜索(GEO)中的相对位置\n"
             "  - 如果竞品数据不完善，指出如何补充\n\n"
-            "## 5. 目标受众与社区舆论洞察 (Audience & Community Sentiment)\n"
+            "## 目标受众与社区舆论洞察 (Audience & Community Sentiment)\n"
             "  - 分析社区讨论(discussions)的主题和情绪基调\n"
             "  - 从社区流量来源(Reddit、HN、知乎、V2EX等)推断用户画像\n"
             "  - 审批队列中的内容产出动势如何\n"
             "  - 品牌在各个平台上的存在感差异\n\n"
-            "## 6. 下一阶段 CMO 战略规划与具体执行行动 (CMO Strategy & Actions)\n"
+            f"## {labels['strategy']} (CMO Strategy & Actions)\n"
             "  - 基于以上全部分析给出 3-5 个可执行的战略方向\n"
             "  - 每个方向要具体到：由哪个Agent执行、预期指标变化、实施优先级\n"
             "  - 给一个清晰的「30天行动路线图」\n"
             "  - 标明需要人工介入的关键节点\n"
+            "\n再次强调：即使事实包中的部分摘要是中文，也要先理解并翻译/改写，最终报告只能使用目标语言。\n",
+            locale=locale,
         )
         user = (
             f"项目：{project['brand_name']} ({project['category']})\n"
@@ -774,7 +976,7 @@ def _prompts(kind: str, audience: str, facts: dict, meta: dict, previous_exists:
             f"数据来源覆盖度：{meta.get('sample_count', 0)}/{meta.get('total_data_sources', 0)} 个数据源有数据\n"
             f"摘要元数据：{_json_dump(meta)}\n\n"
             f"=== 必须引用的真实图表（由后端基于事实包生成，不得改写数字或链接）===\n"
-            f"{facts.get('report_charts_markdown', '当前数据不足，未生成图表。')}\n\n"
+            f"{facts.get('report_charts_markdown', _empty_report_charts_text(locale))}\n\n"
             f"=== 完整事实包（来自所有智能体的采集结果）===\n{_json_dump(facts)}"
         )
         return system, user
@@ -798,7 +1000,9 @@ def _prompts(kind: str, audience: str, facts: dict, meta: dict, previous_exists:
             "## 5. Agent 可自动执行 vs 需人工介入\n"
             "   - 明确区分哪些动作可由现有 Agent 直接执行，哪些需要人工批准、外部账号或额外工具\n\n"
             "## 6. 关键数据快照\n"
-            "   - 只引用事实包里已经存在的核心 KPI，不要补造新的量化指标"
+            "   - 只引用事实包里已经存在的核心 KPI，不要补造新的量化指标\n"
+            "\n再次强调：即使事实包中的部分摘要是中文，也要先理解并翻译/改写，最终简报只能使用目标语言。\n",
+            locale=locale,
         )
         user = f"项目战略事实包：\n{_json_dump({'meta': meta, 'facts': facts})}"
         return system, user
@@ -808,30 +1012,43 @@ def _prompts(kind: str, audience: str, facts: dict, meta: dict, previous_exists:
             "你的任务是生成一份深度周报。输出 Markdown，报告总长度应在 1500-3000 字之间。\n\n"
             "【标题与可视化硬性要求】\n"
             "- `#` 只用于报告总标题，`##` 只用于一级章节，`###` 只用于二级小节，禁止使用 `####` 或更深标题。\n"
+            f"- 报告开头必须先给结论：`# 报告标题` 后第一个一级章节必须是 `## {labels['conclusion']}`。\n"
+            f"- `## {labels['conclusion']}` 必须用 3-5 条短段落或 bullet 直接说明本周最大变化、最大风险、下周第一优先级；不要写背景铺垫。\n"
+            f"- 第二个一级章节必须是 `## {labels['toc']}`，列出后续章节标题，让读者先知道报告结构。\n"
+            f"- `## {labels['toc']}` 后再进入图表、趋势诊断和行动计划。\n"
             "- 必须保留并解释输入中提供的真实图表 Markdown，不能修改图表链接、标题或图表数字。\n"
-            "- 必须包含 `## 数据图表速览`，每张图后解释：图表说明、业务含义、数据限制。\n"
+            f"- 必须包含 `## {labels['charts']}`，且必须放在 `## {labels['toc']}` 后；每张图后解释：图表说明、业务含义、数据限制。\n"
             "- 少于 2 个时间点的指标不能写成趋势，只能写成当前快照。\n\n"
-            "严格按以下结构生成，每个模块都要做深入的业务推导，不能停留在数据罗列层面：\n\n"
-            "## 1. 本周最重要的变化 (Top Changes)\n"
+            "严格按以下阅读顺序生成，先让读者抓结论，再展开论证：\n\n"
+            f"## {labels['conclusion']}\n"
+            "  - 直接给出本周 3-5 个最高价值判断，每条必须区分事实 / 推断 / 建议\n"
+            "  - 最后点明下周第一优先级行动\n\n"
+            f"## {labels['toc']}\n"
+            "  - 列出后续一级章节\n\n"
+            f"## {labels['charts']}\n"
+            "  - 引用输入中的图表，并解释每张图的业务含义与限制\n\n"
+            "## 本周最重要的变化 (Top Changes)\n"
             "  - 列出 3-5 个最重要的变化，每个变化不仅要说「发生了什么」，还要解释「为什么重要」「对增长意味着什么」\n"
             "  - 如果有 AI引文可信度、品牌数字足迹的变化也要覆盖\n\n"
-            "## 2. 多维度趋势深度分析 (SEO/GEO/SERP/Community/Citability/Brand Presence)\n"
+            "## 多维度趋势深度分析 (SEO/GEO/SERP/Community/Citability/Brand Presence)\n"
             "  - 对每个有数据的维度做趋势诊断（上升/下降/持平），并分析走势背后的原因\n"
             "  - 做跨维度关联分析：例如 SEO得分下降是否影响了SERP排名？社区讨论增加是否推动了GEO可见性？\n"
             "  - AI爬虫放行状态有无变化？AI引文可信度的趋势如何？\n\n"
-            "## 3. 本周新增风险与亮点 (Risks & Wins)\n"
+            "## 本周新增风险与亮点 (Risks & Wins)\n"
             "  - 结合 Insights 洞察系统的告警做深入解读\n"
             "  - 风险要给出具体影响评估和缓解建议\n"
             "  - 亮点要说明如何扩大战果\n\n"
-            "## 4. 竞品与市场信号变化 (Competitive & Market Signals)\n"
+            "## 竞品与市场信号变化 (Competitive & Market Signals)\n"
             "  - 社区讨论中有无竞品相关的新动向\n"
             "  - SERP排名中竞品的排名变化\n"
             "  - 审批队列中的内容产出情况\n\n"
-            "## 5. 下周战略焦点与执行计划 (Next Week Strategy)\n"
+            "## 下周战略焦点与执行计划 (Next Week Strategy)\n"
             "  - 给出 3-5 个具体的下周行动项\n"
             "  - 每个行动项标明负责的Agent和预期结果\n"
             "  - 标注需要人工决策的事项\n\n"
-            "样本稀疏时，必须在报告开头显式标注置信度。"
+            "样本稀疏时，必须在报告开头显式标注置信度。\n"
+            "\n再次强调：即使事实包中的部分摘要是中文，也要先理解并翻译/改写，最终报告只能使用目标语言。",
+            locale=locale,
         )
         user = (
             f"项目：{project['brand_name']} ({project['category']})\n"
@@ -839,7 +1056,7 @@ def _prompts(kind: str, audience: str, facts: dict, meta: dict, previous_exists:
             f"数据来源覆盖度：{meta.get('sample_count', 0)}/{meta.get('total_data_sources', 0)} 个数据源有数据\n"
             f"元数据：{_json_dump(meta)}\n\n"
             f"=== 必须引用的真实图表（由后端基于事实包生成，不得改写数字或链接）===\n"
-            f"{facts.get('report_charts_markdown', '当前数据不足，未生成图表。')}\n\n"
+            f"{facts.get('report_charts_markdown', _empty_report_charts_text(locale))}\n\n"
             f"=== 完整事实包（来自所有智能体的采集结果）===\n{_json_dump(facts)}"
         )
         return system, user
@@ -851,7 +1068,9 @@ def _prompts(kind: str, audience: str, facts: dict, meta: dict, previous_exists:
         "2. 本周关键指标快照\n"
         "3. 下周重点目标\n"
         "4. 优先方向与 Agent 分工\n"
-        "5. 护栏与禁止事项"
+        "5. 护栏与禁止事项\n"
+        "\n再次强调：即使事实包中的部分摘要是中文，也要先理解并翻译/改写，最终简报只能使用目标语言。",
+        locale=locale,
     )
     user = f"周期报告事实包：\n{_json_dump({'meta': meta, 'facts': facts})}"
     return system, user
@@ -864,6 +1083,7 @@ async def _generate_report_record(
     facts: dict,
     meta: dict,
     previous_exists: bool,
+    locale: str = "zh",
     on_progress=None,
 ) -> dict:
     used_pipeline = False
@@ -877,7 +1097,7 @@ async def _generate_report_record(
     chart_asset_ids: list[str] = []
 
     if audience == "human":
-        facts, meta, charts_markdown = _prepare_report_charts(kind, facts, meta)
+        facts, meta, charts_markdown = _prepare_report_charts(kind, facts, meta, locale=locale)
         chart_asset_ids = [
             chart["asset_id"]
             for chart in meta.get("charts", [])
@@ -892,12 +1112,13 @@ async def _generate_report_record(
 
             content = await run_deep_report_pipeline(
                 facts, meta, previous_exists, kind=kind,
+                locale=locale,
                 on_progress=on_progress,
             )
             used_pipeline = True
             if not content.strip():
                 raise RuntimeError("Pipeline returned empty report.")
-            content = _postprocess_human_report_content(content, charts_markdown)
+            content = _postprocess_human_report_content(content, charts_markdown, locale=locale)
         except Exception as pipeline_exc:
             pipeline_error = str(pipeline_exc) or pipeline_exc.__class__.__name__
             logger.warning(
@@ -906,7 +1127,7 @@ async def _generate_report_record(
             )
             # Fallback to single-call LLM
             try:
-                system_prompt, user_prompt = _prompts(kind, audience, facts, meta, previous_exists)
+                system_prompt, user_prompt = _prompts(kind, audience, facts, meta, previous_exists, locale=locale)
                 content, fallback_model = await _generate_llm_markdown_with_empty_retry(
                     system_prompt,
                     user_prompt,
@@ -915,7 +1136,7 @@ async def _generate_report_record(
                 used_fallback = True
                 if fallback_model:
                     report_model = fallback_model
-                content = _postprocess_human_report_content(content, charts_markdown)
+                content = _postprocess_human_report_content(content, charts_markdown, locale=locale)
             except Exception as exc:
                 llm_error = str(exc) or exc.__class__.__name__
                 logger.exception("Report generation failed for %s/%s", kind, audience)
@@ -935,7 +1156,7 @@ async def _generate_report_record(
                 )
     else:
         # Agent brief — single-call path
-        system_prompt, user_prompt = _prompts(kind, audience, facts, meta, previous_exists)
+        system_prompt, user_prompt = _prompts(kind, audience, facts, meta, previous_exists, locale=locale)
         try:
             content, fallback_model = await _generate_llm_markdown_with_empty_retry(
                 system_prompt,
@@ -978,6 +1199,7 @@ async def _persist_bundle(
     *,
     project_id: int,
     kind: str,
+    locale: str,
     source_run_id: int | None,
     window_start: str | None,
     window_end: str | None,
@@ -985,7 +1207,9 @@ async def _persist_bundle(
     meta: dict,
     on_progress=None,
 ) -> dict:
-    previous_human = await storage.get_latest_report(project_id, kind, "human")
+    locale = _normalize_report_locale(locale)
+    meta = {**meta, "locale": locale}
+    previous_human = await storage.get_latest_report(project_id, kind, "human", locale=locale)
     records = {
         "human": await _generate_report_record(
             kind=kind,
@@ -993,6 +1217,7 @@ async def _persist_bundle(
             facts=facts,
             meta=meta,
             previous_exists=bool(previous_human),
+            locale=locale,
             on_progress=on_progress,
         ),
         "agent": await _generate_report_record(
@@ -1001,27 +1226,37 @@ async def _persist_bundle(
             facts=facts,
             meta=meta,
             previous_exists=bool(previous_human),
+            locale=locale,
         ),
     }
     created = await storage.create_report_bundle(
         project_id=project_id,
         kind=kind,
+        locale=locale,
         source_run_id=source_run_id,
         window_start=window_start,
         window_end=window_end,
         records=records,
     )
-    payload = {"kind": kind}
+    payload = {"kind": kind, "locale": locale}
     payload.update({item["audience"]: item for item in created})
     return payload
 
 
-async def generate_strategic_report_bundle(project_id: int, source_run_id: int | None = None, on_progress=None) -> dict:
+async def generate_strategic_report_bundle(
+    project_id: int,
+    source_run_id: int | None = None,
+    *,
+    locale: str = "zh",
+    on_progress=None,
+) -> dict:
     """Generate and persist the latest strategic report bundle."""
-    facts, meta = await _build_strategic_facts(project_id)
+    locale = _normalize_report_locale(locale)
+    facts, meta = await _build_strategic_facts(project_id, locale=locale)
     return await _persist_bundle(
         project_id=project_id,
         kind="strategic",
+        locale=locale,
         source_run_id=source_run_id,
         window_start=None,
         window_end=None,
@@ -1035,15 +1270,18 @@ async def generate_periodic_report_bundle(
     project_id: int,
     *,
     source_run_id: int | None = None,
+    locale: str = "zh",
     now: datetime | None = None,
     window_days: int = _PERIODIC_WINDOW_DAYS,
     on_progress=None,
 ) -> dict:
     """Generate and persist the latest periodic report bundle."""
+    locale = _normalize_report_locale(locale)
     facts, meta = await _build_periodic_facts(project_id, now=now, window_days=window_days)
     return await _persist_bundle(
         project_id=project_id,
         kind="periodic",
+        locale=locale,
         source_run_id=source_run_id,
         window_start=meta["window_start"],
         window_end=meta["window_end"],

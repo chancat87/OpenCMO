@@ -282,15 +282,18 @@ export async function downloadAsPDF({
   filename: _filename = "report.pdf",
   title = "AI CMO Report",
   subtitle,
+  missingElementMessage = "Report content is not available yet. Expand the report and try again.",
 }: {
   elementId: string;
   filename?: string;
   title?: string;
   subtitle?: string;
+  missingElementMessage?: string;
 }) {
   const element = document.getElementById(elementId);
   if (!element) {
     console.error(`[pdf] Element #${elementId} not found.`);
+    alert(missingElementMessage);
     return;
   }
 

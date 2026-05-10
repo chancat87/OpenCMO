@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { generateBlog, listBlogDrafts, type BlogGenerateParams } from "../api/blogGen";
+import type { Locale } from "../i18n";
 
 export function useBlogGenerate(projectId: number) {
   const qc = useQueryClient();
@@ -12,9 +13,9 @@ export function useBlogGenerate(projectId: number) {
   });
 }
 
-export function useBlogDrafts(projectId: number) {
+export function useBlogDrafts(projectId: number, language: Locale) {
   return useQuery({
-    queryKey: ["blog-drafts", projectId],
-    queryFn: () => listBlogDrafts(projectId),
+    queryKey: ["blog-drafts", projectId, language],
+    queryFn: () => listBlogDrafts(projectId, language),
   });
 }

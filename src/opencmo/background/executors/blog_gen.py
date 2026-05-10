@@ -36,6 +36,7 @@ async def run_blog_generation_executor(ctx) -> None:
             style=payload.get("style", "launch"),
             bilingual=payload.get("bilingual", False),
             skill_id=payload.get("skill_id"),
+            language=payload.get("language"),
             task_id=task["task_id"],
             on_progress=on_progress,
         )

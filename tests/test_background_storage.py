@@ -64,3 +64,37 @@ async def test_append_task_event_and_list_events(tmp_path, monkeypatch):
     assert events[0]["event_type"] == "progress"
     assert events[0]["phase"] == "reflect"
     assert events[0]["payload"]["step"] == 1
+
+
+@pytest.mark.asyncio
+async def test_worker_lease_protects_lifecycle_updates(tmp_path, monkeypatch):
+    from opencmo import storage
+
+    db_path = tmp_path / "test.db"
+    monkeypatch.setattr(storage, "_DB_PATH", db_path, raising=False)
+    await storage.ensure_db()
+    project_id = await storage.ensure_project("Lease", "https://lease.test", "saas")
+
+    await bg_storage.insert_task(
+        task_id="lease-1",
+        kind="scan",
+        project_id=project_id,
+        payload={},
+        dedupe_key=None,
+        priority=50,
+        max_attempts=3,
+    )
+    claimed = await bg_storage.claim_next_queued_task(worker_id="worker-a")
+    assert claimed["worker_id"] == "worker-a"
+
+    assert await bg_storage.mark_task_running("lease-1", worker_id="worker-b") is False
+    assert await bg_storage.heartbeat("lease-1", worker_id="worker-b") is False
+    assert await bg_storage.complete_task("lease-1", result={"ok": False}, worker_id="worker-b") is False
+    assert await bg_storage.fail_task("lease-1", error={"message": "wrong worker"}, worker_id="worker-b") is False
+
+    assert await bg_storage.mark_task_running("lease-1", worker_id="worker-a") is True
+    assert await bg_storage.complete_task("lease-1", result={"ok": True}, worker_id="worker-a") is True
+
+    task = await bg_storage.get_task("lease-1")
+    assert task["status"] == "completed"
+    assert task["result"]["ok"] is True

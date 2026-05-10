@@ -54,12 +54,13 @@ async def api_v1_task_events(task_id: str):
                     detail = await serialize_background_task(current)
                     done_payload = {
                         "type": "done",
-                        "status": detail["status"],
-                        "summary": detail["summary"],
-                        "run_id": detail["run_id"],
-                        "findings_count": detail["findings_count"],
-                        "recommendations_count": detail["recommendations_count"],
-                        "error": detail["error"],
+                        **detail,
+                        "status": detail.get("status"),
+                        "summary": detail.get("summary", ""),
+                        "run_id": detail.get("run_id"),
+                        "findings_count": detail.get("findings_count", 0),
+                        "recommendations_count": detail.get("recommendations_count", 0),
+                        "error": detail.get("error"),
                     }
                     yield f"data: {json.dumps(done_payload, ensure_ascii=False)}\n\n"
                     return

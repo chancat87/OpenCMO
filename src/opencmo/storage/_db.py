@@ -406,6 +406,7 @@ CREATE TABLE IF NOT EXISTS reports (
     project_id INTEGER NOT NULL REFERENCES projects(id),
     kind TEXT NOT NULL,
     audience TEXT NOT NULL,
+    locale TEXT NOT NULL DEFAULT 'zh',
     version INTEGER NOT NULL,
     is_latest INTEGER NOT NULL DEFAULT 1,
     source_run_id INTEGER REFERENCES scan_runs(id),
@@ -418,11 +419,8 @@ CREATE TABLE IF NOT EXISTS reports (
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_reports_project_kind_audience_version
-ON reports(project_id, kind, audience, version);
-
-CREATE INDEX IF NOT EXISTS idx_reports_project_latest
-ON reports(project_id, kind, audience, is_latest, created_at DESC);
+-- Report indexes are created in _ensure_report_locale_indexes() after
+-- migrations/reconciliation add locale on legacy databases.
 
 CREATE TABLE IF NOT EXISTS brand_kits (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -743,6 +741,15 @@ _MIGRATIONS: list[tuple[int, str, list[str]]] = [
         "ALTER TABLE geo_scans ADD COLUMN params_hash TEXT",
         "ALTER TABLE geo_scans ADD COLUMN window_start TEXT",
     ]),
+    (19, "locale-aware reports", [
+        "ALTER TABLE reports ADD COLUMN locale TEXT NOT NULL DEFAULT 'zh'",
+        "DROP INDEX IF EXISTS idx_reports_project_kind_audience_version",
+        "DROP INDEX IF EXISTS idx_reports_project_latest",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_reports_project_kind_audience_locale_version "
+        "ON reports(project_id, kind, audience, locale, version)",
+        "CREATE INDEX IF NOT EXISTS idx_reports_project_latest "
+        "ON reports(project_id, kind, audience, locale, is_latest, created_at DESC)",
+    ]),
 ]
 
 _LATEST_VERSION = _MIGRATIONS[-1][0]
@@ -789,6 +796,30 @@ async def _ensure_dedupe_indexes(db: aiosqlite.Connection) -> None:
                 logger.debug("dedupe index skipped: %s", exc)
 
 
+async def _ensure_report_locale_indexes(db: aiosqlite.Connection) -> None:
+    """Keep report uniqueness aligned with the locale-aware schema."""
+    cursor = await db.execute(
+        "SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = 'reports'"
+    )
+    existing = {row[0]: row[1] or "" for row in await cursor.fetchall()}
+
+    if "idx_reports_project_kind_audience_version" in existing:
+        await db.execute("DROP INDEX IF EXISTS idx_reports_project_kind_audience_version")
+
+    latest_sql = existing.get("idx_reports_project_latest", "")
+    if "idx_reports_project_latest" in existing and "locale" not in latest_sql.lower():
+        await db.execute("DROP INDEX IF EXISTS idx_reports_project_latest")
+
+    await db.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_reports_project_kind_audience_locale_version "
+        "ON reports(project_id, kind, audience, locale, version)"
+    )
+    await db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_reports_project_latest "
+        "ON reports(project_id, kind, audience, locale, is_latest, created_at DESC)"
+    )
+
+
 async def _reconcile_required_columns(db: aiosqlite.Connection) -> None:
     """Repair historical schema drift even when schema_version is already current."""
     required_columns = {
@@ -808,6 +839,7 @@ async def _reconcile_required_columns(db: aiosqlite.Connection) -> None:
             "window_start": "ALTER TABLE geo_scans ADD COLUMN window_start TEXT",
         },
         "scheduled_jobs": {"locale": "ALTER TABLE scheduled_jobs ADD COLUMN locale TEXT NOT NULL DEFAULT 'en'"},
+        "reports": {"locale": "ALTER TABLE reports ADD COLUMN locale TEXT NOT NULL DEFAULT 'zh'"},
         "projects": {"aliases": "ALTER TABLE projects ADD COLUMN aliases TEXT NOT NULL DEFAULT '[]'"},
         "competitors": {"aliases": "ALTER TABLE competitors ADD COLUMN aliases TEXT NOT NULL DEFAULT '[]'"},
     }
@@ -877,6 +909,7 @@ async def ensure_db() -> None:
 
             await _reconcile_required_columns(db)
             await _ensure_dedupe_indexes(db)
+            await _ensure_report_locale_indexes(db)
             await db.commit()
 
             _SCHEMA_READY_FOR = _DB_PATH

@@ -123,12 +123,18 @@ async def get_blog_draft(draft_id: int) -> dict | None:
         await db.close()
 
 
-async def list_blog_drafts(project_id: int, *, limit: int = 20) -> list[dict]:
+async def list_blog_drafts(project_id: int, *, language: str | None = None, limit: int = 20) -> list[dict]:
     db = await get_db()
     try:
+        where = ["project_id = ?"]
+        params: list[object] = [project_id]
+        if language:
+            where.append("language = ?")
+            params.append(language)
+        params.append(limit)
         cursor = await db.execute(
-            f"SELECT {_SELECT_COLS} FROM blog_drafts WHERE project_id = ? ORDER BY created_at DESC LIMIT ?",
-            (project_id, limit),
+            f"SELECT {_SELECT_COLS} FROM blog_drafts WHERE {' AND '.join(where)} ORDER BY created_at DESC LIMIT ?",
+            tuple(params),
         )
         rows = await cursor.fetchall()
         return [_row_to_dict(r) for r in rows]

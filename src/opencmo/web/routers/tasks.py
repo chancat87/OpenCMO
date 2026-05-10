@@ -366,10 +366,12 @@ async def _serialize_report_task(task: dict) -> dict:
     payload = task["payload"]
     result = task["result"] or {}
     error = task["error"] or {}
+    report_kind = payload.get("kind") or payload.get("report_kind") or result.get("kind")
     return {
         "task_id": task["task_id"],
         "task_kind": "report",
-        "report_kind": payload["kind"],
+        "report_kind": report_kind,
+        "locale": result.get("locale") or payload.get("locale", "zh"),
         "project_id": task["project_id"],
         "status": _compat_status(task["status"]),
         "created_at": task["created_at"],
@@ -399,7 +401,7 @@ async def _serialize_graph_task(task: dict) -> dict:
         "current_wave": result.get("current_wave"),
         "nodes_discovered": result.get("nodes_discovered"),
         "nodes_explored": result.get("nodes_explored"),
-        "graph_project_id": payload["project_id"],
+        "graph_project_id": payload.get("project_id") or task["project_id"],
     }
 
 
@@ -419,6 +421,7 @@ async def _serialize_blog_gen_task(task: dict) -> dict:
         "progress": _progress_from_events(events),
         "summary": result.get("summary") or error.get("message") or "",
         "style": payload.get("style"),
+        "language": result.get("language") or payload.get("language"),
         "skill_id": result.get("skill_id") or payload.get("skill_id"),
         "skill_name": result.get("skill_name"),
         "marketing_skill": result.get("marketing_skill"),

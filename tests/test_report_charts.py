@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from opencmo.report_charts import build_report_charts, delete_chart_assets, get_report_asset_path
+from opencmo.report_charts import build_report_charts, charts_to_markdown, delete_chart_assets, get_report_asset_path
 from opencmo.reports import (
     _normalize_report_headings,
     _postprocess_human_report_content,
@@ -56,16 +56,75 @@ def test_periodic_chart_builder_requires_two_points_for_trends(tmp_path, monkeyp
     assert "50" in svg
 
 
+def test_chart_markdown_uses_requested_locale(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENCMO_REPORT_ASSET_DIR", str(tmp_path))
+    facts = {
+        "geo_history": [
+            {"scanned_at": "2026-05-01T00:00:00", "geo_score": 40},
+            {"scanned_at": "2026-05-02T00:00:00", "geo_score": 50},
+        ],
+    }
+
+    charts = build_report_charts("periodic", facts, {"sample_count": 1, "total_data_sources": 1}, locale="en")
+    markdown = charts_to_markdown(charts, locale="en")
+
+    assert charts[0].title == "GEO Trend"
+    assert "Chart note:" in markdown
+    assert "Data source:" in markdown
+    assert "图表说明" not in markdown
+    assert "数据来源" not in markdown
+
+
+def test_finding_distribution_maps_severity_to_priority_buckets(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENCMO_REPORT_ASSET_DIR", str(tmp_path))
+    facts = {
+        "findings": [
+            {"severity": "critical"},
+            {"severity": "warning"},
+            {"severity": "info"},
+        ],
+        "recommendations": [
+            {"priority": "high"},
+            {"priority": "medium"},
+            {"priority": "low"},
+        ],
+    }
+
+    charts = build_report_charts("strategic", facts, {}, locale="en")
+
+    assert [chart.title for chart in charts] == ["Risk and Recommendation Distribution"]
+    svg = get_report_asset_path(charts[0].asset_id).read_text(encoding="utf-8")
+    assert "High" in svg
+    assert "Medium" in svg
+    assert "Low" in svg
+    assert ">2<" in svg
+
+
 def test_report_heading_normalization_and_chart_section_insertion():
-    content = "# 总标题\n\n## 1. 执行摘要\n\n正文\n\n#### 深层标题\n\n内容"
+    content = "# 总标题\n\n## 先说结论\n\n正文\n\n## 目录\n\n- 背景与判断口径\n\n#### 深层标题\n\n内容"
 
     normalized = _normalize_report_headings(content)
     assert "####" not in normalized
     assert "### 深层标题" in normalized
 
     processed = _postprocess_human_report_content(normalized, "### 图表\n![图](/api/v1/report-assets/abc.svg)")
-    assert "## 2. 数据图表速览" in processed
+    assert "## 数据图表速览" in processed
     assert processed.count("# 总标题") == 1
+    assert processed.index("## 先说结论") < processed.index("## 目录") < processed.index("## 数据图表速览")
+
+
+def test_report_chart_section_insertion_uses_locale_labels():
+    content = "# Title\n\n## Bottom Line\n\nSummary\n\n## Table of Contents\n\n- Context\n\n## Context\n\nBody"
+
+    processed = _postprocess_human_report_content(
+        content,
+        "### Charts\n![Chart](/api/v1/report-assets/abc.svg)",
+        locale="en",
+    )
+
+    assert "## Charts at a Glance" in processed
+    assert processed.index("## Bottom Line") < processed.index("## Table of Contents")
+    assert processed.index("## Table of Contents") < processed.index("## Charts at a Glance")
 
 
 def test_simple_markdown_to_html_supports_images():
@@ -97,7 +156,7 @@ def test_postprocess_skips_chart_section_when_already_referenced():
     processed = _postprocess_human_report_content(content, "### 图表\n![图](/api/v1/report-assets/c.svg)")
 
     assert processed == content
-    assert "## 2. 数据图表速览" not in processed
+    assert "## 数据图表速览" not in processed
 
 
 def test_delete_chart_assets_removes_files_and_ignores_missing(tmp_path, monkeypatch):

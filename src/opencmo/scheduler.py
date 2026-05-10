@@ -46,7 +46,7 @@ def _job_key(job_id: int) -> str:
     return f"opencmo_job_{job_id}"
 
 
-async def _maybe_send_email_report(project_id: int, job_type: str, triggered_by: str):
+async def _maybe_send_email_report(project_id: int, job_type: str, triggered_by: str, *, locale: str = "zh"):
     """Send email report only for (full, cron) runs."""
     if job_type != "full" or triggered_by != "cron":
         return
@@ -55,13 +55,17 @@ async def _maybe_send_email_report(project_id: int, job_type: str, triggered_by:
 
         if _get_smtp_config() is None:
             return
-        await send_report_impl(project_id)
+        await send_report_impl(project_id, locale=locale)
     except Exception:
         logger.exception("Email report failed for project %d", project_id)
 
 
 async def run_scheduled_scan(
-    project_id: int, job_type: str, job_id: int | None = None, triggered_by: str = "cron"
+    project_id: int,
+    job_type: str,
+    job_id: int | None = None,
+    triggered_by: str = "cron",
+    locale: str = "zh",
 ):
     """Execute a scan directly (no LLM), save results to DB.
 
@@ -404,7 +408,7 @@ async def run_scheduled_scan(
         try:
             from opencmo.reports import generate_strategic_report_bundle
 
-            await generate_strategic_report_bundle(project_id, source_run_id=None)
+            await generate_strategic_report_bundle(project_id, source_run_id=None, locale=locale)
         except Exception:
             logger.exception("Strategic report generation failed for project %d", project_id)
 
@@ -412,12 +416,12 @@ async def run_scheduled_scan(
         try:
             from opencmo.reports import generate_periodic_report_bundle
 
-            await generate_periodic_report_bundle(project_id, source_run_id=None)
+            await generate_periodic_report_bundle(project_id, source_run_id=None, locale=locale)
         except Exception:
             logger.exception("Periodic report generation failed for project %d", project_id)
 
     # Email report (only for cron + full)
-    await _maybe_send_email_report(project_id, job_type, triggered_by)
+    await _maybe_send_email_report(project_id, job_type, triggered_by, locale=locale)
 
 
 def get_scheduler() -> "AsyncIOScheduler":
@@ -462,7 +466,7 @@ def sync_job_record(job: dict) -> bool:
     scheduler.add_job(
         run_scheduled_scan,
         trigger=trigger,
-        args=[job["project_id"], job["job_type"], job["id"]],
+        args=[job["project_id"], job["job_type"], job["id"], "cron", job.get("locale", "zh")],
         id=job_key,
         replace_existing=True,
     )
