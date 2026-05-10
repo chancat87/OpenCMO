@@ -42,6 +42,8 @@ def requires_workspace_auth(path: str, method: str = "GET") -> bool:
         return True
     if path.startswith("/api/v1/"):
         return True
+    if path.startswith("/legacy"):
+        return True
     return False
 
 

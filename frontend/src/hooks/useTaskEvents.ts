@@ -35,7 +35,6 @@ export function useTaskEvents(
   const { onDone, enabled = true } = options;
   const [events, setEvents] = useState<TaskEvent[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
-  const eventSourceRef = useRef<EventSource | null>(null);
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
 
@@ -49,19 +48,19 @@ export function useTaskEvents(
       return;
     }
 
-    const es = new EventSource(`/api/v1/tasks/${taskId}/events`);
-    eventSourceRef.current = es;
+    const controller = new AbortController();
+    let cancelled = false;
     setIsStreaming(true);
     setEvents([]);
 
-    es.onmessage = (msg) => {
+    const handleMessage = (data: string) => {
       try {
-        const event: TaskEvent = JSON.parse(msg.data);
+        const event: TaskEvent = JSON.parse(data);
         setEvents((prev) => [...prev, event]);
 
         if (event.type === "done" || event.type === "error") {
           setIsStreaming(false);
-          es.close();
+          controller.abort();
           onDoneRef.current?.(event);
         }
       } catch {
@@ -69,14 +68,61 @@ export function useTaskEvents(
       }
     };
 
-    es.onerror = () => {
-      setIsStreaming(false);
-      es.close();
+    const readStream = async () => {
+      const headers = new Headers();
+      const token = localStorage.getItem("opencmo_token");
+      if (token) headers.set("Authorization", `Bearer ${token}`);
+
+      try {
+        const resp = await fetch(`/api/v1/tasks/${taskId}/events`, {
+          headers,
+          signal: controller.signal,
+        });
+
+        if (resp.status === 401) {
+          window.dispatchEvent(new CustomEvent("opencmo:unauthorized"));
+        }
+        if (!resp.ok || !resp.body) {
+          setIsStreaming(false);
+          return;
+        }
+
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (!cancelled) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const chunks = buffer.split("\n\n");
+          buffer = chunks.pop() ?? "";
+
+          for (const chunk of chunks) {
+            const data = chunk
+              .split("\n")
+              .filter((line) => line.startsWith("data:"))
+              .map((line) => line.slice(5).trimStart())
+              .join("\n");
+            if (data) handleMessage(data);
+          }
+        }
+      } catch {
+        if (!controller.signal.aborted) {
+          setIsStreaming(false);
+        }
+        return;
+      }
+
+      if (!cancelled) setIsStreaming(false);
     };
 
+    void readStream();
+
     return () => {
-      es.close();
-      eventSourceRef.current = null;
+      cancelled = true;
+      controller.abort();
     };
   }, [taskId, enabled]);
 

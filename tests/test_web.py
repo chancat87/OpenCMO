@@ -167,6 +167,23 @@ def test_docs_are_protected_when_token_configured(tmp_path, monkeypatch):
             assert test_client.get("/openapi.json").status_code == 401
 
 
+def test_legacy_workspace_routes_require_token_when_configured(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENCMO_WEB_TOKEN", "test-token")
+    db_path = tmp_path / "test.db"
+    with patch.object(storage, "_DB_PATH", db_path):
+        pid = asyncio.run(storage.ensure_project("Legacy Protected", "https://legacy.test", "testing"))
+        with TestClient(app) as test_client:
+            protected_paths = [
+                "/legacy/",
+                f"/legacy/project/{pid}",
+                f"/legacy/api/project/{pid}/seo-data",
+            ]
+            for path in protected_paths:
+                resp = test_client.get(path)
+                assert resp.status_code == 401, path
+                assert resp.json()["error_code"] == "auth_required"
+
+
 def test_settings_protected_and_rejects_private_base_url(tmp_path, monkeypatch):
     monkeypatch.setenv("OPENCMO_WEB_TOKEN", "test-token")
     db_path = tmp_path / "test.db"
@@ -1152,6 +1169,49 @@ def test_api_v1_task_events_stream_background_history(client):
     assert events[-1]["type"] == "done"
     assert events[-1]["run_id"] == 42
     assert events[-1]["findings_count"] == 2
+
+
+def test_api_v1_task_events_stream_accepts_bearer_when_token_configured(tmp_path, monkeypatch):
+    from opencmo.background import service as bg_service
+
+    monkeypatch.setenv("OPENCMO_WEB_TOKEN", "test-token")
+    db_path = tmp_path / "test.db"
+    with patch.object(storage, "_DB_PATH", db_path):
+        pid = asyncio.run(storage.ensure_project("Auth Events", "https://auth-events.test", "testing"))
+        task = asyncio.run(
+            bg_service.enqueue_task(
+                kind="scan",
+                project_id=pid,
+                payload={
+                    "monitor_id": 10,
+                    "project_id": pid,
+                    "job_type": "full",
+                    "job_id": 10,
+                    "locale": "en",
+                },
+                dedupe_key="scan:monitor:10",
+            )
+        )
+        asyncio.run(bg_service.complete_task(task["task_id"], result={"summary": "Done"}))
+
+        with TestClient(app) as test_client:
+            with test_client.stream("GET", f"/api/v1/tasks/{task['task_id']}/events") as resp:
+                assert resp.status_code == 401
+
+            with test_client.stream(
+                "GET",
+                f"/api/v1/tasks/{task['task_id']}/events",
+                headers={"Authorization": "Bearer test-token"},
+            ) as resp:
+                assert resp.status_code == 200
+                events = [
+                    json.loads(line[6:])
+                    for line in resp.iter_lines()
+                    if line.startswith("data: ")
+                ]
+
+        assert events[-1]["type"] == "done"
+        assert events[-1]["status"] == "completed"
 
 
 @pytest.mark.parametrize(
