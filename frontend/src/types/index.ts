@@ -68,7 +68,7 @@ export interface TaskRecord {
   project_id: number;
   job_type?: string;
   report_kind?: string;
-  status: "pending" | "running" | "completed" | "failed";
+  status: "pending" | "running" | "completed" | "failed" | "cancelled" | "canceled";
   created_at: string;
   completed_at: string | null;
   error: string | null;
@@ -461,6 +461,7 @@ export interface ReportRecord {
   project_id: number;
   kind: ReportKind;
   audience: ReportAudience;
+  locale: string;
   version: number;
   is_latest: boolean;
   source_run_id: number | null;
@@ -476,6 +477,7 @@ export interface ReportRecord {
 
 export interface ReportBundle {
   kind: ReportKind;
+  locale?: string;
   human: ReportRecord;
   agent: ReportRecord;
 }

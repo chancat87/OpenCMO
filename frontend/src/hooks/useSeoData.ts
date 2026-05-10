@@ -8,9 +8,10 @@ export function useSeoHistory(projectId: number) {
   });
 }
 
-export function useSeoChart(projectId: number) {
+export function useSeoChart(projectId: number, enabled = true) {
   return useQuery({
     queryKey: ["seo-chart", projectId],
     queryFn: () => getSeoChart(projectId),
+    enabled,
   });
 }

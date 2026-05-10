@@ -5,6 +5,10 @@ import type { Finding, Recommendation, TaskArtifacts } from "../types";
 
 const STALE_TASK_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes (matches backend stale threshold)
 
+function isTerminalTaskStatus(status: string | undefined) {
+  return status === "completed" || status === "failed" || status === "cancelled" || status === "canceled";
+}
+
 export function useTaskPoll(taskId: string | null) {
   return useQuery({
     queryKey: ["task", taskId],
@@ -12,7 +16,7 @@ export function useTaskPoll(taskId: string | null) {
     enabled: !!taskId,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
-      if (status === "completed" || status === "failed") return false;
+      if (isTerminalTaskStatus(status)) return false;
       return 2000;
     },
   });

@@ -8,8 +8,10 @@ import { useProjectSummary } from "../hooks/useProject";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { useI18n } from "../i18n";
+import { isLocale, LOCALE_LABELS } from "../i18n/locale";
 import type { MarketingSkillId } from "../types";
 import type { TranslationKey } from "../i18n";
+import { utcDate } from "../utils/time";
 
 const SKILL_LABEL_KEYS: Record<MarketingSkillId, TranslationKey> = {
   content_strategy: "blogGen.skill.content_strategy",
@@ -19,6 +21,25 @@ const SKILL_LABEL_KEYS: Record<MarketingSkillId, TranslationKey> = {
   programmatic_seo: "blogGen.skill.programmatic_seo",
   directory_submissions: "blogGen.skill.directory_submissions",
 };
+
+const DRAFT_STATUS_LABEL_KEYS: Record<string, TranslationKey> = {
+  pending: "content.status.pending",
+  running: "content.status.running",
+  completed: "content.status.completed",
+  failed: "content.status.failed",
+  draft: "content.status.draft",
+  pending_review: "content.status.pendingReview",
+  approved: "content.status.approved",
+  rejected: "content.status.rejected",
+};
+
+function enumFallback(value: string) {
+  return value.replace(/_/g, " ");
+}
+
+function formatLanguage(value: string) {
+  return isLocale(value) ? LOCALE_LABELS[value] : value.toUpperCase();
+}
 
 function ScoreBadge({ score, label }: { score: number; label: string }) {
   const color =
@@ -36,9 +57,9 @@ function ScoreBadge({ score, label }: { score: number; label: string }) {
 export function ContentPage() {
   const { id } = useParams();
   const projectId = Number(id);
+  const { t, locale } = useI18n();
   const { data: summary, isLoading: summaryLoading, error: summaryError } = useProjectSummary(projectId);
-  const { data: drafts, isLoading: draftsLoading } = useBlogDrafts(projectId);
-  const { t } = useI18n();
+  const { data: drafts, isLoading: draftsLoading } = useBlogDrafts(projectId, locale);
 
   if (summaryLoading) return <LoadingSpinner />;
   if (summaryError) return <ErrorAlert message={summaryError.message} />;
@@ -102,7 +123,7 @@ export function ContentPage() {
                           {draft.title || t("content.untitled")}
                         </h3>
                         <span className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 uppercase">
-                          {draft.style.replace("_", " ")}
+                          {t(`blogGen.style.${draft.style}` as TranslationKey)}
                         </span>
                         {draft.meta?.marketing_skill?.id && (
                           <span className="shrink-0 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
@@ -111,11 +132,11 @@ export function ContentPage() {
                         )}
                         <span className="shrink-0 flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 uppercase">
                           <Globe size={10} />
-                          {draft.language}
+                          {formatLanguage(draft.language)}
                         </span>
                       </div>
                       <p className="mt-1 text-xs text-slate-400">
-                        {new Date(draft.created_at).toLocaleDateString()} &middot; {draft.status}
+                        {utcDate(draft.created_at).toLocaleDateString()} &middot; {DRAFT_STATUS_LABEL_KEYS[draft.status] ? t(DRAFT_STATUS_LABEL_KEYS[draft.status]!) : enumFallback(draft.status)}
                         {draft.paired_draft_id && ` \u00b7 ${t("content.bilingual")}`}
                       </p>
                       {draft.content_preview && (

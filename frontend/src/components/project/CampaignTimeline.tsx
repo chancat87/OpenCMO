@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useCampaigns, useCampaign } from "../../hooks/useCampaigns";
 import { useI18n } from "../../i18n";
+import type { TranslationKey } from "../../i18n";
+import { utcDate } from "../../utils/time";
 import {
   Rocket, FileText, ChevronDown, ChevronUp, Clock,
   CheckCircle2, Loader2,
@@ -17,8 +19,29 @@ const STATUS_STYLE: Record<string, string> = {
   cancelled: "text-zinc-400 bg-zinc-50",
 };
 
+const STATUS_LABEL_KEYS: Record<string, TranslationKey> = {
+  drafting: "campaign.status.drafting",
+  completed: "campaign.status.completed",
+  cancelled: "campaign.status.cancelled",
+  canceled: "campaign.status.cancelled",
+  failed: "campaign.status.failed",
+};
+
+const CHANNEL_LABEL_KEYS: Record<string, TranslationKey> = {
+  email: "campaign.channel.email",
+  twitter_dm: "campaign.channel.twitterDm",
+  github_issue: "campaign.channel.githubIssue",
+  blog: "campaign.channel.blog",
+  other: "campaign.channel.other",
+};
+
+function enumFallback(value: string) {
+  return value.replace(/_/g, " ");
+}
+
 function ArtifactCard({ artifact }: { artifact: { artifact_type: string; channel: string | null; title: string; content: string } }) {
   const [expanded, setExpanded] = useState(false);
+  const { t } = useI18n();
   const preview = artifact.content.slice(0, 200);
 
   return (
@@ -30,11 +53,11 @@ function ArtifactCard({ artifact }: { artifact: { artifact_type: string; channel
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-indigo-400" />
           <span className="text-sm font-medium text-zinc-700">
-            {artifact.title || artifact.artifact_type}
+            {artifact.title || enumFallback(artifact.artifact_type)}
           </span>
           {artifact.channel && (
             <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-500">
-              {artifact.channel}
+              {CHANNEL_LABEL_KEYS[artifact.channel] ? t(CHANNEL_LABEL_KEYS[artifact.channel]!) : enumFallback(artifact.channel)}
             </span>
           )}
         </div>
@@ -93,7 +116,10 @@ export function CampaignTimeline({ projectId }: { projectId: number }) {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-zinc-800">{run.goal}</span>
-                    <span className="text-xs text-zinc-400">{run.created_at?.slice(0, 10)}</span>
+                    <span className="text-xs text-zinc-400">{run.created_at ? utcDate(run.created_at).toISOString().slice(0, 10) : ""}</span>
+                    <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-500">
+                      {STATUS_LABEL_KEYS[run.status] ? t(STATUS_LABEL_KEYS[run.status]!) : enumFallback(run.status)}
+                    </span>
                   </div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {run.channels.map((ch) => (
@@ -101,7 +127,7 @@ export function CampaignTimeline({ projectId }: { projectId: number }) {
                         key={ch}
                         className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-600"
                       >
-                        {ch}
+                        {CHANNEL_LABEL_KEYS[ch] ? t(CHANNEL_LABEL_KEYS[ch]!) : enumFallback(ch)}
                       </span>
                     ))}
                     {(run.artifact_count ?? 0) > 0 && (

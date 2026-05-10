@@ -21,8 +21,12 @@ const PHASE_ORDER = ["reflection", "distillation", "planning", "writing", "gradi
 function PhaseIcon({ status }: { status: string }) {
   if (status === "completed") return <CheckCircle size={18} className="text-emerald-500" />;
   if (status === "running") return <Loader2 size={18} className="text-blue-500 animate-spin" />;
-  if (status === "failed") return <XCircle size={18} className="text-rose-500" />;
+  if (status === "failed" || status === "cancelled" || status === "canceled") return <XCircle size={18} className="text-rose-500" />;
   return <Circle size={18} className="text-slate-300" />;
+}
+
+function isTerminalTaskStatus(status: string) {
+  return status === "completed" || status === "failed" || status === "cancelled" || status === "canceled";
 }
 
 export function PipelineProgress({
@@ -39,9 +43,9 @@ export function PipelineProgress({
 
   useEffect(() => {
     if (!task) return;
-    if ((task.status === "completed" || task.status === "failed") && !completedRef.current) {
+    if (isTerminalTaskStatus(task.status) && !completedRef.current) {
       completedRef.current = true;
-      if (task.status === "completed" && onComplete) {
+      if (onComplete) {
         setTimeout(onComplete, 1500);
       }
     }
@@ -84,12 +88,12 @@ export function PipelineProgress({
             </div>
           )}
           {task.status === "completed" && <CheckCircle size={16} className="text-emerald-500" />}
-          {task.status === "failed" && <XCircle size={16} className="text-rose-500" />}
+          {(task.status === "failed" || task.status === "cancelled" || task.status === "canceled") && <XCircle size={16} className="text-rose-500" />}
           <span className="text-sm font-semibold text-slate-700">
             {task.status === "pending" && t("pipeline.preparing")}
             {task.status === "running" && t("pipeline.agentsWorking")}
             {task.status === "completed" && t("pipeline.complete")}
-            {task.status === "failed" && t("pipeline.error")}
+            {(task.status === "failed" || task.status === "cancelled" || task.status === "canceled") && t("pipeline.error")}
           </span>
         </div>
         <span className="text-xs font-medium text-slate-500">
@@ -101,7 +105,7 @@ export function PipelineProgress({
       <div className="h-1.5 w-full rounded-full bg-slate-100 mb-5 overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-700 ease-out ${
-            task.status === "failed" ? "bg-rose-500" :
+            (task.status === "failed" || task.status === "cancelled" || task.status === "canceled") ? "bg-rose-500" :
             task.status === "completed" ? "bg-emerald-500" : "bg-blue-500"
           }`}
           style={{ width: `${progressPercent}%` }}

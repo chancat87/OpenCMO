@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Eye, Loader2 } from "lucide-react";
+import { Eye, Loader2, PlusCircle } from "lucide-react";
 import { useParams } from "react-router";
-import { useMonitors, useDeleteMonitor } from "../hooks/useMonitors";
+import { useMonitors, useDeleteMonitor, useCreateMonitor } from "../hooks/useMonitors";
 import { useProjectSummary } from "../hooks/useProject";
 import { useTaskPoll } from "../hooks/useTasks";
 import { MonitorList } from "../components/monitors/MonitorList";
+import { MonitorForm } from "../components/monitors/MonitorForm";
 import { AnalysisDialog } from "../components/monitors/AnalysisDialog";
 import { ProjectHeader } from "../components/project/ProjectHeader";
 import { ProjectTabs } from "../components/project/ProjectTabs";
@@ -19,6 +20,7 @@ export function ProjectMonitorsPage() {
   const { data, isLoading: projectLoading, error } = useProjectSummary(projectId);
   const { data: allMonitors, isLoading: monitorsLoading } = useMonitors();
   const deleteMonitor = useDeleteMonitor();
+  const createMonitor = useCreateMonitor();
   const { t } = useI18n();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [selectedTaskUrl, setSelectedTaskUrl] = useState<string | null>(null);
@@ -46,12 +48,36 @@ export function ProjectMonitorsPage() {
     setDialogOpen(true);
   };
 
+  const handleCreateMonitor = async (payload: { url: string; cron_expr: string }) => {
+    const result = await createMonitor.mutateAsync({
+      ...payload,
+      locale: monitors[0]?.locale,
+    });
+    if (result.task_id) {
+      handleTaskCreated(result.task_id, payload.url);
+    }
+  };
+
   return (
     <div>
       <ProjectHeader project={data.project} isPaused={data.is_paused} />
       <ProjectTabs projectId={projectId} />
 
       <div className="space-y-4">
+        {monitors.length > 0 ? (
+          <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">{t("monitors.addAnotherTitle")}</h2>
+                <p className="mt-1 text-sm text-slate-500">{t("monitors.addAnotherDesc")}</p>
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
+                <PlusCircle size={14} />
+                {t("monitors.newMonitor")}
+              </div>
+            </div>
+          </div>
+        ) : null}
         {selectedTaskId && selectedTaskUrl && !dialogOpen && !taskDone && (
           <button
             onClick={() => setDialogOpen(true)}
@@ -68,16 +94,30 @@ export function ProjectMonitorsPage() {
           </button>
         )}
         {monitors.length === 0 ? (
-          <EmptyState
-            title={t("monitors.noMonitors")}
-            description={t("monitors.noMonitorsDesc")}
-          />
+          <div className="space-y-4">
+            <EmptyState
+              title={t("monitors.noMonitors")}
+              description={t("monitors.noMonitorsDesc")}
+            />
+            <MonitorForm
+              onSubmit={handleCreateMonitor}
+              isLoading={createMonitor.isPending}
+              initialUrl={data.project.url}
+            />
+          </div>
         ) : (
-          <MonitorList
-            monitors={monitors}
-            onDelete={(id) => deleteMonitor.mutate(id)}
-            onTaskCreated={handleTaskCreated}
-          />
+          <div className="space-y-4">
+            <MonitorForm
+              onSubmit={handleCreateMonitor}
+              isLoading={createMonitor.isPending}
+              initialUrl={data.project.url}
+            />
+            <MonitorList
+              monitors={monitors}
+              onDelete={(id) => deleteMonitor.mutate(id)}
+              onTaskCreated={handleTaskCreated}
+            />
+          </div>
         )}
       </div>
 

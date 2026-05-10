@@ -11,6 +11,8 @@ import { ErrorAlert } from "../components/common/ErrorAlert";
 import { ProjectHeader } from "../components/project/ProjectHeader";
 import { ProjectTabs } from "../components/project/ProjectTabs";
 import { useI18n } from "../i18n";
+import type { TranslationKey } from "../i18n";
+import { utcDate } from "../utils/time";
 
 function StatCard({ icon: Icon, label, value, color }: {
   icon: React.ElementType;
@@ -39,6 +41,17 @@ const PLATFORM_COLORS: Record<string, string> = {
   blog: "bg-violet-500",
   other: "bg-slate-500",
 };
+
+const PLATFORM_LABEL_KEYS: Record<string, TranslationKey> = {
+  reddit: "perf.platformReddit",
+  twitter: "perf.platformTwitter",
+  blog: "perf.platformBlog",
+  other: "perf.platformOther",
+};
+
+function enumFallback(value: string) {
+  return value.replace(/_/g, " ");
+}
 
 export function PerformancePage() {
   const { id } = useParams();
@@ -171,10 +184,10 @@ export function PerformancePage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className={`inline-flex h-5 items-center rounded-md px-2 text-[10px] font-bold uppercase text-white ${PLATFORM_COLORS[item.channel] || "bg-slate-500"}`}>
-                          {item.channel}
+                          {PLATFORM_LABEL_KEYS[item.channel] ? t(PLATFORM_LABEL_KEYS[item.channel]!) : enumFallback(item.channel)}
                         </span>
                         <span className="text-[10px] text-slate-400">
-                          {item.decided_at ? new Date(item.decided_at).toLocaleDateString() : ""}
+                          {item.decided_at ? utcDate(item.decided_at).toLocaleDateString() : ""}
                         </span>
                       </div>
                       <h3 className="text-sm font-semibold text-slate-800 truncate">

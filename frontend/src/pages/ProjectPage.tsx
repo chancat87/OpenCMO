@@ -30,6 +30,7 @@ export function ProjectPage() {
     latest_monitoring,
     latest_reports,
     is_paused,
+    keyword_count,
     competitor_count,
     pending_approvals,
     blog_drafts_count,
@@ -38,7 +39,6 @@ export function ProjectPage() {
   return (
     <div>
       <ProjectHeader project={project} isPaused={is_paused} />
-      <InsightBanner projectId={projectId} />
       <ProjectTabs projectId={projectId} />
 
       <div className="mt-6 space-y-6">
@@ -48,21 +48,31 @@ export function ProjectPage() {
           latestMonitoring={latest_monitoring}
           latestReports={latest_reports}
           competitorCount={competitor_count}
+          keywordCount={keyword_count}
           pendingApprovals={pending_approvals}
           blogDraftsCount={blog_drafts_count}
           contentAction={<BlogGenerateButton projectId={projectId} />}
         />
 
         <section className="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm">
-          <ScorePanel latest={latest} previous={previous} latestMonitoring={latest_monitoring} />
+          <ScorePanel
+            latest={latest}
+            previous={previous}
+            latestMonitoring={latest_monitoring}
+            projectId={projectId}
+          />
         </section>
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-          <section className="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm">
-            <ActionFeed projectId={projectId} />
-          </section>
+          <div className="min-w-0 space-y-6">
+            <InsightBanner projectId={projectId} />
 
-          <div className="space-y-6">
+            <section className="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm">
+              <ActionFeed projectId={projectId} />
+            </section>
+          </div>
+
+          <div className="min-w-0 space-y-6">
             <section className="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm">
               <CampaignTimeline projectId={projectId} />
             </section>

@@ -8,9 +8,10 @@ export function useGeoHistory(projectId: number) {
   });
 }
 
-export function useGeoChart(projectId: number) {
+export function useGeoChart(projectId: number, enabled = true) {
   return useQuery({
     queryKey: ["geo-chart", projectId],
     queryFn: () => getGeoChart(projectId),
+    enabled,
   });
 }

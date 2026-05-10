@@ -25,6 +25,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useI18n } from "../i18n";
+import type { TranslationKey } from "../i18n";
 import type { GitHubLead } from "../types";
 
 const STATUS_BADGE: Record<string, string> = {
@@ -34,6 +35,19 @@ const STATUS_BADGE: Record<string, string> = {
   replied: "bg-emerald-100 text-emerald-700",
   opted_out: "bg-rose-100 text-rose-600",
 };
+
+const DISCOVERY_STATUS_LABEL_KEYS: Record<string, TranslationKey> = {
+  pending: "github.discoveryStatus.pending",
+  running: "github.discoveryStatus.running",
+  completed: "github.discoveryStatus.completed",
+  failed: "github.discoveryStatus.failed",
+  cancelled: "github.discoveryStatus.cancelled",
+  canceled: "github.discoveryStatus.cancelled",
+};
+
+function enumFallback(value: string) {
+  return value.replace(/_/g, " ");
+}
 
 export function GitHubLeadsPage() {
   const { id } = useParams<{ id: string }>();
@@ -308,7 +322,7 @@ export function GitHubLeadsPage() {
                         : "bg-rose-100 text-rose-600"
                   }`}
                 >
-                  {run.status}
+                  {DISCOVERY_STATUS_LABEL_KEYS[run.status] ? t(DISCOVERY_STATUS_LABEL_KEYS[run.status]!) : enumFallback(run.status)}
                 </span>
               </div>
             ))}

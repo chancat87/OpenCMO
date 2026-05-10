@@ -7,10 +7,10 @@ import { ScorePanel } from "../components/project/ScorePanel";
 import { useI18n } from "../i18n";
 import type { TranslationKey } from "../i18n";
 import { usePublicPageMetadata } from "../hooks/usePublicPageMetadata";
+import { usePublicSeoLocale } from "../hooks/usePublicSeoLocale";
 import type { LatestReports, LatestScans, MonitoringSummary, Project, ReportRecord } from "../types";
 import type { NextAction } from "../api/projects";
 import { getSampleAuditPath, type PublicNavItem } from "../content/marketing";
-import { getSeoLocaleFromLocale } from "../utils/publicRoutes";
 
 const SAMPLE_PROJECT: Project = {
   id: 9001,
@@ -46,6 +46,7 @@ const SAMPLE_REPORT_HUMAN: ReportRecord = {
   project_id: 9001,
   kind: "strategic",
   audience: "human",
+  locale: "en",
   version: 3,
   is_latest: true,
   source_run_id: 118,
@@ -244,8 +245,8 @@ function SampleAuditCard({
 }
 
 export function SampleAuditPage() {
-  const { t, locale } = useI18n();
-  const seoLocale = getSeoLocaleFromLocale(locale);
+  const { t } = useI18n();
+  const seoLocale = usePublicSeoLocale();
   const sampleAuditPath = getSampleAuditPath(seoLocale);
   const sampleActions: NextAction[] = SAMPLE_ACTIONS.map(({ titleKey, descriptionKey, ...action }) => ({
     ...action,

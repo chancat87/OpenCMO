@@ -1,4 +1,4 @@
-import { ArrowRight, Bot, FileText, GitBranch, Globe, PenLine, Search, Users } from "lucide-react";
+import { ArrowRight, Bot, CheckCircle2, FileText, GitBranch, Globe, PenLine, Search, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import type { LatestReports, LatestScans, MonitoringSummary } from "../../types";
@@ -16,6 +16,26 @@ type AgentCardData = {
   why: string;
   next: string;
   action?: ReactNode;
+};
+
+type RouteKey =
+  | "changedToday"
+  | "whatMattersNow"
+  | "readyToShip"
+  | "siteHealth"
+  | "aiSearch"
+  | "community"
+  | "competitor"
+  | "keywords"
+  | "scan"
+  | "report";
+
+type PriorityItem = {
+  key: string;
+  title: string;
+  body: string;
+  label: string;
+  to: string;
 };
 
 function SummaryCard({
@@ -122,12 +142,23 @@ function hasReadyReport(latestReports?: LatestReports) {
   );
 }
 
+function hasAnyScanData(latest: LatestScans, latestMonitoring?: MonitoringSummary | null) {
+  return Boolean(
+    latest.seo ||
+      latest.geo ||
+      latest.community ||
+      latest.serp.length > 0 ||
+      latestMonitoring,
+  );
+}
+
 export function ProjectCommandCenter({
   projectId,
   latest,
   latestMonitoring,
   latestReports,
-  competitorCount = 0,
+  competitorCount,
+  keywordCount,
   pendingApprovals = 0,
   blogDraftsCount = 0,
   actionsOverride,
@@ -139,14 +170,12 @@ export function ProjectCommandCenter({
   latestMonitoring?: MonitoringSummary | null;
   latestReports?: LatestReports;
   competitorCount?: number;
+  keywordCount?: number;
   pendingApprovals?: number;
   blogDraftsCount?: number;
   actionsOverride?: NextAction[];
   contentAction?: ReactNode;
-  routeOverrides?: Partial<Record<
-    "changedToday" | "whatMattersNow" | "readyToShip" | "siteHealth" | "aiSearch" | "community" | "competitor" | "report",
-    string
-  >>;
+  routeOverrides?: Partial<Record<RouteKey, string>>;
 }) {
   const { data } = useNextActions(projectId, !actionsOverride);
   const { t } = useI18n();
@@ -155,6 +184,11 @@ export function ProjectCommandCenter({
   const findingsCount = latestMonitoring?.findings_count ?? 0;
   const recommendationsCount = latestMonitoring?.recommendations_count ?? 0;
   const reportReady = hasReadyReport(latestReports);
+  const hasScanData = hasAnyScanData(latest, latestMonitoring);
+  const competitorTotal = competitorCount ?? 0;
+  const missingCompetitors = competitorCount != null && competitorCount === 0;
+  const missingKeywords = keywordCount != null && keywordCount === 0;
+  const needsSetup = !hasScanData || missingCompetitors || missingKeywords;
   const routes = {
     changedToday: routeOverrides?.changedToday ?? `/projects/${projectId}/seo`,
     whatMattersNow: routeOverrides?.whatMattersNow ?? (pendingApprovals > 0 ? "/approvals" : `/projects/${projectId}/community`),
@@ -163,6 +197,8 @@ export function ProjectCommandCenter({
     aiSearch: routeOverrides?.aiSearch ?? `/projects/${projectId}/geo`,
     community: routeOverrides?.community ?? `/projects/${projectId}/community`,
     competitor: routeOverrides?.competitor ?? `/projects/${projectId}/graph`,
+    keywords: routeOverrides?.keywords ?? `/projects/${projectId}/serp`,
+    scan: routeOverrides?.scan ?? `/projects/${projectId}/monitors`,
     report: routeOverrides?.report ?? `/projects/${projectId}/reports`,
   };
 
@@ -189,8 +225,8 @@ export function ProjectCommandCenter({
       ? t("agents.communityFound", { count: latest.community.total_hits })
       : t("agents.communityPending");
   const competitorFound =
-    competitorCount > 0
-      ? t("agents.competitorFound", { count: competitorCount })
+    competitorTotal > 0
+      ? t("agents.competitorFound", { count: competitorTotal })
       : t("agents.competitorPending");
   const reportFound =
     latestMonitoring != null
@@ -202,7 +238,21 @@ export function ProjectCommandCenter({
       : t("agents.contentPending");
 
   const primaryAction =
-    pendingApprovals > 0
+    needsSetup
+      ? {
+          label: !hasScanData
+            ? t("command.runFirstScan")
+            : missingCompetitors
+              ? t("command.addCompetitors")
+              : t("command.addKeywords"),
+          to: !hasScanData
+            ? routes.scan
+            : missingCompetitors
+              ? routes.competitor
+              : routes.keywords,
+          summary: t("command.emptyChecklistTitle"),
+        }
+      : pendingApprovals > 0
       ? {
           label: t("command.reviewDraft"),
           to: routes.readyToShip,
@@ -224,7 +274,92 @@ export function ProjectCommandCenter({
               label: t("command.reviewFixes"),
               to: routes.changedToday,
               summary: t("project.commandChangedEmpty"),
-            };
+          };
+
+  const setupItems: PriorityItem[] = [
+    missingCompetitors || !hasScanData
+      ? {
+          key: "setup-competitors",
+          title: t("command.addCompetitors"),
+          body: t("command.addCompetitorsDesc"),
+          label: t("command.compareCompetitors"),
+          to: routes.competitor,
+        }
+      : null,
+    missingKeywords || !hasScanData
+      ? {
+          key: "setup-keywords",
+          title: t("command.addKeywords"),
+          body: t("command.addKeywordsDesc"),
+          label: t("command.openSearchKeywords"),
+          to: routes.keywords,
+        }
+      : null,
+    !hasScanData
+      ? {
+          key: "setup-scan",
+          title: t("command.runFirstScan"),
+          body: t("command.runFirstScanDesc"),
+          label: t("command.openMonitoring"),
+          to: routes.scan,
+        }
+      : null,
+  ].filter((item): item is PriorityItem => item != null);
+
+  const workflowItems: PriorityItem[] = [
+    pendingApprovals > 0
+      ? {
+          key: "review",
+          title: t("command.priorityReviewTitle"),
+          body: t("command.priorityReviewBody", { count: pendingApprovals }),
+          label: t("command.reviewDraft"),
+          to: routes.readyToShip,
+        }
+      : null,
+    actions[0]
+      ? {
+          key: "next-action",
+          title: actions[0].title,
+          body: actions[0].description,
+          label: t("command.openOpportunities"),
+          to: routeByDomain[actions[0].domain as keyof typeof routeByDomain] ?? routes.whatMattersNow,
+        }
+      : null,
+    findingsCount > 0
+      ? {
+          key: "findings",
+          title: t("command.priorityFindingsTitle"),
+          body: t("command.priorityFindingsBody", { count: findingsCount }),
+          label: t("command.reviewFixes"),
+          to: routes.changedToday,
+        }
+      : null,
+    reportReady
+      ? {
+          key: "report",
+          title: t("command.priorityReportTitle"),
+          body: t("command.priorityReportBody"),
+          label: t("command.exportReport"),
+          to: routes.report,
+        }
+      : null,
+  ].filter((item): item is PriorityItem => item != null);
+
+  const fallbackItems: PriorityItem[] = [
+    {
+      key: "monitoring",
+      title: t("command.reviewFixes"),
+      body: t("project.commandChangedEmpty"),
+      label: t("command.reviewFixes"),
+      to: routes.changedToday,
+    },
+  ];
+  const prioritySource = needsSetup
+    ? [...setupItems, ...workflowItems]
+    : workflowItems.length > 0
+      ? workflowItems
+      : fallbackItems;
+  const priorityItems = prioritySource.slice(0, 3);
 
   const agentCards: AgentCardData[] = [
     {
@@ -337,6 +472,42 @@ export function ProjectCommandCenter({
                 : t("project.commandReportPending", { count: recommendationsCount, approvals: pendingApprovals })
             }
           />
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-slate-200/80 bg-white/88 p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                {t("command.priorityTitle")}
+              </p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                {needsSetup ? t("command.prioritySetupSubtitle") : t("command.prioritySubtitle")}
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 lg:grid-cols-3">
+            {priorityItems.map((item) => (
+              <Link
+                key={item.key}
+                to={item.to}
+                className="group flex min-w-0 flex-col justify-between rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 transition hover:border-slate-300 hover:bg-white hover:shadow-sm"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                    <p className="min-w-0 text-sm font-semibold leading-6 text-slate-950">
+                      {item.title}
+                    </p>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{item.body}</p>
+                </div>
+                <span className="mt-4 inline-flex w-fit items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition group-hover:text-slate-950">
+                  {item.label}
+                  <ArrowRight size={13} />
+                </span>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
 
