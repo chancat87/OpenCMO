@@ -9,6 +9,10 @@ build/
 venv/
 *.egg
 .crawl4ai/
+.amp/
+.claude/
+.playwright-cli/
+.playwright-mcp/
 frontend/node_modules/
 frontend/dist/
 *.tsbuildinfo
