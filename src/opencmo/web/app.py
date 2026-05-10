@@ -17,11 +17,18 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
+from pydantic import BaseModel, Field
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import StreamingResponse
 
 from opencmo import storage
+from opencmo.web.auth import (
+    normalize_external_https_url,
+    request_has_valid_bearer,
+    requires_workspace_auth,
+    validate_web_token,
+)
 
 _HERE = Path(__file__).parent
 _SPA_DIR = _HERE.parent.parent.parent / "frontend" / "dist"  # <repo>/frontend/dist
@@ -1235,6 +1242,20 @@ async def canonical_host_middleware(request: Request, call_next):
 
 
 @app.middleware("http")
+async def workspace_auth_middleware(request: Request, call_next):
+    """Protect workspace APIs when OPENCMO_WEB_TOKEN is configured."""
+    if request.method == "OPTIONS" or not requires_workspace_auth(request.url.path, request.method):
+        return await call_next(request)
+    if request_has_valid_bearer(request):
+        return await call_next(request)
+    return JSONResponse(
+        {"error": "Unauthorized", "error_code": "auth_required"},
+        status_code=401,
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+@app.middleware("http")
 async def byok_middleware(request: Request, call_next):
     """Read per-user API keys from X-User-Keys header and inject via ContextVar.
 
@@ -1256,10 +1277,17 @@ async def byok_middleware(request: Request, call_next):
         return await call_next(request)
 
     # Filter to allowed keys only
-    filtered = {
-        k: v for k, v in user_keys.items()
-        if k in _INJECTABLE_KEYS and isinstance(v, str) and v.strip()
-    }
+    filtered: dict[str, str] = {}
+    for key, value in user_keys.items():
+        if key not in _INJECTABLE_KEYS or not isinstance(value, str) or not value.strip():
+            continue
+        if key == "OPENAI_BASE_URL":
+            try:
+                filtered[key] = normalize_external_https_url(value, field_name=key)
+            except ValueError:
+                continue
+        else:
+            filtered[key] = value.strip()
     if not filtered:
         return await call_next(request)
 
@@ -1282,6 +1310,17 @@ async def api_v1_health():
         "ok": True,
         "scheduler": scheduler.scheduler_status(),
     })
+
+
+class _AuthLoginRequest(BaseModel):
+    token: str = Field(..., min_length=1, max_length=4096)
+
+
+@app.post("/api/v1/auth/login")
+async def api_v1_auth_login(payload: _AuthLoginRequest):
+    if validate_web_token(payload.token):
+        return JSONResponse({"ok": True})
+    return JSONResponse({"ok": False, "error": "invalid_token"}, status_code=401)
 
 
 # ---------------------------------------------------------------------------
@@ -1337,9 +1376,6 @@ app.include_router(blog_gen_router)
 
 from typing import Literal  # noqa: E402
 from typing import Optional as _Optional
-
-from pydantic import BaseModel, Field  # noqa: E402
-
 
 class _WaitlistSubmit(BaseModel):
     """Hosted-version waitlist signup payload."""

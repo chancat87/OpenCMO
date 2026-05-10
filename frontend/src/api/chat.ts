@@ -37,6 +37,8 @@ export async function* streamChat(
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
+  const token = localStorage.getItem("opencmo_token");
+  if (token) headers.Authorization = `Bearer ${token}`;
   const keysHeader = buildUserKeysHeader();
   if (keysHeader) headers["X-User-Keys"] = keysHeader;
 
@@ -52,6 +54,9 @@ export async function* streamChat(
   });
 
   if (!resp.ok) {
+    if (resp.status === 401) {
+      window.dispatchEvent(new CustomEvent("opencmo:unauthorized"));
+    }
     throw new Error(`Chat request failed: ${resp.status}`);
   }
 

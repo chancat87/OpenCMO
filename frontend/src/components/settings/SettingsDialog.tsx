@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { X, Key, Check, ChevronDown, ChevronRight, Shield } from "lucide-react";
-import { getSettings, saveSettings } from "../../api/settings";
+import { getSettings, saveSettings, type SettingsSavePayload } from "../../api/settings";
 import { getEffectiveKeyStatus, getUserKeys, setUserKeys, type UserKeys } from "../../api/userKeys";
 import { useI18n } from "../../i18n";
 import type { AISettings } from "../../types";
@@ -113,6 +113,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
   const { t } = useI18n();
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [serverSaveError, setServerSaveError] = useState<string | null>(null);
   const [status, setStatus] = useState<AISettings | null>(null);
 
   // ── User-local keys (stored in browser localStorage) ──
@@ -173,6 +174,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
   const handleSave = async () => {
     setLoading(true);
     setSaved(false);
+    setServerSaveError(null);
     try {
       // 1. Save user-local keys to localStorage
       const newKeys: UserKeys = {};
@@ -185,40 +187,55 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
       if (pagespeedKey) newKeys.PAGESPEED_API_KEY = pagespeedKey;
       setUserKeys(newKeys);
 
-      // 2. Save server-side settings (non-key configs)
-      await saveSettings({
-        REDDIT_CLIENT_ID: redditClientId || undefined,
-        REDDIT_CLIENT_SECRET: redditClientSecret || undefined,
-        REDDIT_USERNAME: redditUsername || undefined,
-        REDDIT_PASSWORD: redditPassword || undefined,
-        OPENCMO_AUTO_PUBLISH: autoPublish ? "1" : "0",
-        TWITTER_API_KEY: twitterApiKey || undefined,
-        TWITTER_API_SECRET: twitterApiSecret || undefined,
-        TWITTER_ACCESS_TOKEN: twitterAccessToken || undefined,
-        TWITTER_ACCESS_SECRET: twitterAccessSecret || undefined,
-        OPENCMO_GEO_CHATGPT: geoChatgpt ? "1" : "0",
-        DATAFORSEO_LOGIN: dataforseoLogin || undefined,
-        DATAFORSEO_PASSWORD: dataforseoPassword || undefined,
-        OPENCMO_SMTP_HOST: smtpHost || undefined,
-        OPENCMO_SMTP_PORT: smtpPort || undefined,
-        OPENCMO_SMTP_USER: smtpUser || undefined,
-        OPENCMO_SMTP_PASS: smtpPass || undefined,
-        OPENCMO_REPORT_EMAIL: reportEmail || undefined,
-      });
+      // 2. Save server-side settings only when an operator changed them.
+      const serverSettings: SettingsSavePayload = {};
+      if (redditClientId) serverSettings.REDDIT_CLIENT_ID = redditClientId;
+      if (redditClientSecret) serverSettings.REDDIT_CLIENT_SECRET = redditClientSecret;
+      if (redditUsername) serverSettings.REDDIT_USERNAME = redditUsername;
+      if (redditPassword) serverSettings.REDDIT_PASSWORD = redditPassword;
+      if (status && autoPublish !== status.auto_publish) {
+        serverSettings.OPENCMO_AUTO_PUBLISH = autoPublish ? "1" : "0";
+      }
+      if (twitterApiKey) serverSettings.TWITTER_API_KEY = twitterApiKey;
+      if (twitterApiSecret) serverSettings.TWITTER_API_SECRET = twitterApiSecret;
+      if (twitterAccessToken) serverSettings.TWITTER_ACCESS_TOKEN = twitterAccessToken;
+      if (twitterAccessSecret) serverSettings.TWITTER_ACCESS_SECRET = twitterAccessSecret;
+      if (status && geoChatgpt !== status.geo_chatgpt_enabled) {
+        serverSettings.OPENCMO_GEO_CHATGPT = geoChatgpt ? "1" : "0";
+      }
+      if (dataforseoLogin) serverSettings.DATAFORSEO_LOGIN = dataforseoLogin;
+      if (dataforseoPassword) serverSettings.DATAFORSEO_PASSWORD = dataforseoPassword;
+      if (status && smtpHost !== status.smtp_host) serverSettings.OPENCMO_SMTP_HOST = smtpHost;
+      if (status && smtpPort !== status.smtp_port) serverSettings.OPENCMO_SMTP_PORT = smtpPort;
+      if (status && smtpUser !== status.smtp_user) serverSettings.OPENCMO_SMTP_USER = smtpUser;
+      if (smtpPass) serverSettings.OPENCMO_SMTP_PASS = smtpPass;
+      if (status && reportEmail !== status.report_email) serverSettings.OPENCMO_REPORT_EMAIL = reportEmail;
+
+      let serverSettingsSaved = false;
+      if (Object.keys(serverSettings).length > 0) {
+        try {
+          await saveSettings(serverSettings);
+          serverSettingsSaved = true;
+        } catch {
+          setServerSaveError(t("settings.serverSettingsAdminOnly"));
+        }
+      }
 
       setSaved(true);
-      // Clear server-side sensitive fields
-      setRedditClientId("");
-      setRedditClientSecret("");
-      setRedditUsername("");
-      setRedditPassword("");
-      setTwitterApiKey("");
-      setTwitterApiSecret("");
-      setTwitterAccessToken("");
-      setTwitterAccessSecret("");
-      setDataforseoLogin("");
-      setDataforseoPassword("");
-      setSmtpPass("");
+      if (serverSettingsSaved) {
+        // Clear server-side sensitive fields after a confirmed admin save.
+        setRedditClientId("");
+        setRedditClientSecret("");
+        setRedditUsername("");
+        setRedditPassword("");
+        setTwitterApiKey("");
+        setTwitterApiSecret("");
+        setTwitterAccessToken("");
+        setTwitterAccessSecret("");
+        setDataforseoLogin("");
+        setDataforseoPassword("");
+        setSmtpPass("");
+      }
       // Refresh server status
       const s = await getSettings();
       setStatus(s);
@@ -403,6 +420,12 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
             <Field label={t("settings.reportEmail")} placeholder="report@example.com" hint={t("settings.reportEmailHint")} value={reportEmail} onChange={setReportEmail} />
           </Section>
         </div>
+
+        {serverSaveError && (
+          <p className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+            {serverSaveError}
+          </p>
+        )}
 
         <div className="mt-6 flex justify-end gap-2">
           <button

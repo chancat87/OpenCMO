@@ -20,6 +20,8 @@ import { BrandKitPage } from "./pages/BrandKitPage";
 import { ProjectMonitorsPage } from "./pages/ProjectMonitorsPage";
 import { GitHubLeadsPage } from "./pages/GitHubLeadsPage";
 import { ContentPage } from "./pages/ContentPage";
+import { TokenPrompt } from "./components/auth/TokenPrompt";
+import { useAuth } from "./components/auth/useAuth";
 
 // Heavy pages lazy-loaded: Three.js graph, react-markdown reports/chat, recharts performance
 const GraphPage = lazy(() =>
@@ -60,6 +62,7 @@ function LocalizedPublicPage({
 }
 
 function AppRoutes() {
+  const { isAuthenticated, needsAuth } = useAuth();
   const localizedService = (locale: "en" | "zh", kind: PublicServicePageKind) => (
     <LocalizedPublicPage locale={locale}>
       <PublicServicePage kind={kind} />
@@ -95,30 +98,34 @@ function AppRoutes() {
       <Route
         path="*"
         element={(
-          <AppShell>
-            <Suspense fallback={<LazyFallback />}>
-              <Routes>
-                <Route path="/workspace" element={<DashboardPage />} />
-                <Route path="/approvals" element={<ApprovalsPage />} />
-                <Route path="/projects/:id" element={<ProjectPage />} />
-                <Route path="/projects/:id/reports" element={<ReportsPage />} />
-                <Route path="/projects/:id/content" element={<ContentPage />} />
-                <Route path="/projects/:id/brand-kit" element={<BrandKitPage />} />
-                <Route
-                  path="/projects/:id/performance"
-                  element={<PerformancePage />}
-                />
-                <Route path="/projects/:id/seo" element={<SeoPage />} />
-                <Route path="/projects/:id/geo" element={<GeoPage />} />
-                <Route path="/projects/:id/serp" element={<SerpPage />} />
-                <Route path="/projects/:id/community" element={<CommunityPage />} />
-                <Route path="/projects/:id/graph" element={<GraphPage />} />
-                <Route path="/projects/:id/monitors" element={<ProjectMonitorsPage />} />
-                <Route path="/projects/:id/github-leads" element={<GitHubLeadsPage />} />
-                <Route path="/chat" element={<ChatPage />} />
-              </Routes>
-            </Suspense>
-          </AppShell>
+          needsAuth && !isAuthenticated ? (
+            <TokenPrompt />
+          ) : (
+            <AppShell>
+              <Suspense fallback={<LazyFallback />}>
+                <Routes>
+                  <Route path="/workspace" element={<DashboardPage />} />
+                  <Route path="/approvals" element={<ApprovalsPage />} />
+                  <Route path="/projects/:id" element={<ProjectPage />} />
+                  <Route path="/projects/:id/reports" element={<ReportsPage />} />
+                  <Route path="/projects/:id/content" element={<ContentPage />} />
+                  <Route path="/projects/:id/brand-kit" element={<BrandKitPage />} />
+                  <Route
+                    path="/projects/:id/performance"
+                    element={<PerformancePage />}
+                  />
+                  <Route path="/projects/:id/seo" element={<SeoPage />} />
+                  <Route path="/projects/:id/geo" element={<GeoPage />} />
+                  <Route path="/projects/:id/serp" element={<SerpPage />} />
+                  <Route path="/projects/:id/community" element={<CommunityPage />} />
+                  <Route path="/projects/:id/graph" element={<GraphPage />} />
+                  <Route path="/projects/:id/monitors" element={<ProjectMonitorsPage />} />
+                  <Route path="/projects/:id/github-leads" element={<GitHubLeadsPage />} />
+                  <Route path="/chat" element={<ChatPage />} />
+                </Routes>
+              </Suspense>
+            </AppShell>
+          )
         )}
       />
     </Routes>

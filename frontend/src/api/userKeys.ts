@@ -1,9 +1,9 @@
 /**
- * User API Keys — stored in localStorage, injected per-request.
+ * User API Keys — stored in localStorage, injected for workspace requests.
  *
- * Each user's keys stay in their own browser. They are sent to the backend
- * via the `X-User-Keys` header on every API call, where the backend
- * middleware injects them into `os.environ` for the duration of that request.
+ * Each user's keys stay in their own browser until a workspace action needs
+ * provider access. They are sent via `X-User-Keys` for that request and
+ * injected into a request-local ContextVar on the backend.
  */
 
 import type { AISettings } from "../types";

@@ -104,14 +104,89 @@ def test_api_endpoints(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Auth — auth middleware was removed in b78c9a7, routes are now fully open.
+# Auth — workspace APIs are open in dev and protected when OPENCMO_WEB_TOKEN is set.
 # ---------------------------------------------------------------------------
 
 
-def test_api_v1_routes_accessible_without_token(client):
-    """All API routes are accessible without any auth token."""
+def test_api_v1_routes_accessible_without_token_in_dev(client):
+    """API routes remain open in local/dev mode when no web token is configured."""
     resp = client.get("/api/v1/projects")
     assert resp.status_code == 200
+
+    resp = client.post("/api/v1/settings", json={"OPENCMO_AUTO_PUBLISH": "0"})
+    assert resp.status_code == 200
+
+
+def test_api_v1_workspace_requires_token_when_configured(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENCMO_WEB_TOKEN", "test-token")
+    db_path = tmp_path / "test.db"
+    with patch.object(storage, "_DB_PATH", db_path):
+        with TestClient(app) as test_client:
+            resp = test_client.get("/api/v1/projects")
+            assert resp.status_code == 401
+            assert resp.json()["error_code"] == "auth_required"
+
+            resp = test_client.get(
+                "/api/v1/projects",
+                headers={"Authorization": "Bearer test-token"},
+            )
+            assert resp.status_code == 200
+
+            login = test_client.post("/api/v1/auth/login", json={"token": "test-token"})
+            assert login.status_code == 200
+            assert login.json()["ok"] is True
+
+            bad_login = test_client.post("/api/v1/auth/login", json={"token": "bad"})
+            assert bad_login.status_code == 401
+
+
+def test_public_api_v1_routes_remain_public_when_token_configured(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENCMO_WEB_TOKEN", "test-token")
+    db_path = tmp_path / "test.db"
+    with patch.object(storage, "_DB_PATH", db_path):
+        with TestClient(app) as test_client:
+            resp = test_client.get("/api/v1/health")
+            assert resp.status_code == 200
+
+            resp = test_client.get("/api/v1/site/stats")
+            assert resp.status_code == 200
+
+            resp = test_client.post(
+                "/api/v1/waitlist",
+                json={"email": "public@example.com", "source": "hosted_page"},
+            )
+            assert resp.status_code == 200
+
+
+def test_docs_are_protected_when_token_configured(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENCMO_WEB_TOKEN", "test-token")
+    db_path = tmp_path / "test.db"
+    with patch.object(storage, "_DB_PATH", db_path):
+        with TestClient(app) as test_client:
+            assert test_client.get("/docs").status_code == 401
+            assert test_client.get("/openapi.json").status_code == 401
+
+
+def test_settings_protected_and_rejects_private_base_url(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENCMO_WEB_TOKEN", "test-token")
+    db_path = tmp_path / "test.db"
+    with patch.object(storage, "_DB_PATH", db_path):
+        with TestClient(app) as test_client:
+            assert test_client.get("/api/v1/settings").status_code == 200
+            assert test_client.post(
+                "/api/v1/settings",
+                json={"OPENAI_BASE_URL": "https://api.openai.com/v1"},
+            ).status_code == 401
+            assert test_client.post(
+                "/api/v1/settings",
+                json={"OPENAI_BASE_URL": "http://127.0.0.1:11434/v1"},
+                headers={"Authorization": "Bearer test-token"},
+            ).status_code == 422
+            assert test_client.post(
+                "/api/v1/settings",
+                json={"OPENAI_BASE_URL": "https://api.openai.com/v1"},
+                headers={"Authorization": "Bearer test-token"},
+            ).status_code == 200
 
 
 def test_api_v1_health_public(client):
@@ -195,11 +270,31 @@ def test_api_v1_generate_blog_enqueues_skill_payload(client):
     assert payload["skill_id"] == "ai_seo"
     assert payload["skill_name"] == "AI SEO"
 
-    find_active.assert_awaited_once_with(f"blog_generation:project:{pid}:comparison:ai_seo:bilingual:1")
+    find_active.assert_awaited_once_with(f"blog_generation:project:{pid}:comparison:ai_seo:language:auto:bilingual:1")
     enqueue_kwargs = enqueue.await_args.kwargs
     assert enqueue_kwargs["kind"] == "blog_generation"
     assert enqueue_kwargs["payload"]["skill_id"] == "ai_seo"
     assert enqueue_kwargs["payload"]["bilingual"] is True
+
+
+def test_api_v1_generate_blog_enqueues_language_payload(client):
+    from opencmo.web.routers import blog_gen as blog_gen_router
+
+    pid = _seed_project("Blog Locale", "https://blog-locale.test")
+
+    with patch.object(blog_gen_router.bg_service, "find_active_task_by_dedupe_key", AsyncMock(return_value=None)) as find_active, \
+         patch.object(blog_gen_router.bg_service, "enqueue_task", AsyncMock(return_value={"task_id": "blog-task-2"})) as enqueue:
+        resp = client.post(
+            f"/api/v1/projects/{pid}/blog/generate",
+            json={"style": "launch", "skill_id": "copywriting", "language": "ja"},
+        )
+
+    assert resp.status_code == 202
+    assert resp.json()["language"] == "ja"
+    find_active.assert_awaited_once_with(
+        f"blog_generation:project:{pid}:launch:copywriting:language:ja:bilingual:0"
+    )
+    assert enqueue.await_args.kwargs["payload"]["language"] == "ja"
 
 
 def test_api_v1_community_discussions_include_match_metadata(client):
@@ -709,6 +804,51 @@ def test_api_v1_monitors_create_url_only(client):
     assert data["monitor_id"] > 0
 
 
+def test_api_v1_monitors_create_normalizes_url_without_scheme(client):
+    resp = client.post("/api/v1/monitors", json={"url": "example.com"})
+    assert resp.status_code == 201
+    data = resp.json()
+
+    monitors = client.get("/api/v1/monitors")
+    assert monitors.status_code == 200
+    monitor = next(item for item in monitors.json() if item["id"] == data["monitor_id"])
+    assert monitor["url"] == "https://example.com"
+    assert monitor["brand_name"] == "Example"
+
+
+def test_api_v1_monitors_create_rejects_invalid_url(client):
+    resp = client.post("/api/v1/monitors", json={"url": "not a url"})
+    assert resp.status_code == 400
+    assert resp.json()["error_code"] == "invalid_url"
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "exa_mple.com",
+        "example!.com",
+        "https://example.com:abc",
+        "https://example.com:99999",
+        "https://example.com:0",
+    ],
+)
+def test_api_v1_monitors_create_rejects_invalid_hostname_and_ports(client, url):
+    resp = client.post("/api/v1/monitors", json={"url": url})
+    assert resp.status_code == 400
+    assert resp.json()["error_code"] == "invalid_url"
+
+
+def test_api_v1_monitors_create_allows_localhost_with_port(client):
+    resp = client.post("/api/v1/monitors", json={"url": "http://localhost:3000"})
+    assert resp.status_code == 201
+    data = resp.json()
+
+    monitors = client.get("/api/v1/monitors")
+    assert monitors.status_code == 200
+    monitor = next(item for item in monitors.json() if item["id"] == data["monitor_id"])
+    assert monitor["url"] == "http://localhost:3000"
+
+
 def test_web_lifecycle_starts_and_stops_scheduler(tmp_path):
     db_path = tmp_path / "test.db"
     with patch.object(storage, "_DB_PATH", db_path), \
@@ -1010,6 +1150,44 @@ def test_api_v1_task_events_stream_background_history(client):
     assert events[-1]["findings_count"] == 2
 
 
+@pytest.mark.parametrize(
+    ("kind", "payload", "result"),
+    [
+        ("report", {"report_kind": "strategic"}, {"kind": "strategic", "summary": "Report complete"}),
+        ("graph_expansion", {"project_id": 0}, {"summary": "Graph complete"}),
+        ("blog_generation", {"style": "launch"}, {"summary": "Blog complete"}),
+    ],
+)
+def test_api_v1_task_events_stream_terminal_payload_for_non_scan_tasks(client, kind, payload, result):
+    from opencmo.background import service as bg_service
+
+    pid = _seed_project(f"Events {kind}", f"https://{kind}.events.test")
+    payload = {**payload, "project_id": pid}
+    task = asyncio.run(
+        bg_service.enqueue_task(
+            kind=kind,
+            project_id=pid,
+            payload=payload,
+            dedupe_key=None,
+        )
+    )
+    asyncio.run(bg_service.complete_task(task["task_id"], result=result))
+
+    with client.stream("GET", f"/api/v1/tasks/{task['task_id']}/events") as resp:
+        assert resp.status_code == 200
+        events = [
+            json.loads(line[6:])
+            for line in resp.iter_lines()
+            if line.startswith("data: ")
+        ]
+
+    assert events[-1]["type"] == "done"
+    assert events[-1]["status"] == "completed"
+    assert events[-1]["summary"] == result["summary"]
+    if kind == "report":
+        assert events[-1]["report_kind"] == "strategic"
+
+
 def test_api_v1_task_not_found(client):
     resp = client.get("/api/v1/tasks/nonexistent")
     assert resp.status_code == 404
@@ -1117,8 +1295,10 @@ def test_api_v1_report_task_fails_when_human_report_is_not_usable(client):
 
         listed = client.get(f"/api/v1/projects/{pid}/reports")
         assert listed.status_code == 200
-        assert len(listed.json()) == 2
-        assert all(item["is_latest"] is False for item in listed.json())
+        failed_reports = listed.json()
+        assert len(failed_reports) >= 2
+        assert all(item["is_latest"] is False for item in failed_reports)
+        assert any("LLM unavailable" in str(item.get("meta", {})) for item in failed_reports)
 
 
 def test_api_v1_graph_expansion_progress_uses_background_runtime(client):

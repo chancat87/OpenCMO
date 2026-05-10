@@ -5,7 +5,7 @@ export function getSettings(): Promise<AISettings> {
   return apiJson<AISettings>("/settings");
 }
 
-export function saveSettings(data: {
+export type SettingsSavePayload = {
   OPENAI_API_KEY?: string;
   OPENAI_BASE_URL?: string;
   OPENCMO_MODEL_DEFAULT?: string;
@@ -37,7 +37,9 @@ export function saveSettings(data: {
   OPENCMO_SMTP_USER?: string;
   OPENCMO_SMTP_PASS?: string;
   OPENCMO_REPORT_EMAIL?: string;
-}): Promise<{ ok: boolean }> {
+};
+
+export function saveSettings(data: SettingsSavePayload): Promise<{ ok: boolean }> {
   return apiJson("/settings", {
     method: "POST",
     body: JSON.stringify(data),

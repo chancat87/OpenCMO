@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+import ipaddress
+import re
+from urllib.parse import urlparse, urlunparse
+
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 router = APIRouter(prefix="/api/v1")
+
+_DNS_LABEL_RE = re.compile(r"^[A-Za-z0-9-]+$")
 
 
 def _normalize_locale(value: str | None) -> str:
@@ -19,6 +25,56 @@ def _normalize_locale(value: str | None) -> str:
     if locale.startswith("es"):
         return "es"
     return "en"
+
+
+def _is_valid_hostname(hostname: str) -> bool:
+    if hostname == "localhost":
+        return True
+    try:
+        ipaddress.ip_address(hostname)
+        return True
+    except ValueError:
+        pass
+    if "." not in hostname:
+        return False
+    labels = hostname.split(".")
+    return all(
+        label
+        and len(label) <= 63
+        and _DNS_LABEL_RE.fullmatch(label)
+        and not label.startswith("-")
+        and not label.endswith("-")
+        for label in labels
+    )
+
+
+def _normalize_monitor_url(raw_url: str) -> tuple[str, str]:
+    value = raw_url.strip()
+    if not value:
+        return "", "url_required"
+    if any(char.isspace() for char in value):
+        return "", "invalid_url"
+    if "://" not in value:
+        value = f"https://{value}"
+
+    parsed = urlparse(value)
+    scheme = parsed.scheme.lower()
+    hostname = parsed.hostname or ""
+    try:
+        port = parsed.port
+    except ValueError:
+        return "", "invalid_url"
+    if port is not None and not 1 <= port <= 65535:
+        return "", "invalid_url"
+    if scheme not in {"http", "https"} or not hostname or not _is_valid_hostname(hostname.lower()):
+        return "", "invalid_url"
+
+    netloc = parsed.netloc
+    if parsed.hostname:
+        host_start = netloc.rfind(parsed.hostname)
+        if host_start >= 0:
+            netloc = f"{netloc[:host_start]}{parsed.hostname.lower()}{netloc[host_start + len(parsed.hostname):]}"
+    return urlunparse(parsed._replace(scheme=scheme, netloc=netloc)), ""
 
 
 async def _enqueue_scan_task(
@@ -77,14 +133,20 @@ async def api_v1_monitors():
 
 @router.post("/monitors")
 async def api_v1_create_monitor(request: Request):
-    from urllib.parse import urlparse
-
     from opencmo import service
 
     body = await request.json()
-    url = body.get("url", "").strip()
-    if not url:
-        return JSONResponse({"error": "url is required"}, status_code=400)
+    url, url_error = _normalize_monitor_url(body.get("url", ""))
+    if url_error == "url_required":
+        return JSONResponse({"error": "url is required", "error_code": "url_required"}, status_code=400)
+    if url_error:
+        return JSONResponse(
+            {
+                "error": "Enter a valid website URL, for example https://example.com.",
+                "error_code": "invalid_url",
+            },
+            status_code=400,
+        )
     # Auto-derive brand from URL domain if not provided
     brand = body.get("brand", "").strip()
     if not brand:

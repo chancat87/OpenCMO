@@ -424,7 +424,7 @@ export const ja: Partial<Record<TranslationKey, string>> = {
   "settings.title": "設定",
   "settings.apiKey": "API キー",
   "settings.apiKeyPlaceholder": "sk-...",
-  "settings.apiKeyHint": "OpenAI 互換の API キー。サーバーに保存されます。",
+  "settings.apiKeyHint": "既定では BYOK 用にこのブラウザへ保存されます。セルフホスト環境ではサーバー既定値も設定できます。",
   "settings.baseUrl": "Base URL（任意）",
   "settings.baseUrlPlaceholder": "https://api.deepseek.com/v1",
   "settings.baseUrlHint": "カスタム OpenAI 互換 URL。DeepSeek、OpenRouter、XH などは通常 /v1 サフィックスが必要です（例: https://xh.v1api.cc/v1）。",
@@ -433,6 +433,7 @@ export const ja: Partial<Record<TranslationKey, string>> = {
   "settings.modelHint": "デフォルトモデルを上書きします。このデプロイの既定値は {{model}} です。",
   "settings.save": "保存",
   "settings.saved": "保存しました！",
+  "settings.serverSettingsAdminOnly": "ブラウザのキーは保存されました。サーバー全体のプロバイダー、公開、メール設定には管理者トークンが必要です。",
   "settings.apiKeySet": "API キー設定済み",
   "settings.apiKeyNotSet": "API キー未設定",
   "settings.browserOverrideActive": "ブラウザ上書きが有効",
@@ -537,7 +538,7 @@ export const ja: Partial<Record<TranslationKey, string>> = {
   "setup.dismissHint": "今回は非表示にする",
 
   // Settings — local keys
-  "settings.localKeysHint": "API キーはブラウザのローカルストレージに保存されます。サーバーには送信されません。",
+  "settings.localKeysHint": "API キーはこのブラウザに保存され、プロバイダーアクセスが必要なワークスペース操作でのみ送信されます。",
 
   // Welcome Hero
   "welcome.title": "OpenCMO へようこそ",

@@ -8,6 +8,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from opencmo import storage
+from opencmo.web.auth import normalize_external_https_url
 
 router = APIRouter(prefix="/api/v1")
 
@@ -127,6 +128,11 @@ async def api_v1_settings_save(request: Request):
         val = body.get(key)
         if val is not None:
             val = val.strip() if isinstance(val, str) else str(val)
+            if val and key == "OPENAI_BASE_URL":
+                try:
+                    val = normalize_external_https_url(val, field_name=key)
+                except ValueError as exc:
+                    return JSONResponse({"error": str(exc), "error_code": "invalid_setting"}, status_code=422)
             if val:
                 await storage.set_setting(key, val)
                 os.environ[key] = val

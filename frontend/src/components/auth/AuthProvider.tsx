@@ -41,25 +41,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // On mount, probe to detect if auth is needed
   useEffect(() => {
-    fetch("/api/v1/projects").then((r) => {
+    const token = localStorage.getItem("opencmo_token");
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    fetch("/api/v1/projects", { headers }).then((r) => {
       if (r.status === 401) {
         setNeedsAuth(true);
         if (!localStorage.getItem("opencmo_token")) {
           setIsAuthenticated(false);
         }
+      } else if (r.ok) {
+        setNeedsAuth(false);
+        setIsAuthenticated(!!token);
       }
     });
   }, []);
 
   const login = useCallback(
     async (token: string) => {
+      const trimmed = token.trim();
       const resp = await fetch("/api/v1/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({ token: trimmed }),
       });
       if (resp.ok) {
-        localStorage.setItem("opencmo_token", token);
+        localStorage.setItem("opencmo_token", trimmed);
         setIsAuthenticated(true);
         queryClient.invalidateQueries();
         return true;

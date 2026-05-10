@@ -15,6 +15,12 @@ import { AnalysisDialog } from "../components/monitors/AnalysisDialog";
 import { useI18n } from "../i18n";
 import { Eye, Loader2 } from "lucide-react";
 
+type SelectedTask = {
+  id: string;
+  url: string;
+  projectId: number;
+};
+
 const cardVariants = {
   hidden: { opacity: 0, y: 20, scale: 0.97 },
   visible: (i: number) => ({
@@ -33,21 +39,19 @@ export function DashboardPage() {
   const { data: projects, isLoading, error } = useProjects();
   const createMonitor = useCreateMonitor();
   const { t, locale } = useI18n();
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [selectedTaskUrl, setSelectedTaskUrl] = useState<string | null>(null);
+  const [selectedTask, setSelectedTask] = useState<SelectedTask | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const { data: taskData } = useTaskPoll(selectedTaskId);
+  const { data: taskData } = useTaskPoll(selectedTask?.id ?? null);
   const taskDone = taskData?.status === "completed" || taskData?.status === "failed";
 
   useEffect(() => {
-    if (!taskDone || !selectedTaskId || dialogOpen) return;
+    if (!taskDone || !selectedTask || dialogOpen) return;
     const timeoutId = window.setTimeout(() => {
-      setSelectedTaskId(null);
-      setSelectedTaskUrl(null);
+      setSelectedTask(null);
     }, 3000);
     return () => window.clearTimeout(timeoutId);
-  }, [dialogOpen, selectedTaskId, taskDone]);
+  }, [dialogOpen, selectedTask, taskDone]);
 
   if (isLoading) {
     return (
@@ -62,9 +66,8 @@ export function DashboardPage() {
   }
   if (error) return <ErrorAlert message={error.message} />;
 
-  const handleTaskCreated = (taskId: string, url: string) => {
-    setSelectedTaskId(taskId);
-    setSelectedTaskUrl(url);
+  const handleTaskCreated = (taskId: string, url: string, projectId: number) => {
+    setSelectedTask({ id: taskId, url, projectId });
     setDialogOpen(true);
   };
 
@@ -104,19 +107,19 @@ export function DashboardPage() {
               onSubmit={async (data) => {
                 const result = await createMonitor.mutateAsync({ ...data, locale });
                 if (result.task_id) {
-                  handleTaskCreated(result.task_id, data.url);
+                  handleTaskCreated(result.task_id, data.url, result.project_id);
                 }
               }}
               isLoading={createMonitor.isPending}
             />
-            {selectedTaskId && selectedTaskUrl && !dialogOpen && !taskDone && (
+            {selectedTask && !dialogOpen && !taskDone && (
               <button
                 onClick={() => setDialogOpen(true)}
                 className="mt-3 flex w-full items-center gap-3 rounded-xl bg-indigo-50 px-4 py-3 text-sm text-indigo-700 ring-1 ring-inset ring-indigo-200 transition-colors hover:bg-indigo-100"
               >
                 <Loader2 size={16} className="animate-spin" />
                 <span className="flex-1 truncate text-left">
-                  {t("monitors.aiAnalyzing")}: {selectedTaskUrl}
+                  {t("monitors.aiAnalyzing")}: {selectedTask.url}
                 </span>
                 <span className="flex items-center gap-1 text-xs font-medium">
                   <Eye size={14} />
@@ -152,10 +155,11 @@ export function DashboardPage() {
         </div>
       ) : null}
 
-      {selectedTaskId && dialogOpen && (
+      {selectedTask && dialogOpen && (
         <AnalysisDialog
-          taskId={selectedTaskId}
-          url={selectedTaskUrl ?? ""}
+          taskId={selectedTask.id}
+          url={selectedTask.url}
+          projectId={selectedTask.projectId}
           onClose={() => setDialogOpen(false)}
         />
       )}

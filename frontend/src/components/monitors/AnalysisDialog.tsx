@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import { Link } from "react-router";
 import {
   X,
   Search,
@@ -13,6 +14,7 @@ import {
   Lightbulb,
   ExternalLink,
   Sparkles,
+  ArrowRight,
 } from "lucide-react";
 import {
   useTaskArtifacts,
@@ -50,6 +52,14 @@ const STATUS_STYLE: Record<string, string> = {
   completed: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   failed: "bg-rose-50 text-rose-700 ring-rose-200",
   warning: "bg-amber-50 text-amber-700 ring-amber-200",
+};
+
+const STATUS_LABEL_KEYS: Record<string, TranslationKey> = {
+  started: "analysis.status.started",
+  running: "analysis.status.running",
+  completed: "analysis.status.completed",
+  failed: "analysis.status.failed",
+  warning: "analysis.status.warning",
 };
 
 const SEVERITY_STYLE: Record<string, string> = {
@@ -444,7 +454,7 @@ function StageCard({
           ) : null}
         </div>
         <span className="text-[10px] font-semibold uppercase tracking-wider opacity-80">
-          {card.status}
+          {t(STATUS_LABEL_KEYS[card.status] ?? "analysis.status.started")}
         </span>
       </div>
       <p className="text-sm leading-relaxed">{card.summary}</p>
@@ -510,10 +520,12 @@ function uniqueSummaries(values: string[], limit = 3) {
 export function AnalysisDialog({
   taskId,
   url,
+  projectId,
   onClose,
 }: {
   taskId: string;
   url: string;
+  projectId?: number | null;
   onClose: () => void;
 }) {
   const { data: task } = useTaskPoll(taskId);
@@ -601,6 +613,10 @@ export function AnalysisDialog({
   const { data: findings = [] } = useTaskFindings(taskId, isDone);
   const { data: recommendations = [] } = useTaskRecommendations(taskId, isDone);
   const blockingWatchout = watchouts.find((item) => item.blocking);
+  const projectHref = projectId ? `/projects/${projectId}` : "";
+  const monitorsHref = projectId ? `/projects/${projectId}/monitors` : "";
+  const isCompleted = task?.status === "completed";
+  const isFailed = task?.status === "failed";
 
   useEffect(() => {
     const el = document.getElementById("analysis-scroll");
@@ -722,10 +738,27 @@ export function AnalysisDialog({
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <TriangleAlert size={32} className="mb-3 text-amber-500" />
               <p className="text-sm font-medium text-amber-600">{t("analysis.taskStale")}</p>
+              <div className="mt-5 flex flex-wrap justify-center gap-2">
+                {monitorsHref ? (
+                  <Link
+                    to={monitorsHref}
+                    className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                  >
+                    {t("analysis.openMonitors")}
+                    <ArrowRight size={14} />
+                  </Link>
+                ) : null}
+                <button
+                  onClick={onClose}
+                  className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200"
+                >
+                  {t("analysis.close")}
+                </button>
+              </div>
             </div>
           )}
 
-          {isDone && artifacts?.overview ? (
+          {isDone && (
             <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-[radial-gradient(circle_at_top_right,_rgba(99,102,241,0.16),_transparent_38%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-6 shadow-sm">
               <div className="flex items-start gap-4">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 ring-1 ring-indigo-200/70">
@@ -736,10 +769,10 @@ export function AnalysisDialog({
                     {t("analysis.summaryTitle")}
                   </p>
                   <h3 className="mt-2 text-xl font-semibold tracking-tight text-slate-950">
-                    {artifacts.overview.headline}
+                    {artifacts?.overview?.headline || (isFailed ? t("analysis.workflowFailed") : t("analysis.workflowComplete"))}
                   </h3>
                   <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
-                    {t("analysis.summarySubtitle")}
+                    {url}
                   </p>
                 </div>
               </div>
@@ -747,25 +780,27 @@ export function AnalysisDialog({
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
                 <SummaryMetric
                   label={t("analysis.keyFindings")}
-                  value={artifacts.overview.findings_count}
+                  value={artifacts?.overview?.findings_count ?? findings.length}
                 />
                 <SummaryMetric
                   label={t("analysis.recommendedActions")}
-                  value={artifacts.overview.recommendations_count}
+                  value={artifacts?.overview?.recommendations_count ?? recommendations.length}
                 />
                 <SummaryMetric
-                  label={t("analysis.dataQuality")}
-                  value={
-                    quality?.level === "reliable"
-                      ? t("analysis.qualityReliable")
-                      : quality?.level === "partial"
-                        ? t("analysis.qualityPartial")
-                        : quality?.level === "limited"
-                          ? t("analysis.qualityLimited")
-                          : "—"
-                  }
+                  label={t("analysis.nextStep")}
+                  value={isFailed ? t("analysis.close") : t("analysis.openProject")}
                 />
               </div>
+
+              {isCompleted && projectHref ? (
+                <Link
+                  to={projectHref}
+                  className="mt-5 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+                >
+                  {t("analysis.openProject")}
+                  <ArrowRight size={14} />
+                </Link>
+              ) : null}
 
               {quality ? (
                 <div className="mt-5">
@@ -778,7 +813,7 @@ export function AnalysisDialog({
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
                     {t("analysis.focusAreas")}
                   </p>
-                  {artifacts.overview.focus_domains.length ? (
+                  {artifacts?.overview?.focus_domains.length ? (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {artifacts.overview.focus_domains.map((domain) => (
                         <span
@@ -806,7 +841,7 @@ export function AnalysisDialog({
                       {blockingWatchout.resolution}
                     </p>
                   </div>
-                ) : artifacts.brief.top_recommendations[0] ? (
+                ) : artifacts?.brief.top_recommendations[0] ? (
                   <div className="rounded-2xl bg-indigo-950 p-4 text-white shadow-sm">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-200">
                       {t("analysis.nextBestAction")}
@@ -833,7 +868,7 @@ export function AnalysisDialog({
                 ) : null}
               </div>
             </section>
-          ) : null}
+          )}
 
           {isDone && topOpportunities.length > 0 && (
             <section>
@@ -1002,7 +1037,7 @@ export function AnalysisDialog({
             </section>
           )}
 
-          {isDone && findings.length === 0 && recommendations.length === 0 && (
+          {isDone && !artifacts?.overview && findings.length === 0 && recommendations.length === 0 && !isFailed && (
             <p className="py-8 text-center text-sm text-slate-400">{t("analysis.noRecordedFindings")}</p>
           )}
 
@@ -1041,12 +1076,33 @@ export function AnalysisDialog({
               </>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-xl bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
-          >
-            {isDone ? t("analysis.close") : t("analysis.closeBackground")}
-          </button>
+          <div className="flex items-center gap-2">
+            {isCompleted && projectHref ? (
+              <Link
+                to={projectHref}
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+              >
+                {t("analysis.openProject")}
+                <ArrowRight size={14} />
+              </Link>
+            ) : null}
+            {isFailed || isStale ? (
+              projectId ? (
+                <Link
+                  to={monitorsHref}
+                  className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
+                >
+                  {t("analysis.openMonitors")}
+                </Link>
+              ) : null
+            ) : null}
+            <button
+              onClick={onClose}
+              className="rounded-xl bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
+            >
+              {isDone || isStale ? t("analysis.close") : t("analysis.closeBackground")}
+            </button>
+          </div>
         </div>
       </div>
     </div>

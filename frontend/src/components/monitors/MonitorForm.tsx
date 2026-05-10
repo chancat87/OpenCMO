@@ -1,31 +1,45 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, CheckCircle2, KeyRound, Sparkles } from "lucide-react";
 import { useI18n } from "../../i18n";
 import { ScheduleSelector } from "./ScheduleSelector";
 import { getEffectiveKeyStatus } from "../../api/userKeys";
 import { useSettings } from "../../hooks/useSettings";
 import { SettingsDialog } from "../settings/SettingsDialog";
+import { ApiError } from "../../api/client";
+import { normalizeWebsiteUrl } from "../../utils/url";
 
 export function MonitorForm({
   onSubmit,
   isLoading,
+  initialUrl = "",
 }: {
   onSubmit: (data: { url: string; cron_expr: string }) => Promise<void>;
   isLoading: boolean;
+  initialUrl?: string;
 }) {
   const { t } = useI18n();
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState(initialUrl);
   const [cronExpr, setCronExpr] = useState("0 9 * * *");
   const [showSettings, setShowSettings] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const settingsQuery = useSettings();
   const keyStatus = getEffectiveKeyStatus(settingsQuery.data);
   const keysReady = keyStatus.effective.llm;
 
+  useEffect(() => {
+    if (!url && initialUrl) setUrl(initialUrl);
+  }, [initialUrl, url]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim()) return;
-    await onSubmit({ url: url.trim(), cron_expr: cronExpr });
-    setUrl("");
+    setSubmitError("");
+    try {
+      await onSubmit({ url: normalizeWebsiteUrl(url), cron_expr: cronExpr });
+      setUrl(initialUrl);
+    } catch (error) {
+      setSubmitError(error instanceof ApiError && error.errorCode === "invalid_url" ? t("monitorForm.invalidUrl") : t("monitorForm.createError"));
+    }
   };
 
   return (
@@ -45,7 +59,8 @@ export function MonitorForm({
             <input
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              type="url"
+              type="text"
+              inputMode="url"
               required
               placeholder={t("monitorForm.urlPlaceholder")}
               className="flex-1 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm shadow-sm transition-shadow placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
@@ -56,18 +71,19 @@ export function MonitorForm({
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md disabled:opacity-50"
             >
               {isLoading ? (
-                t("monitorForm.analyzing")
+                t("monitorForm.creatingWorkspace")
               ) : (
                 <>
-                  {t("monitorForm.startMonitoring")}
+                  {t("monitorForm.analyzeMySite")}
                   <ArrowRight size={16} />
                 </>
               )}
             </button>
           </div>
+          {submitError ? <p className="text-sm font-medium text-rose-600">{submitError}</p> : null}
 
           <div
-            className={`rounded-2xl border px-4 py-3 ${
+            className={`rounded-2xl border px-4 py-3 text-sm ${
               keysReady ? "border-emerald-200 bg-emerald-50/70" : "border-amber-200 bg-amber-50/70"
             }`}
           >
