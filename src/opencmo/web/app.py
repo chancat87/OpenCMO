@@ -14,12 +14,14 @@ import re
 import uuid
 from html import escape
 from pathlib import Path
+from typing import Literal
+from typing import Optional as _Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
-from pydantic import BaseModel, Field
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 from starlette.responses import StreamingResponse
 
 from opencmo import storage
@@ -1374,8 +1376,6 @@ app.include_router(blog_gen_router)
 # BEFORE the SPA catch-all below or they'll be swallowed.
 # ---------------------------------------------------------------------------
 
-from typing import Literal  # noqa: E402
-from typing import Optional as _Optional
 
 class _WaitlistSubmit(BaseModel):
     """Hosted-version waitlist signup payload."""
