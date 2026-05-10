@@ -15,12 +15,12 @@ import {
   getLocalizedBlogArticlePath,
 } from "../content/marketing";
 import { usePublicPageMetadata } from "../hooks/usePublicPageMetadata";
+import { usePublicSeoLocale } from "../hooks/usePublicSeoLocale";
 import { useI18n } from "../i18n";
-import { getSeoLocaleFromLocale } from "../utils/publicRoutes";
 
 export function BlogPage() {
-  const { t, locale } = useI18n();
-  const seoLocale = getSeoLocaleFromLocale(locale);
+  const { t } = useI18n();
+  const seoLocale = usePublicSeoLocale();
   const featuredArticle = BLOG_ARTICLES.find((article) => article.slug === BLOG_FEATURED_ARTICLE_SLUG) ?? BLOG_ARTICLES[0]!;
   const decisionArticles = BLOG_ARTICLES.filter((article) =>
     BLOG_DECISION_ARTICLE_SLUGS.includes(article.slug as (typeof BLOG_DECISION_ARTICLE_SLUGS)[number]),

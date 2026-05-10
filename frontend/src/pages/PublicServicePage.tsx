@@ -20,9 +20,10 @@ import { PublicSiteHeader } from "../components/marketing/PublicSiteHeader";
 import { SectionReveal } from "../components/marketing/SectionReveal";
 import { PUBLIC_HOME_NAV } from "../content/marketing";
 import { usePublicPageMetadata } from "../hooks/usePublicPageMetadata";
+import { usePublicSeoLocale } from "../hooks/usePublicSeoLocale";
 import { useI18n } from "../i18n";
 import type { TranslationKey } from "../i18n";
-import { getLocalizedPublicPath, getSeoLocaleFromLocale } from "../utils/publicRoutes";
+import { getLocalizedPublicPath } from "../utils/publicRoutes";
 
 const GITHUB_REPO_URL = "https://github.com/study8677/OpenCMO";
 
@@ -203,8 +204,7 @@ function ActionLink({
   children: ReactNode;
   variant?: "primary" | "secondary";
 }) {
-  const { locale } = useI18n();
-  const seoLocale = getSeoLocaleFromLocale(locale);
+  const seoLocale = usePublicSeoLocale();
   const className =
     variant === "primary"
       ? "inline-flex items-center gap-2 rounded-lg bg-[#0071e3] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#0077ed]"
@@ -228,8 +228,8 @@ function ActionLink({
 }
 
 function ContactPage({ content }: { content: ServicePageContent }) {
-  const { t, locale } = useI18n();
-  const seoLocale = getSeoLocaleFromLocale(locale);
+  const { t } = useI18n();
+  const seoLocale = usePublicSeoLocale();
   const servicesPath = getLocalizedPublicPath("/services", seoLocale);
 
   return (

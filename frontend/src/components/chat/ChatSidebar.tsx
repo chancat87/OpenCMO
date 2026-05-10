@@ -1,6 +1,7 @@
 import { Plus, Trash2, MessageSquare, X } from "lucide-react";
 import type { ChatSessionSummary } from "../../types";
 import { useI18n } from "../../i18n";
+import { utcDate } from "../../utils/time";
 
 function SessionGroups({
   sessions,
@@ -24,7 +25,7 @@ function SessionGroups({
   const olderItems: ChatSessionSummary[] = [];
 
   for (const s of sessions) {
-    const d = new Date(s.updated_at + "Z").toDateString();
+    const d = utcDate(s.updated_at).toDateString();
     if (d === today) todayItems.push(s);
     else if (d === yesterday) yesterdayItems.push(s);
     else olderItems.push(s);

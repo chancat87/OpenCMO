@@ -42,7 +42,7 @@ export function HostedWaitlistPage() {
         </Link>
       </main>
 
-      <SiteFooter />
+      <SiteFooter variant="public" />
     </div>
   );
 }

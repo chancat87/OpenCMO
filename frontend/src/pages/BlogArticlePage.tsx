@@ -11,26 +11,26 @@ import {
   getLocalizedBlogArticlePath,
 } from "../content/marketing";
 import { usePublicPageMetadata } from "../hooks/usePublicPageMetadata";
+import { usePublicSeoLocale } from "../hooks/usePublicSeoLocale";
 import { useI18n } from "../i18n";
-import { getSeoLocaleFromLocale } from "../utils/publicRoutes";
 
 export function BlogArticlePage() {
   const { slug = "" } = useParams();
-  const { t, locale } = useI18n();
-  const seoLocale = getSeoLocaleFromLocale(locale);
+  const { t } = useI18n();
+  const seoLocale = usePublicSeoLocale();
   const article = findBlogArticleBySlug(slug);
+
+  usePublicPageMetadata({
+    title: article ? `${t(article.title)} | OpenCMO Blog` : t("blog.metaTitle"),
+    description: article ? t(article.summary) : t("blog.metaDescription"),
+    basePath: article ? `/blog/${article.slug}` : "/blog",
+  });
 
   if (!article) {
     return <Navigate to={getBlogIndexPath(seoLocale)} replace />;
   }
 
   const relatedArticles = BLOG_ARTICLES.filter((item) => item.slug !== article.slug).slice(0, 3);
-
-  usePublicPageMetadata({
-    title: `${t(article.title)} | OpenCMO Blog`,
-    description: t(article.summary),
-    basePath: `/blog/${article.slug}`,
-  });
 
   return (
     <div className="min-h-screen bg-[#f6efe5] text-slate-950">

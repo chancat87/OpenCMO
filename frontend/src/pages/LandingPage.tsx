@@ -15,8 +15,8 @@ import {
   getServicesPath,
 } from "../content/marketing";
 import { usePublicPageMetadata } from "../hooks/usePublicPageMetadata";
+import { usePublicSeoLocale } from "../hooks/usePublicSeoLocale";
 import { useI18n } from "../i18n";
-import { getSeoLocaleFromLocale } from "../utils/publicRoutes";
 
 const GITHUB_REPO_URL = "https://github.com/study8677/OpenCMO";
 const CONTACT_EMAIL = "hello@aidcmo.com";
@@ -70,8 +70,8 @@ const PATH_CARDS = [
 ] as const;
 
 export function LandingPage() {
-  const { t, locale } = useI18n();
-  const seoLocale = getSeoLocaleFromLocale(locale);
+  const { t } = useI18n();
+  const seoLocale = usePublicSeoLocale();
 
   usePublicPageMetadata({
     title: t("landing.metaTitle"),

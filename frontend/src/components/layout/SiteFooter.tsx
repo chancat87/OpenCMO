@@ -2,6 +2,7 @@ import { ExternalLink, Github, Link2, Sparkles } from "lucide-react";
 import { Link } from "react-router";
 import { getBlogIndexPath, getLandingPath, getServicesPath, getHostedPath } from "../../content/marketing";
 import { useSiteStats } from "../../hooks/useSiteStats";
+import { usePublicSeoLocale } from "../../hooks/usePublicSeoLocale";
 import { useI18n } from "../../i18n";
 import { getSeoLocaleFromLocale } from "../../utils/publicRoutes";
 
@@ -21,7 +22,8 @@ type SiteFooterProps = {
 export function SiteFooter({ variant = "workspace" }: SiteFooterProps) {
   const { t, locale } = useI18n();
   const { data: siteStats } = useSiteStats();
-  const seoLocale = getSeoLocaleFromLocale(locale);
+  const publicSeoLocale = usePublicSeoLocale();
+  const seoLocale = variant === "public" ? publicSeoLocale : getSeoLocaleFromLocale(locale);
   const numberFormatter = new Intl.NumberFormat(locale);
   const landingHref = getLandingPath(seoLocale);
   const blogHref = getBlogIndexPath(seoLocale);

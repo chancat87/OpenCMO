@@ -1,4 +1,4 @@
-import { ExternalLink, LayoutDashboard, Sparkles } from "lucide-react";
+import { ChevronDown, ExternalLink, LayoutDashboard, Sparkles } from "lucide-react";
 import type { MouseEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { useI18n } from "../../i18n";
@@ -7,7 +7,6 @@ import type { PublicNavItem } from "../../content/marketing";
 import {
   getLocalizedCurrentPublicPath,
   getLocalizedPublicPath,
-  getSeoLocaleFromLocale,
   isPublicRoutePath,
   stripPublicLocalePrefix,
 } from "../../utils/publicRoutes";
@@ -58,11 +57,11 @@ export function PublicSiteHeader({
   const navigate = useNavigate();
   const isPublicRoute = isPublicRoutePath(location.pathname);
   const routeLocale = stripPublicLocalePrefix(location.pathname).routeLocale;
-  const publicLocale = routeLocale ?? getSeoLocaleFromLocale(locale);
+  const publicLocale = routeLocale ?? "en";
 
-  const nextLocale = () => {
+  const handleLocaleChange = (next: Locale) => {
     if (isPublicRoute) {
-      const nextSeoLocale = publicLocale === "en" ? "zh" : "en";
+      const nextSeoLocale = next === "zh" ? "zh" : "en";
       const localizedPath = getLocalizedCurrentPublicPath(location.pathname, nextSeoLocale);
       setLocale(nextSeoLocale);
       if (localizedPath) {
@@ -71,10 +70,10 @@ export function PublicSiteHeader({
       return;
     }
 
-    const idx = SUPPORTED_LOCALES.indexOf(locale);
-    const next = SUPPORTED_LOCALES[((idx === -1 ? 0 : idx) + 1) % SUPPORTED_LOCALES.length] as Locale;
     setLocale(next);
   };
+  const localeOptions: Locale[] = isPublicRoute ? ["en", "zh"] : SUPPORTED_LOCALES;
+  const activeLocale = isPublicRoute ? publicLocale : locale;
 
   const publicHref = (href: string) => {
     if (href.startsWith("#") || !isPublicRoute) {
@@ -142,12 +141,21 @@ export function PublicSiteHeader({
         </nav>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={nextLocale}
-            className={`rounded-full border px-3 py-2 text-xs font-semibold transition-colors ${localeClass}`}
-          >
-            {isPublicRoute ? LOCALE_LABELS[publicLocale] : LOCALE_LABELS[locale]}
-          </button>
+          <label className={`relative inline-flex items-center rounded-full border text-xs font-semibold transition-colors ${localeClass}`}>
+            <select
+              aria-label="Select language"
+              value={activeLocale}
+              onChange={(event) => handleLocaleChange(event.target.value as Locale)}
+              className="h-9 cursor-pointer appearance-none rounded-full bg-transparent pl-3 pr-8 text-xs font-semibold outline-none"
+            >
+              {localeOptions.map((item) => (
+                <option key={item} value={item}>
+                  {LOCALE_LABELS[item]}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="pointer-events-none absolute right-3" />
+          </label>
           <a
             href={`mailto:${CONTACT_EMAIL}`}
             className={`hidden items-center rounded-full px-4 py-2.5 text-sm font-semibold transition-colors md:inline-flex ${workspaceClass}`}
