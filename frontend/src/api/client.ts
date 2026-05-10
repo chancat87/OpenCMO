@@ -5,6 +5,7 @@ const PUBLIC_BYOK_PATHS = new Set([
   "/auth/login",
   "/github-stats",
   "/health",
+  "/site/stats",
   "/waitlist",
 ]);
 
