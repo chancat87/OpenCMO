@@ -1,6 +1,7 @@
 """Tests for the Proactive Insight Engine — detectors, dedup, storage CRUD, and API."""
 
 import asyncio
+import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -10,6 +11,8 @@ from opencmo.insights import (
     _detect_community_buzz,
     _detect_competitor_gaps,
     _detect_geo_decline,
+    _detect_geo_platform_blackout,
+    _detect_geo_sov_decline,
     _detect_seo_regress,
     _detect_serp_drops,
     detect_insights,
@@ -228,6 +231,188 @@ class TestDetectGeoDecline:
             mock_prev.return_value = {"geo": {"score": 80, "scanned_at": "2025-01-01"}}
             insights = asyncio.run(_detect_geo_decline(pid))
         assert len(insights) == 0
+
+
+class TestDetectGeoSovDecline:
+    """_detect_geo_sov_decline: brand Share-of-Voice drop detection."""
+
+    @staticmethod
+    def _row(sov: dict | None, platforms: dict | None = None) -> dict:
+        return {
+            "share_of_voice_json": None if sov is None else json.dumps(sov),
+            "platform_results_json": "{}" if platforms is None else json.dumps(platforms),
+        }
+
+    def test_large_drop_detected(self, db):
+        """SoV drop >= 5pp with enough mention volume produces an insight."""
+        pid = _seed_project()
+        latest = {"brand": {"name": "B", "mentions": 5, "share": 0.20},
+                  "competitors": [{"name": "C", "mentions": 20, "share": 0.80}],
+                  "total_mentions": 25}
+        previous = {"brand": {"name": "B", "mentions": 20, "share": 0.50},
+                    "competitors": [{"name": "C", "mentions": 20, "share": 0.50}],
+                    "total_mentions": 40}
+        with patch.object(storage, "get_geo_history", new_callable=AsyncMock) as mock_hist:
+            mock_hist.return_value = [self._row(latest), self._row(previous)]
+            insights = asyncio.run(_detect_geo_sov_decline(pid))
+        assert len(insights) == 1
+        assert insights[0].insight_type == "geo_sov_decline"
+        assert "30" in insights[0].title
+
+    def test_critical_severity_at_15pp_drop(self, db):
+        """SoV drop >= 15pp is critical."""
+        pid = _seed_project()
+        latest = {"brand": {"share": 0.10}, "total_mentions": 30}
+        previous = {"brand": {"share": 0.40}, "total_mentions": 30}
+        with patch.object(storage, "get_geo_history", new_callable=AsyncMock) as mock_hist:
+            mock_hist.return_value = [self._row(latest), self._row(previous)]
+            insights = asyncio.run(_detect_geo_sov_decline(pid))
+        assert len(insights) == 1
+        assert insights[0].severity == "critical"
+
+    def test_small_drop_ignored(self, db):
+        """SoV drop < 5pp produces no insight."""
+        pid = _seed_project()
+        latest = {"brand": {"share": 0.48}, "total_mentions": 50}
+        previous = {"brand": {"share": 0.50}, "total_mentions": 50}
+        with patch.object(storage, "get_geo_history", new_callable=AsyncMock) as mock_hist:
+            mock_hist.return_value = [self._row(latest), self._row(previous)]
+            insights = asyncio.run(_detect_geo_sov_decline(pid))
+        assert insights == []
+
+    def test_improvement_ignored(self, db):
+        """Improving share produces no insight."""
+        pid = _seed_project()
+        latest = {"brand": {"share": 0.70}, "total_mentions": 50}
+        previous = {"brand": {"share": 0.40}, "total_mentions": 50}
+        with patch.object(storage, "get_geo_history", new_callable=AsyncMock) as mock_hist:
+            mock_hist.return_value = [self._row(latest), self._row(previous)]
+            insights = asyncio.run(_detect_geo_sov_decline(pid))
+        assert insights == []
+
+    def test_below_min_volume_skipped(self, db):
+        """Previous scan with too few mentions is too noisy — skip."""
+        pid = _seed_project()
+        latest = {"brand": {"share": 0.10}, "total_mentions": 4}
+        previous = {"brand": {"share": 0.90}, "total_mentions": 4}
+        with patch.object(storage, "get_geo_history", new_callable=AsyncMock) as mock_hist:
+            mock_hist.return_value = [self._row(latest), self._row(previous)]
+            insights = asyncio.run(_detect_geo_sov_decline(pid))
+        assert insights == []
+
+    def test_missing_sov_payload(self, db):
+        """Empty share_of_voice_json fields short-circuit cleanly."""
+        pid = _seed_project()
+        with patch.object(storage, "get_geo_history", new_callable=AsyncMock) as mock_hist:
+            mock_hist.return_value = [self._row(None), self._row(None)]
+            insights = asyncio.run(_detect_geo_sov_decline(pid))
+        assert insights == []
+
+    def test_single_scan_ignored(self, db):
+        """A single GEO scan can't form a delta."""
+        pid = _seed_project()
+        latest = {"brand": {"share": 0.10}, "total_mentions": 30}
+        with patch.object(storage, "get_geo_history", new_callable=AsyncMock) as mock_hist:
+            mock_hist.return_value = [self._row(latest)]
+            insights = asyncio.run(_detect_geo_sov_decline(pid))
+        assert insights == []
+
+
+class TestDetectGeoPlatformBlackout:
+    """_detect_geo_platform_blackout: detect platforms that stopped mentioning the brand."""
+
+    @staticmethod
+    def _row(platforms: dict) -> dict:
+        return {
+            "share_of_voice_json": None,
+            "platform_results_json": json.dumps(platforms),
+        }
+
+    def test_two_platforms_lost(self, db):
+        """A brand losing mentions on two platforms surfaces one critical/warning insight."""
+        pid = _seed_project()
+        latest = {
+            "Perplexity": {"mentioned": True, "mention_count": 2, "position_pct": 30.0},
+            "You.com": {"mentioned": False, "mention_count": 0, "position_pct": None},
+            "MetaSo": {"mentioned": False, "mention_count": 0, "position_pct": None},
+            "_sentiment": {"score": 20, "label": "neutral"},
+        }
+        previous = {
+            "Perplexity": {"mentioned": True, "mention_count": 3, "position_pct": 25.0},
+            "You.com": {"mentioned": True, "mention_count": 1, "position_pct": 40.0},
+            "MetaSo": {"mentioned": True, "mention_count": 2, "position_pct": 60.0},
+            "_sentiment": {"score": 25, "label": "neutral"},
+        }
+        with patch.object(storage, "get_geo_history", new_callable=AsyncMock) as mock_hist:
+            mock_hist.return_value = [self._row(latest), self._row(previous)]
+            insights = asyncio.run(_detect_geo_platform_blackout(pid))
+        assert len(insights) == 1
+        assert insights[0].insight_type == "geo_platform_blackout"
+        assert "2" in insights[0].title
+        assert "You.com" in insights[0].summary
+        assert "MetaSo" in insights[0].summary
+
+    def test_three_or_more_lost_is_critical(self, db):
+        """Three lost platforms is critical."""
+        pid = _seed_project()
+        latest = {
+            "A": {"mentioned": False},
+            "B": {"mentioned": False},
+            "C": {"mentioned": False},
+            "D": {"mentioned": True},
+        }
+        previous = {
+            "A": {"mentioned": True},
+            "B": {"mentioned": True},
+            "C": {"mentioned": True},
+            "D": {"mentioned": True},
+        }
+        with patch.object(storage, "get_geo_history", new_callable=AsyncMock) as mock_hist:
+            mock_hist.return_value = [self._row(latest), self._row(previous)]
+            insights = asyncio.run(_detect_geo_platform_blackout(pid))
+        assert len(insights) == 1
+        assert insights[0].severity == "critical"
+
+    def test_one_lost_is_warning(self, db):
+        """Losing exactly one platform is warning (still surfaced)."""
+        pid = _seed_project()
+        latest = {"A": {"mentioned": True}, "B": {"mentioned": False}}
+        previous = {"A": {"mentioned": True}, "B": {"mentioned": True}}
+        with patch.object(storage, "get_geo_history", new_callable=AsyncMock) as mock_hist:
+            mock_hist.return_value = [self._row(latest), self._row(previous)]
+            insights = asyncio.run(_detect_geo_platform_blackout(pid))
+        assert len(insights) == 1
+        assert insights[0].severity == "warning"
+
+    def test_no_loss_no_insight(self, db):
+        """Same platforms mentioned in both scans produces nothing."""
+        pid = _seed_project()
+        latest = {"A": {"mentioned": True}, "B": {"mentioned": True}}
+        previous = {"A": {"mentioned": True}, "B": {"mentioned": True}}
+        with patch.object(storage, "get_geo_history", new_callable=AsyncMock) as mock_hist:
+            mock_hist.return_value = [self._row(latest), self._row(previous)]
+            insights = asyncio.run(_detect_geo_platform_blackout(pid))
+        assert insights == []
+
+    def test_single_platform_previous_skipped(self, db):
+        """One-platform previous scan is too small a sample — skip."""
+        pid = _seed_project()
+        latest = {"A": {"mentioned": False}}
+        previous = {"A": {"mentioned": True}}
+        with patch.object(storage, "get_geo_history", new_callable=AsyncMock) as mock_hist:
+            mock_hist.return_value = [self._row(latest), self._row(previous)]
+            insights = asyncio.run(_detect_geo_platform_blackout(pid))
+        assert insights == []
+
+    def test_underscore_keys_ignored(self, db):
+        """Metadata keys (prefixed with _) are not treated as platforms."""
+        pid = _seed_project()
+        latest = {"_sentiment": {"score": 30}, "A": {"mentioned": True}, "B": {"mentioned": True}}
+        previous = {"_sentiment": {"score": 30}, "A": {"mentioned": True}, "B": {"mentioned": True}}
+        with patch.object(storage, "get_geo_history", new_callable=AsyncMock) as mock_hist:
+            mock_hist.return_value = [self._row(latest), self._row(previous)]
+            insights = asyncio.run(_detect_geo_platform_blackout(pid))
+        assert insights == []
 
 
 class TestDetectCommunityBuzz:

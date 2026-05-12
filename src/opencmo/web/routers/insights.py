@@ -60,6 +60,31 @@ def _translate_known_insight(row: dict, lang: str) -> dict | None:
                 f"AI 可见度分数从 {summary_match.group(1)} 降至 {summary_match.group(2)}/100。"
             )
 
+    elif insight_type == "geo_sov_decline":
+        title_match = _match(r"Brand share of voice dropped ([\d.]+) points", title)
+        summary_match = _match(
+            r"Share of voice in AI engine answers fell from ([\d.]+)% to ([\d.]+)%\.",
+            summary,
+        )
+        if title_match:
+            translated_title = f"品牌声量份额下降 {title_match.group(1)} 个百分点"
+        if summary_match:
+            translated_summary = (
+                f"AI 引擎回答中的品牌声量份额从 {summary_match.group(1)}% 降至 "
+                f"{summary_match.group(2)}%。竞品可能正在抢占用户对话。"
+            )
+
+    elif insight_type == "geo_platform_blackout":
+        title_match = _match(r"No longer mentioned on (\d+) AI engine\(s\)", title)
+        summary_match = _match(r"Brand mentions disappeared on: (.+?)\.", summary)
+        if title_match:
+            translated_title = f"在 {title_match.group(1)} 个 AI 引擎上不再被提及"
+        if summary_match:
+            translated_summary = (
+                f"以下平台不再提及品牌：{summary_match.group(1)}。"
+                "请检查这些平台上的内容新鲜度与重新索引情况。"
+            )
+
     elif insight_type == "community_buzz":
         title_match = _match(r"High-engagement discussion on (.+)", title)
         summary_match = _match(r'"(.+)" — engagement ([\d.]+), (\d+) comments\.', summary)

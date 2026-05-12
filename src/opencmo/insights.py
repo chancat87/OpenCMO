@@ -7,12 +7,22 @@ and InsightBanner components.
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass
 
 from opencmo import storage
 
 logger = logging.getLogger(__name__)
+
+
+# Threshold below which Share-of-Voice mention counts are too noisy to compare.
+_GEO_SOV_MIN_PREV_MENTIONS = 5
+# Drop in brand share points (0..1 scale) to surface as warning / critical.
+_GEO_SOV_WARNING_DROP = 0.05
+_GEO_SOV_CRITICAL_DROP = 0.15
+# Minimum platforms in the previous scan before a "blackout" delta is trustworthy.
+_GEO_BLACKOUT_MIN_PREV_PLATFORMS = 2
 
 
 # ---------------------------------------------------------------------------
@@ -105,6 +115,126 @@ async def _detect_geo_decline(project_id: int) -> list[Insight]:
             action_params=f'{{"route": "/projects/{project_id}/geo"}}',
         )]
     return []
+
+
+def _safe_json_loads(raw: object) -> object | None:
+    if not raw:
+        return None
+    if isinstance(raw, (dict, list)):
+        return raw
+    if not isinstance(raw, str):
+        return None
+    try:
+        return json.loads(raw)
+    except (ValueError, TypeError):
+        return None
+
+
+async def _detect_geo_sov_decline(project_id: int) -> list[Insight]:
+    """Detect a meaningful drop in brand Share-of-Voice across AI engine answers.
+
+    Compares the latest two ``geo_scans`` and surfaces when the brand's share of
+    mentions vs. tracked competitors falls noticeably. Requires the previous scan
+    to have at least ``_GEO_SOV_MIN_PREV_MENTIONS`` mentions so the share isn't
+    statistical noise.
+    """
+    history = await storage.get_geo_history(project_id, limit=2)
+    if len(history) < 2:
+        return []
+
+    latest = _safe_json_loads(history[0].get("share_of_voice_json"))
+    previous = _safe_json_loads(history[1].get("share_of_voice_json"))
+    if not isinstance(latest, dict) or not isinstance(previous, dict):
+        return []
+
+    prev_total = previous.get("total_mentions")
+    if not isinstance(prev_total, (int, float)) or prev_total < _GEO_SOV_MIN_PREV_MENTIONS:
+        return []
+
+    prev_brand = (previous.get("brand") or {}).get("share")
+    latest_brand = (latest.get("brand") or {}).get("share")
+    if not isinstance(prev_brand, (int, float)) or not isinstance(latest_brand, (int, float)):
+        return []
+
+    drop = float(prev_brand) - float(latest_brand)
+    if drop < _GEO_SOV_WARNING_DROP:
+        return []
+
+    severity = "critical" if drop >= _GEO_SOV_CRITICAL_DROP else "warning"
+    drop_pct = round(drop * 100, 1)
+    prev_pct = round(float(prev_brand) * 100, 1)
+    latest_pct = round(float(latest_brand) * 100, 1)
+    return [Insight(
+        project_id=project_id,
+        insight_type="geo_sov_decline",
+        severity=severity,
+        title=f"Brand share of voice dropped {drop_pct} points",
+        summary=(
+            f"Share of voice in AI engine answers fell from {prev_pct}% to {latest_pct}%. "
+            "Competitors may be taking over the conversation."
+        ),
+        action_type="navigate",
+        action_params=f'{{"route": "/projects/{project_id}/geo"}}',
+    )]
+
+
+async def _detect_geo_platform_blackout(project_id: int) -> list[Insight]:
+    """Detect platforms where the brand was mentioned previously but no longer is.
+
+    Surfaces a single insight that lists the affected platforms. Skips when the
+    previous scan only covered a single platform (one data point is too noisy).
+    """
+    history = await storage.get_geo_history(project_id, limit=2)
+    if len(history) < 2:
+        return []
+
+    latest = _safe_json_loads(history[0].get("platform_results_json"))
+    previous = _safe_json_loads(history[1].get("platform_results_json"))
+    if not isinstance(latest, dict) or not isinstance(previous, dict):
+        return []
+
+    def _platform_items(payload: dict) -> dict[str, dict]:
+        return {
+            name: data
+            for name, data in payload.items()
+            if not name.startswith("_") and isinstance(data, dict)
+        }
+
+    prev_platforms = _platform_items(previous)
+    latest_platforms = _platform_items(latest)
+    if len(prev_platforms) < _GEO_BLACKOUT_MIN_PREV_PLATFORMS:
+        return []
+
+    lost: list[str] = []
+    for name, prev_data in prev_platforms.items():
+        if not prev_data.get("mentioned"):
+            continue
+        latest_data = latest_platforms.get(name) or {}
+        if latest_data.get("mentioned"):
+            continue
+        lost.append(name)
+
+    if not lost:
+        return []
+
+    lost_sorted = sorted(lost)
+    platforms_label = ", ".join(lost_sorted[:3])
+    if len(lost_sorted) > 3:
+        platforms_label += f" +{len(lost_sorted) - 3} more"
+
+    severity = "critical" if len(lost_sorted) >= 3 else "warning"
+    return [Insight(
+        project_id=project_id,
+        insight_type="geo_platform_blackout",
+        severity=severity,
+        title=f"No longer mentioned on {len(lost_sorted)} AI engine(s)",
+        summary=(
+            f"Brand mentions disappeared on: {platforms_label}. "
+            "Check content freshness and re-indexing on these platforms."
+        ),
+        action_type="navigate",
+        action_params=f'{{"route": "/projects/{project_id}/geo"}}',
+    )]
 
 
 async def _detect_community_buzz(project_id: int) -> list[Insight]:
@@ -307,6 +437,8 @@ async def _detect_ai_crawler_blocks(project_id: int) -> list[Insight]:
 _DETECTORS = [
     _detect_serp_drops,
     _detect_geo_decline,
+    _detect_geo_sov_decline,
+    _detect_geo_platform_blackout,
     _detect_community_buzz,
     _detect_seo_regress,
     _detect_competitor_gaps,
