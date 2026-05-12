@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from opencmo import storage
@@ -371,6 +371,55 @@ async def api_v1_geo_chart(project_id: int):
         "crawl_success_rate": [s.get("crawl_success_rate") for s in history],
         "share_of_voice": latest_sov,
     })
+
+
+@router.post("/projects/{project_id}/geo/ask")
+async def api_v1_geo_ask(project_id: int, request: Request):
+    """Ad-hoc GEO query — run user input across selected AI engines."""
+    project = await storage.get_project(project_id)
+    if not project:
+        return JSONResponse({"error": "Project not found"}, status_code=404)
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+
+    query = (body.get("query") or "").strip()
+    if not query:
+        return JSONResponse({"error": "query is required"}, status_code=400)
+    if len(query) > 500:
+        return JSONResponse({"error": "query too long (max 500 chars)"}, status_code=400)
+
+    platforms = body.get("platforms")
+    if platforms is not None and not isinstance(platforms, list):
+        return JSONResponse({"error": "platforms must be a list of strings"}, status_code=400)
+
+    from dataclasses import asdict
+
+    from opencmo.tools.geo_ask import ask_platforms
+
+    try:
+        response = await ask_platforms(
+            brand_name=project["brand_name"],
+            query=query,
+            platform_names=platforms,
+            aliases=project.get("aliases") or [],
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+    return JSONResponse(asdict(response))
+
+
+@router.get("/projects/{project_id}/geo/platforms")
+async def api_v1_geo_platforms(project_id: int):
+    """Return platform availability snapshot for the ask UI."""
+    project = await storage.get_project(project_id)
+    if not project:
+        return JSONResponse({"error": "Project not found"}, status_code=404)
+    from opencmo.tools.geo_ask import list_available_platforms
+    return JSONResponse({"platforms": list_available_platforms()})
 
 
 @router.get("/projects/{project_id}/community/history")

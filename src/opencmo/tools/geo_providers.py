@@ -471,125 +471,96 @@ class DefaultLLMProvider(GeoProvider):
 # ---------------------------------------------------------------------------
 
 
-class PerplexityProvider(GeoProvider):
+class _CrawlSearchProvider(GeoProvider):
+    """Shared base for AI-search providers we hit by scraping the public web UI.
+
+    Subclasses provide ``name`` and ``search_url_template`` (with a ``{q}``
+    placeholder for the URL-encoded query). Everything else — URL build,
+    browser slot, crawl, markdown extract, content classification, brand
+    match, error capture — is unified here so each new front-end addition is
+    a ~5-line subclass.
+    """
+
+    status = "enabled"
+    requires_auth = False
+    auth_env_vars: list[str] = []
+    search_url_template: str = ""
+
+    def _build_url(self, query: str) -> str:
+        return self.search_url_template.format(q=quote_plus(query))
+
+    async def check_visibility(
+        self, brand_name: str, category: str
+    ) -> GeoProviderResult:
+        query = f"有哪些好用的{category}工具" if _looks_cjk(brand_name, category) else f"best {category} tools"
+        return await self._check_single_query(brand_name, query)
+
+    async def _check_single_query(
+        self, brand_name: str, query: str
+    ) -> GeoProviderResult:
+        snippet_chars = _get_snippet_chars()
+        url = self._build_url(query)
+        try:
+            async with browser_slot():
+                async with AsyncWebCrawler() as crawler:
+                    crawl_result = await crawler.arun(url=url)
+                    content = _extract_markdown(crawl_result)
+                    status = _classify_crawl_content(content)
+                    if status != "ok":
+                        return GeoProviderResult(
+                            platform=self.name,
+                            mentioned=False,
+                            mention_count=0,
+                            position_pct=None,
+                            content_snippet=content[:snippet_chars],
+                            error=None,
+                            query=query,
+                            source_status=status,
+                        )
+                    mentioned, mention_count, position_pct = _analyze_text(
+                        content, brand_name
+                    )
+                    return GeoProviderResult(
+                        platform=self.name,
+                        mentioned=mentioned,
+                        mention_count=mention_count,
+                        position_pct=position_pct,
+                        content_snippet=content[:snippet_chars],
+                        error=None,
+                        query=query,
+                        source_status="ok",
+                    )
+        except Exception as e:
+            return GeoProviderResult(
+                platform=self.name,
+                mentioned=False,
+                mention_count=0,
+                position_pct=None,
+                content_snippet="",
+                error=str(e),
+                query=query,
+                source_status="error",
+            )
+
+
+class PerplexityProvider(_CrawlSearchProvider):
     name = "Perplexity"
-    status = "enabled"
-    requires_auth = False
-    auth_env_vars: list[str] = []
-
-    async def check_visibility(
-        self, brand_name: str, category: str
-    ) -> GeoProviderResult:
-        # For backward compat, use default query
-        query = f"有哪些好用的{category}工具" if _looks_cjk(brand_name, category) else f"best {category} tools"
-        return await self._check_single_query(brand_name, query)
-
-    async def _check_single_query(
-        self, brand_name: str, query: str
-    ) -> GeoProviderResult:
-        snippet_chars = _get_snippet_chars()
-        url = f"https://www.perplexity.ai/search?q={quote_plus(query)}"
-        try:
-            async with browser_slot():
-                async with AsyncWebCrawler() as crawler:
-                    crawl_result = await crawler.arun(url=url)
-                    content = _extract_markdown(crawl_result)
-                    status = _classify_crawl_content(content)
-                    if status != "ok":
-                        return GeoProviderResult(
-                            platform=self.name,
-                            mentioned=False,
-                            mention_count=0,
-                            position_pct=None,
-                            content_snippet=content[:snippet_chars],
-                            error=None,
-                            query=query,
-                            source_status=status,
-                        )
-                    mentioned, mention_count, position_pct = _analyze_text(
-                        content, brand_name
-                    )
-                    return GeoProviderResult(
-                        platform=self.name,
-                        mentioned=mentioned,
-                        mention_count=mention_count,
-                        position_pct=position_pct,
-                        content_snippet=content[:snippet_chars],
-                        error=None,
-                        query=query,
-                        source_status="ok",
-                    )
-        except Exception as e:
-            return GeoProviderResult(
-                platform=self.name,
-                mentioned=False,
-                mention_count=0,
-                position_pct=None,
-                content_snippet="",
-                error=str(e),
-                query=query,
-                source_status="error",
-            )
+    search_url_template = "https://www.perplexity.ai/search?q={q}"
 
 
-class YouDotComProvider(GeoProvider):
+class YouDotComProvider(_CrawlSearchProvider):
     name = "You.com"
-    status = "enabled"
-    requires_auth = False
-    auth_env_vars: list[str] = []
+    search_url_template = "https://you.com/search?q={q}"
 
-    async def check_visibility(
-        self, brand_name: str, category: str
-    ) -> GeoProviderResult:
-        query = f"有哪些好用的{category}工具" if _looks_cjk(brand_name, category) else f"best {category} tools"
-        return await self._check_single_query(brand_name, query)
 
-    async def _check_single_query(
-        self, brand_name: str, query: str
-    ) -> GeoProviderResult:
-        snippet_chars = _get_snippet_chars()
-        url = f"https://you.com/search?q={quote_plus(query)}"
-        try:
-            async with browser_slot():
-                async with AsyncWebCrawler() as crawler:
-                    crawl_result = await crawler.arun(url=url)
-                    content = _extract_markdown(crawl_result)
-                    status = _classify_crawl_content(content)
-                    if status != "ok":
-                        return GeoProviderResult(
-                            platform=self.name,
-                            mentioned=False,
-                            mention_count=0,
-                            position_pct=None,
-                            content_snippet=content[:snippet_chars],
-                            error=None,
-                            query=query,
-                            source_status=status,
-                        )
-                    mentioned, mention_count, position_pct = _analyze_text(
-                        content, brand_name
-                    )
-                    return GeoProviderResult(
-                        platform=self.name,
-                        mentioned=mentioned,
-                        mention_count=mention_count,
-                        position_pct=position_pct,
-                        content_snippet=content[:snippet_chars],
-                        error=None,
-                        query=query,
-                        source_status="ok",
-                    )
-        except Exception as e:
-            return GeoProviderResult(
-                platform=self.name,
-                mentioned=False,
-                mention_count=0,
-                position_pct=None,
-                content_snippet="",
-                error=str(e),
-                query=query,
-                source_status="error",
-            )
+class MetaSoProvider(_CrawlSearchProvider):
+    name = "MetaSo"
+    search_url_template = "https://metaso.cn/?q={q}"
+
+
+class ThreeSixtyAISearchProvider(_CrawlSearchProvider):
+    name = "360 AI"
+    search_url_template = "https://www.so.com/s?q={q}"
 
 
 # ---------------------------------------------------------------------------
@@ -942,4 +913,6 @@ GEO_PROVIDER_REGISTRY: list[GeoProvider] = [
     DeepSeekProvider(),
     ZhipuProvider(),
     DoubaoProvider(),
+    MetaSoProvider(),
+    ThreeSixtyAISearchProvider(),
 ]
