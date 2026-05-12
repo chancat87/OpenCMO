@@ -23,6 +23,16 @@ from opencmo.storage._db import (
     get_db,
 )
 
+# --- AI Models (Provider config + smart failover) ---
+from opencmo.storage.ai_models import (
+    add_ai_model,
+    claim_quota,
+    delete_ai_model,
+    get_ai_model,
+    list_ai_models,
+    update_ai_model,
+)
+
 # --- Approvals ---
 from opencmo.storage.approvals import (
     create_approval,
@@ -277,6 +287,9 @@ _sys.modules[__name__].__class__ = _PatchableModule
 __all__ = [
     # _db
     "_DB_PATH", "_SCHEMA", "_SCHEMA_READY_FOR", "ensure_db", "get_db",
+    # ai_models
+    "add_ai_model", "claim_quota", "delete_ai_model",
+    "get_ai_model", "list_ai_models", "update_ai_model",
     # projects
     "ensure_project", "update_project", "get_project", "list_projects",
     "find_projects_by_brand", "find_project_by_identity", "delete_project",

@@ -1288,6 +1288,7 @@ async def api_v1_health():
 # Include domain routers
 # ---------------------------------------------------------------------------
 
+from opencmo.web.routers.ai_models import router as ai_models_router
 from opencmo.web.routers.approvals import router as approvals_router
 from opencmo.web.routers.blog_gen import router as blog_gen_router
 from opencmo.web.routers.brand_kit import router as brand_kit_router
@@ -1327,6 +1328,7 @@ app.include_router(performance_router)
 app.include_router(quick_actions_router)
 app.include_router(github_router)
 app.include_router(blog_gen_router)
+app.include_router(ai_models_router)
 
 
 # ---------------------------------------------------------------------------

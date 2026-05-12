@@ -350,3 +350,95 @@ async def chat_completion_messages(
 
     resp = await _call_with_retry(make_coro, timeout=timeout)
     return _extract_content(resp)
+
+
+async def chat_completion_with_failover(
+    role: str,
+    *,
+    messages: list[dict] | None = None,
+    system: str | None = None,
+    user: str | None = None,
+    temperature: float = 0.7,
+    timeout: float | None = None,
+    max_tokens: int | None = None,
+) -> str:
+    """LLM chat completion with multi-model failover by role.
+
+    Looks up ai_models rows for ``role`` ordered by failover_priority ASC,
+    then attempts each enabled candidate in turn. Per-attempt retry uses
+    the existing exponential backoff inside chat_completion_messages.
+
+    A candidate is skipped (and we move to the next) when:
+        - claim_quota returns False (disabled or daily_limit reached), or
+        - chat_completion_messages raises after exhausting its retries.
+
+    If no ai_models rows exist for the role, falls back to the standard
+    single-model chat_completion_messages path so existing callers keep
+    working during incremental adoption.
+
+    Raises:
+        ValueError: when both ``messages`` and ``system``/``user`` are absent.
+        RuntimeError: when every model was skipped due to exhausted quotas.
+        Exception: the last exception raised by an LLM provider when every
+            candidate failed for non-quota reasons.
+    """
+    if messages is None:
+        if system is None or user is None:
+            raise ValueError(
+                "chat_completion_with_failover requires either messages=[...] "
+                "or both system=... and user=..."
+            )
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ]
+
+    from opencmo.storage.ai_models import claim_quota, list_ai_models
+
+    candidates = await list_ai_models(role=role, enabled_only=True)
+    if not candidates:
+        return await chat_completion_messages(
+            messages,
+            temperature=temperature,
+            timeout=timeout,
+            max_tokens=max_tokens,
+        )
+
+    last_exc: Exception | None = None
+    any_attempted = False
+    for candidate in candidates:
+        claimed = await claim_quota(candidate["id"])
+        if not claimed:
+            logger.warning(
+                "ai_models id=%s name=%r skipped — quota exhausted or disabled",
+                candidate["id"],
+                candidate.get("name"),
+            )
+            continue
+        any_attempted = True
+        try:
+            return await chat_completion_messages(
+                messages,
+                temperature=temperature,
+                timeout=timeout,
+                max_tokens=max_tokens,
+                model_override=candidate["model_id"],
+                api_key_override=candidate.get("api_key") or None,
+                base_url_override=candidate.get("base_url") or None,
+            )
+        except Exception as exc:
+            last_exc = exc
+            logger.warning(
+                "ai_models id=%s name=%r failed: %s — failing over to next",
+                candidate["id"],
+                candidate.get("name"),
+                exc,
+            )
+            continue
+
+    if not any_attempted:
+        raise RuntimeError(
+            f"All ai_models for role={role!r} skipped — daily quota exhausted"
+        )
+    assert last_exc is not None
+    raise last_exc
