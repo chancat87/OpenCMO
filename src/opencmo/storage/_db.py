@@ -588,6 +588,26 @@ ON blog_drafts(project_id, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_blog_drafts_task
 ON blog_drafts(task_id);
+
+CREATE TABLE IF NOT EXISTS ai_models (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    role TEXT NOT NULL DEFAULT 'default',
+    name TEXT NOT NULL,
+    api_key TEXT NOT NULL DEFAULT '',
+    base_url TEXT NOT NULL DEFAULT '',
+    model_id TEXT NOT NULL,
+    failover_priority INTEGER NOT NULL DEFAULT 100,
+    daily_limit INTEGER NOT NULL DEFAULT 0,
+    used_today INTEGER NOT NULL DEFAULT 0,
+    used_total INTEGER NOT NULL DEFAULT 0,
+    last_reset_at TEXT,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_models_role_priority
+ON ai_models(role, enabled, failover_priority);
 """
 
 # ---------------------------------------------------------------------------
@@ -749,6 +769,25 @@ _MIGRATIONS: list[tuple[int, str, list[str]]] = [
         "ON reports(project_id, kind, audience, locale, version)",
         "CREATE INDEX IF NOT EXISTS idx_reports_project_latest "
         "ON reports(project_id, kind, audience, locale, is_latest, created_at DESC)",
+    ]),
+    (20, "ai_models table for provider config + smart failover", [
+        """CREATE TABLE IF NOT EXISTS ai_models (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            role TEXT NOT NULL DEFAULT 'default',
+            name TEXT NOT NULL,
+            api_key TEXT NOT NULL DEFAULT '',
+            base_url TEXT NOT NULL DEFAULT '',
+            model_id TEXT NOT NULL,
+            failover_priority INTEGER NOT NULL DEFAULT 100,
+            daily_limit INTEGER NOT NULL DEFAULT 0,
+            used_today INTEGER NOT NULL DEFAULT 0,
+            used_total INTEGER NOT NULL DEFAULT 0,
+            last_reset_at TEXT,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_ai_models_role_priority ON ai_models(role, enabled, failover_priority)",
     ]),
 ]
 
