@@ -1,6 +1,7 @@
 """Tests for web dashboard routes (legacy + API v1)."""
 
 import asyncio
+import base64
 import json
 import os
 import sqlite3
@@ -15,10 +16,13 @@ from opencmo import storage
 pytest.importorskip("fastapi")
 
 from fastapi.testclient import TestClient
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
+from opencmo import llm
 from opencmo.web import app as app_module
 from opencmo.web import chat_sessions, task_registry
-from opencmo.web.app import app
+from opencmo.web.app import app, byok_middleware
 
 
 @pytest.fixture
@@ -208,6 +212,78 @@ def test_settings_protected_and_rejects_private_base_url(tmp_path, monkeypatch):
                 json={"OPENAI_BASE_URL": "https://api.openai.com/v1"},
                 headers={"Authorization": "Bearer test-token"},
             ).status_code == 200
+
+
+def test_settings_save_supports_gsc_and_chinese_geo_provider_keys(client, monkeypatch):
+    keys = {
+        "GOOGLE_GSC_CREDENTIALS": '{"token":"gsc-token","refresh_token":"refresh"}',
+        "GOOGLE_GSC_SITE_URL": "sc-domain:example.com",
+        "MOONSHOT_API_KEY": "moonshot-test-key",
+        "DASHSCOPE_API_KEY": "dashscope-test-key",
+        "DEEPSEEK_API_KEY": "deepseek-test-key",
+        "ZHIPU_API_KEY": "zhipu-test-key",
+        "DOUBAO_API_KEY": "doubao-test-key",
+    }
+    for key in keys:
+        monkeypatch.delenv(key, raising=False)
+
+    resp = client.post("/api/v1/settings", json=keys)
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True}
+
+    for key, value in keys.items():
+        assert asyncio.run(storage.get_setting(key)) == value
+        assert os.environ[key] == value
+
+    status = client.get("/api/v1/settings").json()
+    assert status["gsc_credentials_set"] is True
+    assert status["gsc_site_url"] == "sc-domain:example.com"
+    assert status["moonshot_key_set"] is True
+    assert status["dashscope_key_set"] is True
+    assert status["deepseek_key_set"] is True
+    assert status["zhipu_key_set"] is True
+    assert status["doubao_key_set"] is True
+
+
+def test_byok_injectable_keys_include_gsc_and_chinese_geo_providers():
+    assert {
+        "GOOGLE_GSC_CREDENTIALS",
+        "GOOGLE_GSC_SITE_URL",
+        "MOONSHOT_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "DEEPSEEK_API_KEY",
+        "ZHIPU_API_KEY",
+        "DOUBAO_API_KEY",
+    }.issubset(app_module._INJECTABLE_KEYS)
+
+
+def test_byok_middleware_injects_gsc_and_chinese_geo_provider_keys():
+    user_keys = {
+        "GOOGLE_GSC_CREDENTIALS": '{"token":"gsc-token"}',
+        "GOOGLE_GSC_SITE_URL": "sc-domain:example.com",
+        "MOONSHOT_API_KEY": "moonshot-test-key",
+        "DASHSCOPE_API_KEY": "dashscope-test-key",
+        "DEEPSEEK_API_KEY": "deepseek-test-key",
+        "ZHIPU_API_KEY": "zhipu-test-key",
+        "DOUBAO_API_KEY": "doubao-test-key",
+    }
+    encoded = base64.b64encode(json.dumps(user_keys).encode()).decode()
+    request = Request({
+        "type": "http",
+        "method": "GET",
+        "path": "/api/v1/health",
+        "headers": [(b"x-user-keys", encoded.encode())],
+    })
+
+    async def call_next(_: Request):
+        for key, value in user_keys.items():
+            assert llm.get_key(key) == value
+        return JSONResponse({"ok": True})
+
+    response = asyncio.run(byok_middleware(request, call_next))
+
+    assert response.status_code == 200
+    assert llm.get_request_keys() == {}
 
 
 def test_api_v1_health_public(client):

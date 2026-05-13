@@ -10,8 +10,10 @@ from opencmo.tools.geo_providers import (
     ChatGPTProvider,
     ClaudeProvider,
     DeepSeekProvider,
+    DefaultLLMProvider,
     DoubaoProvider,
     GeminiProvider,
+    GeoProviderResult,
     KimiProvider,
     PerplexityProvider,
     QwenProvider,
@@ -335,3 +337,202 @@ async def test_provider_failure_graceful():
         assert result.mentioned is False
         assert result.error is not None
         assert "network error" in result.error
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "provider_cls",
+    [
+        DefaultLLMProvider,
+        ChatGPTProvider,
+        KimiProvider,
+        QwenProvider,
+        DeepSeekProvider,
+        ZhipuProvider,
+        DoubaoProvider,
+    ],
+)
+async def test_llm_api_provider_exception_status_is_error(provider_cls):
+    """LLM-backed provider exceptions should not look like ok/no-mention."""
+    provider = provider_cls()
+
+    with (
+        patch(
+            "opencmo.llm.chat_completion_messages",
+            new=AsyncMock(side_effect=Exception("api failed")),
+        ),
+        patch("opencmo.llm.get_model", new=AsyncMock(return_value="test-model")),
+        patch("opencmo.llm.get_key", return_value="test-key"),
+    ):
+        result = await provider._check_single_query("Crawl4AI", "query")
+
+    assert result.mentioned is False
+    assert result.error == "api failed"
+    assert result.source_status == "error"
+
+
+@pytest.mark.asyncio
+async def test_claude_provider_exception_status_is_error():
+    provider = ClaudeProvider()
+
+    with (
+        patch("opencmo.tools.geo_providers._HAS_ANTHROPIC", True),
+        patch("opencmo.tools.geo_providers.anthropic") as mock_anthropic,
+        patch("opencmo.llm.get_key", return_value="test-key"),
+    ):
+        mock_client = AsyncMock()
+        mock_client.messages.create = AsyncMock(side_effect=Exception("anthropic failed"))
+        mock_anthropic.AsyncAnthropic.return_value = mock_client
+
+        result = await provider._check_single_query("Crawl4AI", "query")
+
+    assert result.mentioned is False
+    assert result.error == "anthropic failed"
+    assert result.source_status == "error"
+
+
+@pytest.mark.asyncio
+async def test_gemini_provider_exception_status_is_error():
+    provider = GeminiProvider()
+
+    with (
+        patch("opencmo.tools.geo_providers._HAS_GENAI", True),
+        patch("opencmo.tools.geo_providers.genai") as mock_genai,
+        patch("opencmo.llm.get_key", return_value="test-key"),
+    ):
+        mock_model = AsyncMock()
+        mock_model.generate_content_async = AsyncMock(side_effect=Exception("gemini failed"))
+        mock_genai.GenerativeModel.return_value = mock_model
+
+        result = await provider._check_single_query("Crawl4AI", "query")
+
+    assert result.mentioned is False
+    assert result.error == "gemini failed"
+    assert result.source_status == "error"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "provider_cls",
+    [
+        DefaultLLMProvider,
+        ChatGPTProvider,
+        KimiProvider,
+        QwenProvider,
+        DeepSeekProvider,
+        ZhipuProvider,
+        DoubaoProvider,
+    ],
+)
+async def test_llm_api_provider_empty_response_status_is_empty(provider_cls):
+    """Empty API responses should be unobservable, not ok/no-mention."""
+    provider = provider_cls()
+
+    with (
+        patch("opencmo.llm.chat_completion_messages", new=AsyncMock(return_value="")),
+        patch("opencmo.llm.get_model", new=AsyncMock(return_value="test-model")),
+        patch("opencmo.llm.get_key", return_value="test-key"),
+    ):
+        result = await provider._check_single_query("Crawl4AI", "query")
+
+    assert result.mentioned is False
+    assert result.error is None
+    assert result.source_status == "empty"
+
+
+@pytest.mark.asyncio
+async def test_claude_provider_empty_response_status_is_empty():
+    provider = ClaudeProvider()
+    mock_response = MagicMock()
+    mock_response.content = []
+
+    with (
+        patch("opencmo.tools.geo_providers._HAS_ANTHROPIC", True),
+        patch("opencmo.tools.geo_providers.anthropic") as mock_anthropic,
+        patch("opencmo.llm.get_key", return_value="test-key"),
+    ):
+        mock_client = AsyncMock()
+        mock_client.messages.create = AsyncMock(return_value=mock_response)
+        mock_anthropic.AsyncAnthropic.return_value = mock_client
+
+        result = await provider._check_single_query("Crawl4AI", "query")
+
+    assert result.mentioned is False
+    assert result.error is None
+    assert result.source_status == "empty"
+
+
+@pytest.mark.asyncio
+async def test_gemini_provider_empty_response_status_is_empty():
+    provider = GeminiProvider()
+    mock_response = MagicMock()
+    mock_response.text = ""
+
+    with (
+        patch("opencmo.tools.geo_providers._HAS_GENAI", True),
+        patch("opencmo.tools.geo_providers.genai") as mock_genai,
+        patch("opencmo.llm.get_key", return_value="test-key"),
+    ):
+        mock_model = AsyncMock()
+        mock_model.generate_content_async = AsyncMock(return_value=mock_response)
+        mock_genai.GenerativeModel.return_value = mock_model
+
+        result = await provider._check_single_query("Crawl4AI", "query")
+
+    assert result.mentioned is False
+    assert result.error is None
+    assert result.source_status == "empty"
+
+
+@pytest.mark.asyncio
+async def test_api_provider_blocked_response_status_is_blocked():
+    provider = DefaultLLMProvider()
+
+    with patch(
+        "opencmo.llm.chat_completion_messages",
+        new=AsyncMock(return_value="Access denied. Too many requests."),
+    ):
+        result = await provider._check_single_query("Crawl4AI", "query")
+
+    assert result.mentioned is False
+    assert result.error is None
+    assert result.source_status == "blocked"
+
+
+@pytest.mark.asyncio
+async def test_provider_multi_aggregates_error_and_empty_statuses():
+    provider = KimiProvider()
+
+    async def fake_check(_brand_name, query):
+        if query == "empty query":
+            return GeoProviderResult(
+                platform=provider.name,
+                mentioned=False,
+                mention_count=0,
+                position_pct=None,
+                content_snippet="",
+                error=None,
+                query=query,
+                source_status="empty",
+            )
+        return GeoProviderResult(
+            platform=provider.name,
+            mentioned=False,
+            mention_count=0,
+            position_pct=None,
+            content_snippet="",
+            error="api failed",
+            query=query,
+            source_status="error",
+        )
+
+    with (
+        patch("opencmo.tools.geo_providers._get_query_templates", return_value=["empty query", "error query"]),
+        patch.object(provider, "_check_single_query", side_effect=fake_check),
+    ):
+        result = await provider.check_visibility_multi("Crawl4AI", "web scraping")
+
+    assert result.mentioned is False
+    assert result.error == "api failed"
+    assert result.source_status == "error"
+    assert [r.source_status for r in result.per_query_results] == ["empty", "error"]

@@ -185,6 +185,7 @@ async def run_scheduled_scan(
             import json
 
             from opencmo.tools.geo_providers import (
+                GeoAggregatedResult,
                 compute_share_of_voice,
                 get_enabled_providers,
                 reset_brand_aliases,
@@ -199,8 +200,16 @@ async def run_scheduled_scan(
                 async def _check_one(provider):
                     try:
                         return provider.name, await provider.check_visibility_multi(brand, category)
-                    except Exception:
-                        return provider.name, None
+                    except Exception as exc:
+                        return provider.name, GeoAggregatedResult(
+                            platform=provider.name,
+                            mentioned=False,
+                            total_mention_count=0,
+                            best_position_pct=None,
+                            per_query_results=[],
+                            source_status="error",
+                            error=str(exc),
+                        )
 
                 pairs = await asyncio.gather(*(_check_one(p) for p in enabled))
                 results = {name: agg for name, agg in pairs if agg is not None}
@@ -226,29 +235,38 @@ async def run_scheduled_scan(
                 sov = None
 
             usable = {name: r for name, r in results.items() if getattr(r, "source_status", "ok") == "ok"}
+            crawl_success_rate = len(usable) / len(enabled) if enabled else 0.0
             platforms_mentioned = sum(1 for r in usable.values() if r.mentioned)
             visibility_score = int(platforms_mentioned / len(usable) * 40) if usable else 0
             position_scores = [30 * (1 - r.best_position_pct / 100) for r in usable.values() if r.best_position_pct is not None]
             position_score = int(sum(position_scores) / len(position_scores)) if position_scores else 0
             sentiment_snippets: dict[str, str] = {}
             for name, aggregated in results.items():
+                if getattr(aggregated, "source_status", "ok") != "ok":
+                    continue
                 snippets = [
                     qr.content_snippet
                     for qr in getattr(aggregated, "per_query_results", [])
-                    if getattr(qr, "content_snippet", "")
+                    if getattr(qr, "content_snippet", "") and getattr(qr, "source_status", "ok") == "ok"
                 ]
                 if snippets:
                     sentiment_snippets[name] = "\n".join(snippets)
 
             sentiment_signal = await analyze_geo_sentiment(brand, sentiment_snippets)
             sentiment_score = sentiment_signal.score
-            geo_score = visibility_score + position_score + (sentiment_score or 0)
+            geo_score = (
+                visibility_score + position_score + (sentiment_score or 0)
+                if crawl_success_rate > 0
+                else None
+            )
 
             payload = {
                 name: {
                     "mentioned": r.mentioned,
                     "mention_count": r.total_mention_count,
                     "position_pct": r.best_position_pct,
+                    "source_status": getattr(r, "source_status", "ok"),
+                    "error": getattr(r, "error", None),
                 }
                 for name, r in results.items()
             }
@@ -263,6 +281,7 @@ async def run_scheduled_scan(
                 visibility_score=visibility_score,
                 position_score=position_score,
                 sentiment_score=sentiment_score,
+                crawl_success_rate=crawl_success_rate,
                 platform_results_json=platform_json,
                 share_of_voice_json=json.dumps(sov) if sov is not None else None,
                 params_hash=storage.scan_params_hash(

@@ -23,6 +23,7 @@ export function HostedWaitlist({ variant }: Props) {
   const [errorMsg, setErrorMsg] = useState<string>("");
 
   const isInline = variant === "inline";
+  const TitleTag = isInline ? "h3" : "h1";
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -69,15 +70,15 @@ export function HostedWaitlist({ variant }: Props) {
   return (
     <div className={wrapperClass}>
       <div className={isInline ? "" : "text-center"}>
-        <h3
+        <TitleTag
           className={
             isInline
               ? "font-display text-xl font-semibold tracking-tight text-white sm:text-2xl"
-              : "font-display text-2xl font-semibold tracking-tight text-white sm:text-3xl"
+              : "font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl"
           }
         >
           {t("landing.hosted.title")}
-        </h3>
+        </TitleTag>
         <p
           className={
             isInline

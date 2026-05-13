@@ -43,9 +43,16 @@ async def api_v1_settings_get():
     # GEO platforms
     anthropic_key = await _get_setting("ANTHROPIC_API_KEY")
     google_ai_key = await _get_setting("GOOGLE_AI_API_KEY")
+    moonshot_key = await _get_setting("MOONSHOT_API_KEY")
+    dashscope_key = await _get_setting("DASHSCOPE_API_KEY")
+    deepseek_key = await _get_setting("DEEPSEEK_API_KEY")
+    zhipu_key = await _get_setting("ZHIPU_API_KEY")
+    doubao_key = await _get_setting("DOUBAO_API_KEY")
     geo_chatgpt = await _get_setting("OPENCMO_GEO_CHATGPT")
     # SEO
     pagespeed_key = await _get_setting("PAGESPEED_API_KEY")
+    gsc_credentials = await _get_setting("GOOGLE_GSC_CREDENTIALS")
+    gsc_site_url = await _get_setting("GOOGLE_GSC_SITE_URL")
     # Search (Tavily)
     tavily_key = await _get_setting("TAVILY_API_KEY")
     # GitHub
@@ -76,10 +83,22 @@ async def api_v1_settings_get():
         "anthropic_key_masked": _mask_key(anthropic_key),
         "google_ai_key_set": bool(google_ai_key),
         "google_ai_key_masked": _mask_key(google_ai_key),
+        "moonshot_key_set": bool(moonshot_key),
+        "moonshot_key_masked": _mask_key(moonshot_key),
+        "dashscope_key_set": bool(dashscope_key),
+        "dashscope_key_masked": _mask_key(dashscope_key),
+        "deepseek_key_set": bool(deepseek_key),
+        "deepseek_key_masked": _mask_key(deepseek_key),
+        "zhipu_key_set": bool(zhipu_key),
+        "zhipu_key_masked": _mask_key(zhipu_key),
+        "doubao_key_set": bool(doubao_key),
+        "doubao_key_masked": _mask_key(doubao_key),
         "geo_chatgpt_enabled": geo_chatgpt == "1",
         # SEO
         "pagespeed_key_set": bool(pagespeed_key),
         "pagespeed_key_masked": _mask_key(pagespeed_key),
+        "gsc_credentials_set": bool(gsc_credentials),
+        "gsc_site_url": gsc_site_url,
         # Search (Tavily)
         "tavily_key_set": bool(tavily_key),
         "tavily_key_masked": _mask_key(tavily_key),
@@ -106,9 +125,10 @@ _ALL_SETTING_KEYS = (
     # Twitter
     "TWITTER_API_KEY", "TWITTER_API_SECRET", "TWITTER_ACCESS_TOKEN", "TWITTER_ACCESS_SECRET",
     # GEO
-    "ANTHROPIC_API_KEY", "GOOGLE_AI_API_KEY", "OPENCMO_GEO_CHATGPT",
+    "ANTHROPIC_API_KEY", "GOOGLE_AI_API_KEY", "MOONSHOT_API_KEY", "DASHSCOPE_API_KEY",
+    "DEEPSEEK_API_KEY", "ZHIPU_API_KEY", "DOUBAO_API_KEY", "OPENCMO_GEO_CHATGPT",
     # SEO
-    "PAGESPEED_API_KEY",
+    "PAGESPEED_API_KEY", "GOOGLE_GSC_CREDENTIALS", "GOOGLE_GSC_SITE_URL",
     # Search (Tavily)
     "TAVILY_API_KEY",
     # GitHub

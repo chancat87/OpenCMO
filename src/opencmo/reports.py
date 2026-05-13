@@ -160,6 +160,18 @@ def _safe_delta(latest, previous):
     return latest - previous
 
 
+def _score_percent(value) -> float | None:
+    if value is None:
+        return None
+    try:
+        num = float(value)
+    except (TypeError, ValueError):
+        return None
+    if 0 <= num <= 1:
+        return num * 100
+    return num
+
+
 def _rank_label(position: int | None) -> str:
     if position is None:
         return "未排名"
@@ -600,9 +612,9 @@ async def _build_strategic_facts(project_id: int, *, locale: str = "zh") -> tupl
         if ranked:
             strengths.append(f"已有 {len(ranked)}/{len(serp_latest)} 个关键词进入搜索结果。")
     if citability_history:
-        avg = citability_history[0].get("avg_score")
-        if avg and avg >= 0.6:
-            strengths.append(f"AI 引文可信度评分 {round(avg * 100)}%，内容被 AI 引用的潜力较高。")
+        avg = _score_percent(citability_history[0].get("avg_score"))
+        if avg is not None and avg >= 60:
+            strengths.append(f"AI 引文可信度评分 {round(avg)}%，内容被 AI 引用的潜力较高。")
     if brand_presence_history:
         fp = brand_presence_history[0].get("footprint_score")
         if fp and fp >= 60:
@@ -629,9 +641,9 @@ async def _build_strategic_facts(project_id: int, *, locale: str = "zh") -> tupl
     if environment_limitations:
         risks.append(f"有 {len(environment_limitations)} 条监控限制来自环境或 provider 异常，需谨慎解读。")
     if citability_history:
-        avg = citability_history[0].get("avg_score")
-        if avg is not None and avg < 0.4:
-            risks.append(f"AI 引文可信度评分仅 {round(avg * 100)}%，内容结构化程度不足以被 AI 引用。")
+        avg = _score_percent(citability_history[0].get("avg_score"))
+        if avg is not None and avg < 40:
+            risks.append(f"AI 引文可信度评分仅 {round(avg)}%，内容结构化程度不足以被 AI 引用。")
     if ai_crawler_history:
         blocked = ai_crawler_history[0].get("blocked_count", 0)
         if blocked > 3:
@@ -824,9 +836,9 @@ async def _build_periodic_facts(
         ranked = [item for item in serp_latest if item.get("position")]
         top_changes.append(f"当前共有 {len(ranked)}/{len(serp_latest)} 个关键词进入自然搜索结果。")
     if citability_history:
-        avg = citability_history[0].get("avg_score")
+        avg = _score_percent(citability_history[0].get("avg_score"))
         if avg is not None:
-            top_changes.append(f"AI 引文可信度评分 {round(avg * 100)}%。")
+            top_changes.append(f"AI 引文可信度评分 {round(avg)}%。")
     if brand_presence_history:
         fp = brand_presence_history[0].get("footprint_score")
         if fp is not None:

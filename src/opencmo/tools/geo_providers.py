@@ -94,6 +94,16 @@ def _classify_crawl_content(content: str) -> str:
     return "ok"
 
 
+def _classify_api_content(content: str) -> str:
+    """Return 'ok' | 'empty' | 'blocked' for an API provider response."""
+    if not content or not content.strip():
+        return "empty"
+    lowered = content.lower()
+    if any(marker in lowered for marker in _BLOCKED_MARKERS):
+        return "blocked"
+    return "ok"
+
+
 _STATUS_RANK = {"ok": 0, "empty": 1, "blocked": 2, "error": 3}
 
 
@@ -442,6 +452,19 @@ class DefaultLLMProvider(GeoProvider):
                 [{"role": "user", "content": query}],
                 max_tokens=1024,
             )
+            content = content or ""
+            status = _classify_api_content(content)
+            if status != "ok":
+                return GeoProviderResult(
+                    platform=self.name,
+                    mentioned=False,
+                    mention_count=0,
+                    position_pct=None,
+                    content_snippet=content[:snippet_chars],
+                    error=None,
+                    query=query,
+                    source_status=status,
+                )
             mentioned, mention_count, position_pct = _analyze_text(
                 content, brand_name
             )
@@ -453,6 +476,7 @@ class DefaultLLMProvider(GeoProvider):
                 content_snippet=content[:snippet_chars],
                 error=None,
                 query=query,
+                source_status="ok",
             )
         except Exception as e:
             return GeoProviderResult(
@@ -463,6 +487,7 @@ class DefaultLLMProvider(GeoProvider):
                 content_snippet="",
                 error=str(e),
                 query=query,
+                source_status="error",
             )
 
 
@@ -610,6 +635,19 @@ class ChatGPTProvider(GeoProvider):
                 model_override=await llm.get_model(),
                 max_tokens=1024,
             )
+            content = content or ""
+            status = _classify_api_content(content)
+            if status != "ok":
+                return GeoProviderResult(
+                    platform=self.name,
+                    mentioned=False,
+                    mention_count=0,
+                    position_pct=None,
+                    content_snippet=content[:snippet_chars],
+                    error=None,
+                    query=query,
+                    source_status=status,
+                )
             mentioned, mention_count, position_pct = _analyze_text(
                 content, brand_name
             )
@@ -621,6 +659,7 @@ class ChatGPTProvider(GeoProvider):
                 content_snippet=content[:snippet_chars],
                 error=None,
                 query=query,
+                source_status="ok",
             )
         except Exception as e:
             return GeoProviderResult(
@@ -631,6 +670,7 @@ class ChatGPTProvider(GeoProvider):
                 content_snippet="",
                 error=str(e),
                 query=query,
+                source_status="error",
             )
 
 
@@ -673,6 +713,19 @@ class ClaudeProvider(GeoProvider):
                 ],
             )
             content = response.content[0].text if response.content else ""
+            content = content or ""
+            status = _classify_api_content(content)
+            if status != "ok":
+                return GeoProviderResult(
+                    platform=self.name,
+                    mentioned=False,
+                    mention_count=0,
+                    position_pct=None,
+                    content_snippet=content[:snippet_chars],
+                    error=None,
+                    query=query,
+                    source_status=status,
+                )
             mentioned, mention_count, position_pct = _analyze_text(
                 content, brand_name
             )
@@ -684,6 +737,7 @@ class ClaudeProvider(GeoProvider):
                 content_snippet=content[:snippet_chars],
                 error=None,
                 query=query,
+                source_status="ok",
             )
         except Exception as e:
             return GeoProviderResult(
@@ -694,6 +748,7 @@ class ClaudeProvider(GeoProvider):
                 content_snippet="",
                 error=str(e),
                 query=query,
+                source_status="error",
             )
 
 
@@ -726,6 +781,18 @@ class GeminiProvider(GeoProvider):
             model = genai.GenerativeModel("gemini-1.5-flash")
             response = await model.generate_content_async(query)
             content = response.text or ""
+            status = _classify_api_content(content)
+            if status != "ok":
+                return GeoProviderResult(
+                    platform=self.name,
+                    mentioned=False,
+                    mention_count=0,
+                    position_pct=None,
+                    content_snippet=content[:snippet_chars],
+                    error=None,
+                    query=query,
+                    source_status=status,
+                )
             mentioned, mention_count, position_pct = _analyze_text(
                 content, brand_name
             )
@@ -737,6 +804,7 @@ class GeminiProvider(GeoProvider):
                 content_snippet=content[:snippet_chars],
                 error=None,
                 query=query,
+                source_status="ok",
             )
         except Exception as e:
             return GeoProviderResult(
@@ -747,6 +815,7 @@ class GeminiProvider(GeoProvider):
                 content_snippet="",
                 error=str(e),
                 query=query,
+                source_status="error",
             )
 
 
@@ -791,6 +860,19 @@ class _OpenAICompatibleProvider(GeoProvider):
                 api_key_override=llm.get_key(self.api_key_env),
                 base_url_override=self.base_url,
             )
+            content = content or ""
+            status = _classify_api_content(content)
+            if status != "ok":
+                return GeoProviderResult(
+                    platform=self.name,
+                    mentioned=False,
+                    mention_count=0,
+                    position_pct=None,
+                    content_snippet=content[:snippet_chars],
+                    error=None,
+                    query=query,
+                    source_status=status,
+                )
             mentioned, mention_count, position_pct = _analyze_text(
                 content, brand_name
             )
@@ -802,6 +884,7 @@ class _OpenAICompatibleProvider(GeoProvider):
                 content_snippet=content[:snippet_chars],
                 error=None,
                 query=query,
+                source_status="ok",
             )
         except Exception as e:
             return GeoProviderResult(
@@ -812,6 +895,7 @@ class _OpenAICompatibleProvider(GeoProvider):
                 content_snippet="",
                 error=str(e),
                 query=query,
+                source_status="error",
             )
 
 

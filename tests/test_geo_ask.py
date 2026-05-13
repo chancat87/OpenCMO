@@ -23,7 +23,6 @@ from fastapi.testclient import TestClient
 
 from opencmo.web.app import app
 
-
 # ---------------------------------------------------------------------------
 # Helpers — stub providers we can drop into the registry for deterministic tests
 # ---------------------------------------------------------------------------

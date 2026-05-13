@@ -11,6 +11,7 @@ import {
   BLOG_PRINCIPLES,
   BLOG_READER_PATHS,
   PUBLIC_BLOG_NAV,
+  getHostedPath,
   getLandingPath,
   getLocalizedBlogArticlePath,
 } from "../content/marketing";
@@ -21,6 +22,7 @@ import { useI18n } from "../i18n";
 export function BlogPage() {
   const { t } = useI18n();
   const seoLocale = usePublicSeoLocale();
+  const hostedPath = getHostedPath(seoLocale);
   const featuredArticle = BLOG_ARTICLES.find((article) => article.slug === BLOG_FEATURED_ARTICLE_SLUG) ?? BLOG_ARTICLES[0]!;
   const decisionArticles = BLOG_ARTICLES.filter((article) =>
     BLOG_DECISION_ARTICLE_SLUGS.includes(article.slug as (typeof BLOG_DECISION_ARTICLE_SLUGS)[number]),
@@ -71,7 +73,7 @@ export function BlogPage() {
                   <ArrowRight size={16} />
                 </Link>
                 <Link
-                  to="/workspace"
+                  to={hostedPath}
                   className="inline-flex items-center gap-2 rounded-full border border-black/8 bg-white/72 px-5 py-3 text-sm font-semibold text-slate-900 transition-colors hover:bg-white"
                 >
                   {t("blog.workspaceCta")}

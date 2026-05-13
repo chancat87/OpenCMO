@@ -234,8 +234,10 @@ async def test_run_scheduled_scan_geo_uses_real_sentiment_analysis(tmp_path):
 
         history = await storage.get_geo_history(pid, limit=1)
         assert history[0]["sentiment_score"] == 21
+        assert history[0]["crawl_success_rate"] == 1.0
         assert history[0]["geo_score"] == 83
         payload = json.loads(history[0]["platform_results_json"])
+        assert payload["Perplexity"]["source_status"] == "ok"
         assert payload["_sentiment"]["label"] == "positive"
 
 
@@ -268,8 +270,10 @@ async def test_run_scheduled_scan_geo_leaves_sentiment_empty_when_unavailable(tm
 
         history = await storage.get_geo_history(pid, limit=1)
         assert history[0]["sentiment_score"] is None
+        assert history[0]["crawl_success_rate"] == 1.0
         assert history[0]["geo_score"] == 55
         payload = json.loads(history[0]["platform_results_json"])
+        assert payload["Perplexity"]["source_status"] == "ok"
         assert payload["_sentiment"]["label"] == "unavailable"
 
 

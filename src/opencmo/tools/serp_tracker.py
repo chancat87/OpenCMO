@@ -144,12 +144,13 @@ class CrawlSerpProvider(SerpProvider):
 class DataForSeoProvider(SerpProvider):
     name = "dataforseo"
     status = "stub"
+    status_reason = "DataForSEO SERP provider is not implemented yet"
 
     @property
     def is_enabled(self) -> bool:
-
-        from opencmo import llm
-        return bool(llm.get_key("DATAFORSEO_LOGIN") and llm.get_key("DATAFORSEO_PASSWORD"))
+        # Keep the stub visible in the registry without allowing credentials or
+        # provider ordering to select a non-functional provider for live checks.
+        return False
 
     async def check_ranking(
         self, keyword: str, target_domain: str, num_results: int = 20
@@ -159,7 +160,7 @@ class DataForSeoProvider(SerpProvider):
             url_found=None,
             total_results=0,
             provider=self.name,
-            error="DataForSEO provider not implemented yet",
+            error=self.status_reason,
         )
 
 

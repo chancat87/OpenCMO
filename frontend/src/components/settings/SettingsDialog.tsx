@@ -124,6 +124,13 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
   const [anthropicKey, setAnthropicKey] = useState("");
   const [googleAiKey, setGoogleAiKey] = useState("");
   const [pagespeedKey, setPagespeedKey] = useState("");
+  const [gscCredentials, setGscCredentials] = useState("");
+  const [gscSiteUrl, setGscSiteUrl] = useState("");
+  const [moonshotKey, setMoonshotKey] = useState("");
+  const [dashscopeKey, setDashscopeKey] = useState("");
+  const [deepseekKey, setDeepseekKey] = useState("");
+  const [zhipuKey, setZhipuKey] = useState("");
+  const [doubaoKey, setDoubaoKey] = useState("");
 
   // ── Server-side settings ──
   const [redditClientId, setRedditClientId] = useState("");
@@ -156,12 +163,20 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
     if (uk.ANTHROPIC_API_KEY) setAnthropicKey(uk.ANTHROPIC_API_KEY);
     if (uk.GOOGLE_AI_API_KEY) setGoogleAiKey(uk.GOOGLE_AI_API_KEY);
     if (uk.PAGESPEED_API_KEY) setPagespeedKey(uk.PAGESPEED_API_KEY);
+    if (uk.GOOGLE_GSC_CREDENTIALS) setGscCredentials(uk.GOOGLE_GSC_CREDENTIALS);
+    if (uk.GOOGLE_GSC_SITE_URL) setGscSiteUrl(uk.GOOGLE_GSC_SITE_URL);
+    if (uk.MOONSHOT_API_KEY) setMoonshotKey(uk.MOONSHOT_API_KEY);
+    if (uk.DASHSCOPE_API_KEY) setDashscopeKey(uk.DASHSCOPE_API_KEY);
+    if (uk.DEEPSEEK_API_KEY) setDeepseekKey(uk.DEEPSEEK_API_KEY);
+    if (uk.ZHIPU_API_KEY) setZhipuKey(uk.ZHIPU_API_KEY);
+    if (uk.DOUBAO_API_KEY) setDoubaoKey(uk.DOUBAO_API_KEY);
 
     // Load server-side status
     getSettings().then((s) => {
       setStatus(s);
       if (!uk.OPENAI_BASE_URL && s.base_url) setBaseUrl(s.base_url);
       if (!uk.OPENCMO_MODEL_DEFAULT && s.model) setModel(s.model);
+      if (!uk.GOOGLE_GSC_SITE_URL && s.gsc_site_url) setGscSiteUrl(s.gsc_site_url);
       setAutoPublish(s.auto_publish);
       setGeoChatgpt(s.geo_chatgpt_enabled);
       setSmtpHost(s.smtp_host);
@@ -185,6 +200,13 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
       if (anthropicKey) newKeys.ANTHROPIC_API_KEY = anthropicKey;
       if (googleAiKey) newKeys.GOOGLE_AI_API_KEY = googleAiKey;
       if (pagespeedKey) newKeys.PAGESPEED_API_KEY = pagespeedKey;
+      if (gscCredentials) newKeys.GOOGLE_GSC_CREDENTIALS = gscCredentials;
+      if (gscSiteUrl) newKeys.GOOGLE_GSC_SITE_URL = gscSiteUrl;
+      if (moonshotKey) newKeys.MOONSHOT_API_KEY = moonshotKey;
+      if (dashscopeKey) newKeys.DASHSCOPE_API_KEY = dashscopeKey;
+      if (deepseekKey) newKeys.DEEPSEEK_API_KEY = deepseekKey;
+      if (zhipuKey) newKeys.ZHIPU_API_KEY = zhipuKey;
+      if (doubaoKey) newKeys.DOUBAO_API_KEY = doubaoKey;
       setUserKeys(newKeys);
 
       // 2. Save server-side settings only when an operator changed them.
@@ -347,10 +369,40 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
                   okText={`Gemini ${t("settings.configured")} (${status.google_ai_key_masked})`}
                   noText={`Gemini ${t("settings.notConfigured")}`}
                 />
+                <StatusBadge
+                  ok={status.moonshot_key_set}
+                  okText={`Kimi ${t("settings.configured")} (${status.moonshot_key_masked})`}
+                  noText={`Kimi ${t("settings.notConfigured")}`}
+                />
+                <StatusBadge
+                  ok={status.dashscope_key_set}
+                  okText={`Qwen ${t("settings.configured")} (${status.dashscope_key_masked})`}
+                  noText={`Qwen ${t("settings.notConfigured")}`}
+                />
+                <StatusBadge
+                  ok={status.deepseek_key_set}
+                  okText={`DeepSeek ${t("settings.configured")} (${status.deepseek_key_masked})`}
+                  noText={`DeepSeek ${t("settings.notConfigured")}`}
+                />
+                <StatusBadge
+                  ok={status.zhipu_key_set}
+                  okText={`Zhipu ${t("settings.configured")} (${status.zhipu_key_masked})`}
+                  noText={`Zhipu ${t("settings.notConfigured")}`}
+                />
+                <StatusBadge
+                  ok={status.doubao_key_set}
+                  okText={`Doubao ${t("settings.configured")} (${status.doubao_key_masked})`}
+                  noText={`Doubao ${t("settings.notConfigured")}`}
+                />
               </>
             )}
             <Field label={t("settings.anthropicKey")} type="password" placeholder="sk-ant-..." value={anthropicKey} onChange={setAnthropicKey} />
             <Field label={t("settings.googleAiKey")} type="password" placeholder="AIza..." value={googleAiKey} onChange={setGoogleAiKey} />
+            <Field label={t("settings.moonshotKey")} type="password" placeholder="sk-..." value={moonshotKey} onChange={setMoonshotKey} />
+            <Field label={t("settings.dashscopeKey")} type="password" placeholder="sk-..." value={dashscopeKey} onChange={setDashscopeKey} />
+            <Field label={t("settings.deepseekKey")} type="password" placeholder="sk-..." value={deepseekKey} onChange={setDeepseekKey} />
+            <Field label={t("settings.zhipuKey")} type="password" placeholder="..." value={zhipuKey} onChange={setZhipuKey} />
+            <Field label={t("settings.doubaoKey")} type="password" placeholder="..." value={doubaoKey} onChange={setDoubaoKey} />
             <Toggle label={t("settings.geoChatgpt")} hint={t("settings.geoChatgptHint")} value={geoChatgpt} onChange={setGeoChatgpt} />
             <p className="text-[10px] text-slate-400">{t("settings.geoHint")}</p>
           </Section>
@@ -365,6 +417,15 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
               />
             )}
             <Field label={t("settings.pagespeedKey")} type="password" placeholder="AIza..." hint={t("settings.pagespeedHint")} value={pagespeedKey} onChange={setPagespeedKey} />
+            {status && (
+              <StatusBadge
+                ok={status.gsc_credentials_set}
+                okText={`GSC ${t("settings.configured")}`}
+                noText={t("settings.gscNotConfigured")}
+              />
+            )}
+            <Field label={t("settings.gscCredentials")} type="password" placeholder='{"token":"..."}' hint={t("settings.gscCredentialsHint")} value={gscCredentials} onChange={setGscCredentials} />
+            <Field label={t("settings.gscSiteUrl")} placeholder="sc-domain:example.com" hint={t("settings.gscSiteUrlHint")} value={gscSiteUrl} onChange={setGscSiteUrl} />
           </Section>
 
           {/* ── Search (Tavily) ── */}

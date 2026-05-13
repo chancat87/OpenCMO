@@ -16,7 +16,8 @@ import { SiteFooter } from "../components/layout/SiteFooter";
 import { useI18n } from "../i18n";
 import type { TranslationKey } from "../i18n";
 import { usePublicPageMetadata } from "../hooks/usePublicPageMetadata";
-import { PUBLIC_HOME_NAV } from "../content/marketing";
+import { PUBLIC_HOME_NAV, getHostedPath } from "../content/marketing";
+import { usePublicSeoLocale } from "../hooks/usePublicSeoLocale";
 
 const CONTACT_EMAIL = "hello@aidcmo.com";
 const GITHUB_REPO_URL = "https://github.com/study8677/OpenCMO";
@@ -72,6 +73,8 @@ const BRIEF_FIELDS = [
 
 export function ServicesPage() {
   const { t } = useI18n();
+  const seoLocale = usePublicSeoLocale();
+  const hostedPath = getHostedPath(seoLocale);
 
   usePublicPageMetadata({
     title: t("service.audit.metaTitle"),
@@ -106,7 +109,7 @@ export function ServicesPage() {
                   {t("service.audit.heroCta")}
                 </a>
                 <Link
-                  to="/workspace"
+                  to={hostedPath}
                   className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/6 px-7 py-4 text-sm font-semibold text-white/90 transition-colors hover:border-white/25 hover:text-white"
                 >
                   <LayoutDashboard size={16} />
@@ -243,7 +246,7 @@ export function ServicesPage() {
                   {t("service.audit.heroCta")}
                 </a>
                 <Link
-                  to="/workspace"
+                  to={hostedPath}
                   className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/6 px-7 py-4 text-sm font-semibold text-white/90 transition-colors hover:border-white/25 hover:text-white"
                 >
                   {t("service.audit.workspaceCta")}

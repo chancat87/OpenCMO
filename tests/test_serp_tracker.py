@@ -277,14 +277,39 @@ def test_get_active_provider_default():
     assert provider.name == "crawl"
 
 
-def test_get_active_provider_dataforseo(monkeypatch):
-    """DataForSeoProvider enabled when env vars are set."""
+def test_dataforseo_provider_stub_is_never_enabled(monkeypatch):
+    """DataForSeoProvider remains a visible stub, not an active provider."""
     from opencmo.tools.serp_tracker import DataForSeoProvider
 
     monkeypatch.setenv("DATAFORSEO_LOGIN", "test")
     monkeypatch.setenv("DATAFORSEO_PASSWORD", "test")
     provider = DataForSeoProvider()
-    assert provider.is_enabled
+    assert provider.status == "stub"
+    assert not provider.is_enabled
+
+
+def test_dataforseo_stub_does_not_preempt_active_provider(monkeypatch):
+    """DataForSeoProvider should not win provider resolution while it is a stub."""
+    from opencmo.tools import serp_tracker
+    from opencmo.tools.serp_tracker import DataForSeoProvider
+
+    class FakeCrawlProvider:
+        name = "crawl"
+
+        @property
+        def is_enabled(self):
+            return True
+
+    monkeypatch.setenv("DATAFORSEO_LOGIN", "test")
+    monkeypatch.setenv("DATAFORSEO_PASSWORD", "test")
+    monkeypatch.setattr(
+        serp_tracker,
+        "SERP_PROVIDER_REGISTRY",
+        [DataForSeoProvider(), FakeCrawlProvider()],
+    )
+
+    provider = serp_tracker._get_active_provider()
+    assert provider.name == "crawl"
 
 
 def test_tavily_provider_client_uses_current_byok_key(monkeypatch):

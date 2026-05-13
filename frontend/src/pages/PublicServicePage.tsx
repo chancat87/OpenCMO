@@ -101,7 +101,7 @@ const CONTACT_ROUTES: ContactRoute[] = [
     title: "service.contact.routeWorkspaceTitle",
     body: "service.contact.routeWorkspaceBody",
     cta: "service.contact.routeWorkspaceCta",
-    href: "/workspace",
+    href: "/hosted",
   },
 ];
 
@@ -231,6 +231,7 @@ function ContactPage({ content }: { content: ServicePageContent }) {
   const { t } = useI18n();
   const seoLocale = usePublicSeoLocale();
   const servicesPath = getLocalizedPublicPath("/services", seoLocale);
+  const hostedPath = getLocalizedPublicPath("/hosted", seoLocale);
 
   return (
     <div className="min-h-screen bg-[#08141f] text-white">
@@ -267,7 +268,7 @@ function ContactPage({ content }: { content: ServicePageContent }) {
                   <ArrowRight size={14} />
                 </Link>
                 <Link
-                  to="/workspace"
+                  to={hostedPath}
                   className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/6 px-7 py-4 text-sm font-semibold text-white/90 transition-colors hover:border-white/25 hover:text-white"
                 >
                   <LayoutDashboard size={16} />

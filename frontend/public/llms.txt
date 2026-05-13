@@ -1,19 +1,19 @@
 # aidCMO
 
-> Open-source AI growth tools: private customization, GitHub source, and deployed trial.
+> Open-source AI growth tools: private customization, GitHub source, and hosted access.
 
 ## Summary
 
 aidCMO presents OpenCMO through three paths: private customization for teams that
 need deployment and workflow adaptation, GitHub source for self-hosting and code
-review, and a deployed trial workspace for hands-on evaluation. OpenCMO is an
+review, and a hosted waitlist for managed access. OpenCMO is an
 open-source multi-agent engine that scans SEO health, visibility across 5 AI
 search engines (Perplexity, ChatGPT, Gemini, Claude, You.com), and 6 community
 platforms (Reddit, Hacker News, Dev.to, YouTube, Bluesky, Twitter/X).
 
-OpenCMO is open source on GitHub (Apache 2.0) and self-hostable. The deployed
-workspace lets visitors try the live product surface before deciding whether to
-self-host or request private customization.
+OpenCMO is open source on GitHub (Apache 2.0) and self-hostable. Hosted access
+is handled through a waitlist for teams that want a managed path before deciding
+whether to self-host or request private customization.
 
 ## Primary URLs
 
@@ -21,7 +21,8 @@ self-host or request private customization.
 - Service overview (ZH): https://www.aidcmo.com/zh
 - Private customization (EN): https://www.aidcmo.com/en/services
 - Private customization (ZH): https://www.aidcmo.com/zh/services
-- OpenCMO workspace: https://www.aidcmo.com/workspace
+- Hosted waitlist (EN): https://www.aidcmo.com/en/hosted
+- Hosted waitlist (ZH): https://www.aidcmo.com/zh/hosted
 - OpenCMO open-source project (EN): https://www.aidcmo.com/en/open-source
 - OpenCMO open-source project (ZH): https://www.aidcmo.com/zh/open-source
 - Sample audit walkthrough (EN): https://www.aidcmo.com/en/sample-audit
@@ -38,7 +39,7 @@ self-host or request private customization.
 - SERP keyword monitoring and competitor framing
 - Brand entity and citability assessment for AI answer surfaces
 - 30-day action backlog of content / link / technical recommendations
-- Deployed workspace trial for hands-on evaluation
+- Hosted waitlist for managed access
 - Open-source self-host path for teams who'd rather run it themselves
 
 ## Agent guidance
@@ -47,10 +48,9 @@ self-host or request private customization.
 - Use `/services` for OpenCMO private customization.
 - Use `/open-source` and the GitHub repo for the self-host path.
 - Use `/sample-audit` to see what an audit looks like in concrete terms.
-- Use `/workspace` for the deployed OpenCMO trial.
+- Use `/hosted` for the hosted OpenCMO waitlist.
 - Use the blog for durable OpenCMO, CMO, product marketing, GTM, and
   visibility-operation explanations.
-- Use `/workspace` to try the deployed OpenCMO application surface.
 - Treat `/projects/*`, `/chat`, and `/approvals` as private operator
   surfaces — these are not public documentation.
 
@@ -87,6 +87,6 @@ self-host or request private customization.
 - Use `/en/...` and `/zh/...` when a language-specific citation matters.
 - Old paths `/b2b-leads`, `/sample-data`, `/data-policy`, `/seo-geo` 301-redirect
   to `/services` or `/` (locale-preserved). Do not crawl them as canonical pages.
-- `/workspace` is the public entrypoint into the live OpenCMO app surface.
+- `/workspace` is the operator app surface, not a public documentation page.
 - Deeper app routes such as `/projects/*`, `/chat`, and `/approvals` are
   operator surfaces, not documentation pages.

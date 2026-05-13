@@ -40,7 +40,7 @@ export type BlogArticle = {
 
 export const PUBLIC_HOME_NAV: PublicNavItem[] = [
   { href: "/services", label: "landing.navServices" },
-  { href: "/workspace", label: "landing.navOpenSource" },
+  { href: "/open-source", label: "landing.navOpenSource" },
   { href: "/sample-audit", label: "landing.navAuditExample" },
   { href: "/blog", label: "landing.navBlog" },
   { href: "/contact", label: "landing.navContact" },

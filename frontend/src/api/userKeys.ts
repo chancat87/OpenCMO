@@ -19,6 +19,13 @@ export const USER_KEY_NAMES = [
   "ANTHROPIC_API_KEY",
   "GOOGLE_AI_API_KEY",
   "PAGESPEED_API_KEY",
+  "GOOGLE_GSC_CREDENTIALS",
+  "GOOGLE_GSC_SITE_URL",
+  "MOONSHOT_API_KEY",
+  "DASHSCOPE_API_KEY",
+  "DEEPSEEK_API_KEY",
+  "ZHIPU_API_KEY",
+  "DOUBAO_API_KEY",
 ] as const;
 
 export type UserKeyName = (typeof USER_KEY_NAMES)[number];

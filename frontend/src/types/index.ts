@@ -519,10 +519,22 @@ export interface AISettings {
   anthropic_key_masked: string;
   google_ai_key_set: boolean;
   google_ai_key_masked: string;
+  moonshot_key_set: boolean;
+  moonshot_key_masked: string;
+  dashscope_key_set: boolean;
+  dashscope_key_masked: string;
+  deepseek_key_set: boolean;
+  deepseek_key_masked: string;
+  zhipu_key_set: boolean;
+  zhipu_key_masked: string;
+  doubao_key_set: boolean;
+  doubao_key_masked: string;
   geo_chatgpt_enabled: boolean;
   // SEO
   pagespeed_key_set: boolean;
   pagespeed_key_masked: string;
+  gsc_credentials_set: boolean;
+  gsc_site_url: string;
   // Search (Tavily)
   tavily_key_set: boolean;
   tavily_key_masked: string;

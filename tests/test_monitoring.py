@@ -1,6 +1,8 @@
 """Tests for monitoring orchestration."""
 
 import asyncio
+import json
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -125,6 +127,89 @@ async def test_collect_signals_emits_github_success_when_discovery_has_no_warnin
     summaries = [event["summary"] for event in captured if event["stage"] == "signal_collect"]
     assert "GitHub discovery finished: 3 found, 1 contactable." in summaries
     assert not any("GitHub discovery failed" in summary for summary in summaries)
+
+
+@pytest.mark.asyncio
+async def test_collect_signals_seo_passes_url_to_health_score():
+    project_id = await storage.ensure_project("SeoBrand", "https://seo.test", "saas")
+
+    crawler = AsyncMock()
+    crawler.__aenter__.return_value = crawler
+    crawler.__aexit__.return_value = False
+    crawler.arun.return_value = SimpleNamespace(
+        html="<html><title>SEO Brand</title></html>",
+        markdown="",
+        media={},
+        links={},
+    )
+
+    health_score = None
+
+    def compute_score(*args, **kwargs):
+        nonlocal health_score
+        health_score = kwargs
+        return 88.0
+
+    with patch("crawl4ai.AsyncWebCrawler", return_value=crawler), \
+         patch("opencmo.tools.seo_audit._fetch_core_web_vitals", new=AsyncMock(return_value=None)), \
+         patch("opencmo.tools.seo_audit._check_robots_and_sitemap", new=AsyncMock(return_value={
+             "has_robots": True,
+             "robots_disallow_all": False,
+             "has_sitemap": True,
+             "sitemap_loc_count": 1,
+             "sitemap_in_robots": "https://seo.test/sitemap.xml",
+         })), \
+         patch("opencmo.tools.seo_audit._check_security_headers", new=AsyncMock(return_value={"has_hsts": True, "has_security_headers": True})), \
+         patch("opencmo.tools.seo_audit._compute_seo_health_score", side_effect=compute_score), \
+         patch("opencmo.tools.serp_tracker.track_project_keywords", new=AsyncMock()), \
+         patch("opencmo.monitoring._emit", new=AsyncMock()):
+        await _collect_signals(1, project_id, "seo", 1, None)
+
+    assert health_score is not None
+    assert health_score["url"] == "https://seo.test"
+    history = await storage.get_seo_history(project_id, limit=1)
+    assert history[0]["seo_health_score"] == 88.0
+
+
+@pytest.mark.asyncio
+async def test_collect_signals_geo_persists_provider_status_and_success_rate():
+    project_id = await storage.ensure_project("GeoBrand", "https://geo.test", "saas")
+
+    ok_provider = SimpleNamespace(
+        name="Perplexity",
+        is_enabled=True,
+        check_visibility_multi=AsyncMock(return_value=SimpleNamespace(
+            mentioned=True,
+            total_mention_count=2,
+            best_position_pct=25,
+            source_status="ok",
+            error=None,
+            per_query_results=[
+                SimpleNamespace(
+                    content_snippet="GeoBrand is frequently recommended.",
+                    source_status="ok",
+                ),
+            ],
+        )),
+    )
+    failing_provider = SimpleNamespace(
+        name="Claude",
+        is_enabled=True,
+        check_visibility_multi=AsyncMock(side_effect=RuntimeError("provider unavailable")),
+    )
+
+    with patch("opencmo.tools.geo_providers.GEO_PROVIDER_REGISTRY", [ok_provider, failing_provider]), \
+         patch("opencmo.tools.text_signals.analyze_geo_sentiment", new=AsyncMock(return_value=SimpleNamespace(score=21, label="positive", reasoning="ok"))), \
+         patch("opencmo.monitoring._emit", new=AsyncMock()):
+        await _collect_signals(1, project_id, "geo", 1, None)
+
+    history = await storage.get_geo_history(project_id, limit=1)
+    assert history[0]["crawl_success_rate"] == 0.5
+    assert history[0]["geo_score"] == 83
+    payload = json.loads(history[0]["platform_results_json"])
+    assert payload["Perplexity"]["source_status"] == "ok"
+    assert payload["Claude"]["source_status"] == "error"
+    assert payload["Claude"]["error"] == "provider unavailable"
 
 
 @pytest.mark.asyncio

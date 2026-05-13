@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from opencmo import service, storage
-from opencmo.reports import _classify_findings
+from opencmo.reports import _classify_findings, _score_percent
 
 
 @pytest.fixture(autouse=True)
@@ -20,6 +20,12 @@ def _db(tmp_path):
 
 def run(coro):
     return asyncio.run(coro)
+
+
+def test_score_percent_accepts_fraction_and_percent_scales():
+    assert _score_percent(0.7) == 70
+    assert _score_percent(80) == 80
+    assert _score_percent(None) is None
 
 
 async def _seed_project():

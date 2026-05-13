@@ -23,9 +23,16 @@ export type SettingsSavePayload = {
   // GEO
   ANTHROPIC_API_KEY?: string;
   GOOGLE_AI_API_KEY?: string;
+  MOONSHOT_API_KEY?: string;
+  DASHSCOPE_API_KEY?: string;
+  DEEPSEEK_API_KEY?: string;
+  ZHIPU_API_KEY?: string;
+  DOUBAO_API_KEY?: string;
   OPENCMO_GEO_CHATGPT?: string;
   // SEO
   PAGESPEED_API_KEY?: string;
+  GOOGLE_GSC_CREDENTIALS?: string;
+  GOOGLE_GSC_SITE_URL?: string;
   // Search (Tavily)
   TAVILY_API_KEY?: string;
   // SERP

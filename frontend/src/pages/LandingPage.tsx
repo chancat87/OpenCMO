@@ -9,9 +9,11 @@ import { SiteFooter } from "../components/layout/SiteFooter";
 import { PublicSiteHeader } from "../components/marketing/PublicSiteHeader";
 import { SectionReveal } from "../components/marketing/SectionReveal";
 import { BuiltInOpen } from "../components/marketing/BuiltInOpen";
+import { HostedWaitlist } from "../components/marketing/HostedWaitlist";
 import {
   PUBLIC_HOME_NAV,
   getContactPath,
+  getHostedPath,
   getServicesPath,
 } from "../content/marketing";
 import { usePublicPageMetadata } from "../hooks/usePublicPageMetadata";
@@ -63,8 +65,8 @@ const PATH_CARDS = [
   {
     title: "landing.pathDeployedTitle",
     body: "landing.pathDeployedDesc",
-    cta: "landing.workspaceCta",
-    href: "/workspace",
+    cta: "landing.hosted.submitButton",
+    href: "/hosted",
     external: false,
   },
 ] as const;
@@ -82,6 +84,9 @@ export function LandingPage() {
   const getPathCardHref = (href: string) => {
     if (href === "/services") {
       return getServicesPath(seoLocale);
+    }
+    if (href === "/hosted") {
+      return getHostedPath(seoLocale);
     }
     return href;
   };
@@ -123,11 +128,11 @@ export function LandingPage() {
                 <ExternalLink size={14} />
               </a>
               <Link
-                to="/workspace"
+                to={getHostedPath(seoLocale)}
                 className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/6 px-7 py-4 text-sm font-semibold text-white/90 transition-colors hover:border-white/25 hover:text-white"
               >
                 <MonitorPlay size={16} />
-                {t("landing.workspaceCta")}
+                {t("landing.hosted.submitButton")}
                 <ArrowRight size={14} />
               </Link>
             </div>
@@ -288,13 +293,9 @@ export function LandingPage() {
                   {t("landing.heroSecondaryCta")}
                   <ExternalLink size={14} />
                 </a>
-                <Link
-                  to="/workspace"
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-white/65 transition-colors hover:text-white"
-                >
-                  {t("landing.workspaceCta")}
-                  <ArrowRight size={14} />
-                </Link>
+              </div>
+              <div className="mx-auto mt-10 max-w-xl text-left">
+                <HostedWaitlist variant="inline" />
               </div>
               <p className="mt-10 text-sm text-white/55">
                 {t("landing.emailLabel")} ·{" "}
