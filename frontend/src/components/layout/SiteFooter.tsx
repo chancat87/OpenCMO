@@ -1,6 +1,6 @@
 import { ExternalLink, Github, Link2, Sparkles } from "lucide-react";
 import { Link } from "react-router";
-import { getBlogIndexPath, getLandingPath, getServicesPath, getHostedPath } from "../../content/marketing";
+import { getBlogIndexPath, getLandingPath, getServicesPath } from "../../content/marketing";
 import { useSiteStats } from "../../hooks/useSiteStats";
 import { usePublicSeoLocale } from "../../hooks/usePublicSeoLocale";
 import { useI18n } from "../../i18n";
@@ -28,7 +28,6 @@ export function SiteFooter({ variant = "workspace" }: SiteFooterProps) {
   const landingHref = getLandingPath(seoLocale);
   const blogHref = getBlogIndexPath(seoLocale);
   const servicesHref = getServicesPath(seoLocale);
-  const hostedHref = getHostedPath(seoLocale);
 
   if (variant === "public") {
     return (
@@ -70,10 +69,10 @@ export function SiteFooter({ variant = "workspace" }: SiteFooterProps) {
                   {t("landing.primaryCta")}
                 </Link>
                 <Link
-                  to={hostedHref}
+                  to="/workspace"
                   className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/6 px-4 py-3 text-sm font-semibold text-white/86 transition-colors hover:border-white/22 hover:bg-white/10 hover:text-white"
                 >
-                  {t("landing.hosted.submitButton")}
+                  {t("landing.workspaceCta")}
                 </Link>
               </div>
             </div>

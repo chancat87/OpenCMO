@@ -50,11 +50,11 @@ _HOME_STATIC_SITE_COPY_BY_LOCALE = {
 <main id="static-site-copy">
   <header>
     <p>aidCMO</p>
-    <h1>OpenCMO: private customization, GitHub source, or hosted waitlist.</h1>
+    <h1>OpenCMO: private customization, GitHub source, or deployed trial.</h1>
     <p>
       OpenCMO scans SEO, AI visibility, SERP movement, and community signals.
-      Use it through private customization, self-host it from GitHub, or join
-      the hosted access waitlist.
+      Use it through private customization, self-host it from GitHub, or open
+      the deployed workspace first.
     </p>
   </header>
   <section>
@@ -62,18 +62,18 @@ _HOME_STATIC_SITE_COPY_BY_LOCALE = {
     <ul>
       <li>Private customization for teams that need deployment and workflow adaptation.</li>
       <li>GitHub source for teams that want to inspect, fork, or self-host OpenCMO.</li>
-      <li>Hosted waitlist for teams that want managed access before self-hosting or customization.</li>
+      <li>Deployed trial workspace for teams that want to experience the product first.</li>
     </ul>
   </section>
   <section>
     <h2>OpenCMO — open-source on GitHub</h2>
     <p>
-      OpenCMO is open on GitHub and self-hostable. Hosted access is being
-      staged for teams that want managed OpenCMO before private customization.
+      OpenCMO is open on GitHub and self-hostable. The deployed workspace shows
+      the operator surface before you commit to private customization.
     </p>
     <ul>
       <li>GitHub repository: https://github.com/study8677/OpenCMO</li>
-      <li>Hosted waitlist: https://www.aidcmo.com/en/hosted</li>
+      <li>OpenCMO workspace: https://www.aidcmo.com/workspace</li>
       <li>License: Apache 2.0 — https://github.com/study8677/OpenCMO/blob/main/LICENSE</li>
       <li>Machine-readable summary: https://www.aidcmo.com/llms.txt</li>
     </ul>
@@ -82,13 +82,13 @@ _HOME_STATIC_SITE_COPY_BY_LOCALE = {
     <h2>How to engage</h2>
     <p>
       Choose the path that matches your stage: private customization, GitHub
-      self-hosting, or hosted access.
+      self-hosting, or the deployed workspace.
     </p>
     <ul>
       <li>Private customization: https://www.aidcmo.com/en/services</li>
       <li>Audit example: https://www.aidcmo.com/en/sample-audit</li>
       <li>Open-source project: https://www.aidcmo.com/en/open-source</li>
-      <li>Hosted waitlist: https://www.aidcmo.com/en/hosted</li>
+      <li>OpenCMO workspace: https://www.aidcmo.com/workspace</li>
       <li>Contact: hello@aidcmo.com</li>
     </ul>
   </section>
@@ -98,10 +98,10 @@ _HOME_STATIC_SITE_COPY_BY_LOCALE = {
 <main id="static-site-copy">
   <header>
     <p>aidCMO</p>
-    <h1>OpenCMO：私有化定制、GitHub 源码、hosted waitlist。</h1>
+    <h1>OpenCMO：私有化定制、GitHub 源码、已部署版试用。</h1>
     <p>
       OpenCMO 扫描 SEO、AI 可见度、SERP 变化和社区信号。
-      你可以做私有化定制，从 GitHub 自部署，也可以先加入 hosted 访问名单。
+      你可以做私有化定制，从 GitHub 自部署，也可以先打开已部署版体验。
     </p>
   </header>
   <section>
@@ -109,18 +109,18 @@ _HOME_STATIC_SITE_COPY_BY_LOCALE = {
     <ul>
       <li>私有化定制：适合需要部署和工作流适配的团队。</li>
       <li>GitHub 源码：适合想检查、fork 或自部署 OpenCMO 的团队。</li>
-      <li>Hosted waitlist：适合想先获得 managed access 的团队。</li>
+      <li>已部署版试用：适合想先体验真实产品界面的团队。</li>
     </ul>
   </section>
   <section>
     <h2>OpenCMO — 在 GitHub 上开源</h2>
     <p>
-      OpenCMO 在 GitHub 上开源，也可以自部署。Hosted access 面向想先使用托管版、
-      再决定是否私有化定制的团队。
+      OpenCMO 在 GitHub 上开源，也可以自部署。已部署版用于先看真实工作台，
+      再决定是否私有化定制。
     </p>
     <ul>
       <li>GitHub 仓库: https://github.com/study8677/OpenCMO</li>
-      <li>Hosted waitlist: https://www.aidcmo.com/zh/hosted</li>
+      <li>OpenCMO 工作台: https://www.aidcmo.com/workspace</li>
       <li>许可证: Apache 2.0 — https://github.com/study8677/OpenCMO/blob/main/LICENSE</li>
       <li>机器可读摘要: https://www.aidcmo.com/llms.txt</li>
     </ul>
@@ -128,13 +128,13 @@ _HOME_STATIC_SITE_COPY_BY_LOCALE = {
   <section>
     <h2>如何合作</h2>
     <p>
-      按阶段选择：私有化定制、GitHub 自部署，或 hosted 访问。
+      按阶段选择：私有化定制、GitHub 自部署，或已部署版试用。
     </p>
     <ul>
       <li>私有化定制: https://www.aidcmo.com/zh/services</li>
       <li>审计样例: https://www.aidcmo.com/zh/sample-audit</li>
       <li>开源项目: https://www.aidcmo.com/zh/open-source</li>
-      <li>Hosted waitlist: https://www.aidcmo.com/zh/hosted</li>
+      <li>OpenCMO 工作台: https://www.aidcmo.com/workspace</li>
       <li>联系: hello@aidcmo.com</li>
     </ul>
   </section>
@@ -777,14 +777,14 @@ def _build_home_json_ld(locale: str | None = None) -> str:
             "image": "https://www.aidcmo.com/logo.png",
             "description": (
                 "aidCMO supports private OpenCMO customization, GitHub self-hosting, "
-                "and a hosted access waitlist."
+                "and a deployed trial workspace."
                 if localized == "en"
-                else "aidCMO 支持 OpenCMO 私有化定制、GitHub 自部署和 hosted 访问名单。"
+                else "aidCMO 支持 OpenCMO 私有化定制、GitHub 自部署和已部署版试用。"
             ),
             "serviceType": [
                 "OpenCMO private customization",
                 "OpenCMO self-host support",
-                "Hosted OpenCMO waitlist",
+                "Deployed workspace trial",
                 "SEO audit",
                 "GEO and AI search visibility audit",
             ],
@@ -1062,15 +1062,15 @@ def _apply_public_route_metadata(html: str, full_path: str) -> str:
 
     if normalized == "":
         title = (
-            "aidCMO — OpenCMO private customization, GitHub, and hosted waitlist"
+            "aidCMO — OpenCMO private customization, GitHub, and deployed trial"
             if locale_key == "en"
-            else "aidCMO — OpenCMO 私有化定制、GitHub 与 hosted waitlist"
+            else "aidCMO — OpenCMO 私有化定制、GitHub 与已部署版试用"
         )
         description = (
             "OpenCMO is an open-source AI CMO workspace. Choose private customization, "
-            "review the GitHub repo, or join the hosted waitlist."
+            "review the GitHub repo, or try the deployed workspace."
             if locale_key == "en"
-            else "OpenCMO 是开源 AI CMO 工作台。你可以选择私有化定制、查看 GitHub 源码，或加入 hosted waitlist。"
+            else "OpenCMO 是开源 AI CMO 工作台。你可以选择私有化定制、查看 GitHub 源码，或直接试用已部署版。"
         )
         canonical_url = _public_url("/", route_locale)
         replacements = [
