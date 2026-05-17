@@ -12,6 +12,7 @@ import { GlobalOverview } from "../components/dashboard/GlobalOverview";
 import { InsightBanner } from "../components/dashboard/InsightBanner";
 import { MonitorForm } from "../components/monitors/MonitorForm";
 import { AnalysisDialog } from "../components/monitors/AnalysisDialog";
+import { UnlockCustomPlanCTA } from "../components/UnlockCustomPlanCTA";
 import { useI18n } from "../i18n";
 import { Eye, Loader2 } from "lucide-react";
 import { useAuth } from "../components/auth/useAuth";
@@ -74,7 +75,7 @@ export function DashboardPage() {
   };
 
   const trialUsageCards = usage ? (
-    <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
       {[
         ["trial.remainingDays", usage.remaining_days, usage.plan],
         ["trial.projectUsage", `${usage.projects.used}/${usage.projects.limit}`, t("trial.projects")],
@@ -87,6 +88,7 @@ export function DashboardPage() {
           <p className="mt-1 text-xs text-slate-500">{detail}</p>
         </div>
       ))}
+      <UnlockCustomPlanCTA variant="card" />
     </div>
   ) : null;
 

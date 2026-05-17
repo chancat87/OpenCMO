@@ -1127,4 +1127,14 @@ export const ja: Partial<Record<TranslationKey, string>> = {
   "contactQR.subheading": "WeChatでQRをスキャンすると、すぐにメッセージを送れます。",
   "contactQR.imageAlt": "WeChat連絡QRコード",
   "contactQR.close": "閉じる",
+
+  // Unlock custom plan CTA + modal
+  "unlock.cta": "カスタムプランをアンロック",
+  "unlock.cardLabel": "もっと必要？",
+  "unlock.cardHint": "タップしてQRをスキャンし、専用プランをご相談ください。",
+  "unlock.title": "カスタムプラン",
+  "unlock.subtitle": "QRをスキャンして、貴チームに合わせたプランをご相談ください。",
+  "unlock.qrAlt": "WeChat連絡QRコード",
+  "unlock.footer": "1日以内にWeChatでご返信します。",
+  "unlock.close": "閉じる",
 };

@@ -1929,6 +1929,16 @@ export const en = {
   "contactQR.subheading": "Scan the QR with WeChat to message us directly.",
   "contactQR.imageAlt": "WeChat contact QR code",
   "contactQR.close": "Close",
+
+  // Unlock custom plan CTA + modal
+  "unlock.cta": "Unlock custom plan",
+  "unlock.cardLabel": "Need more?",
+  "unlock.cardHint": "Tap to scan our WeChat QR and discuss a tailored plan.",
+  "unlock.title": "Custom Plan",
+  "unlock.subtitle": "Scan to discuss a tailored plan for your team.",
+  "unlock.qrAlt": "WeChat contact QR code",
+  "unlock.footer": "We'll respond on WeChat within a day.",
+  "unlock.close": "Close",
 } as const;
 
 export type TranslationKey = keyof typeof en;
