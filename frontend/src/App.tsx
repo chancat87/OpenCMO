@@ -1,13 +1,16 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import { BrowserRouter, Navigate, Routes, Route, useLocation } from "react-router";
 import { AppShell } from "./components/layout/AppShell";
+import { FloatingContactQR } from "./components/FloatingContactQR";
 import { PublicLocaleSync } from "./components/marketing/PublicLocaleSync";
+import { isPublicRoutePath } from "./utils/publicRoutes";
 import { LandingPage } from "./pages/LandingPage";
 import { PublicServicePage, type PublicServicePageKind } from "./pages/PublicServicePage";
 import { ServicesPage } from "./pages/ServicesPage";
 import { HostedWaitlistPage } from "./pages/HostedWaitlistPage";
 import { SignupPage } from "./pages/SignupPage";
 import { LoginPage } from "./pages/LoginPage";
+import { VerifyEmailPage } from "./pages/VerifyEmailPage";
 import { AdminPage } from "./pages/AdminPage";
 import { BlogPage } from "./pages/BlogPage";
 import { BlogArticlePage } from "./pages/BlogArticlePage";
@@ -93,6 +96,12 @@ function RequireAuth({ children, adminOnly = false }: { children: ReactNode; adm
   return children;
 }
 
+function PublicFloatingWidgets() {
+  const location = useLocation();
+  if (!isPublicRoutePath(location.pathname)) return null;
+  return <FloatingContactQR />;
+}
+
 function AppRoutes() {
   const localizedService = (locale: "en" | "zh", kind: PublicServicePageKind) => (
     <LocalizedPublicPage locale={locale}>
@@ -113,6 +122,7 @@ function AppRoutes() {
       <Route path="/zh/hosted" element={<LocalizedPublicPage locale="zh"><HostedWaitlistPage /></LocalizedPublicPage>} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/open-source" element={<PublicServicePage kind="open-source" />} />
       <Route path="/en/open-source" element={localizedService("en", "open-source")} />
       <Route path="/zh/open-source" element={localizedService("zh", "open-source")} />
@@ -169,6 +179,7 @@ export default function App() {
   return (
     <BrowserRouter basename="/">
       <AppRoutes />
+      <PublicFloatingWidgets />
     </BrowserRouter>
   );
 }

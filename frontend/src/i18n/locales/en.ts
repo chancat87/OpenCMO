@@ -83,6 +83,25 @@ export const en = {
   "trial.usageEvents": "Usage events",
   "trial.noUsageEvents": "No usage events in the latest window.",
 
+  // Email verification
+  "verify.title": "Verify your email",
+  "verify.subtitle": "Enter the 6-digit code we sent to",
+  "verify.codeLabel": "Verification code",
+  "verify.digitAria": "Digit {{index}}",
+  "verify.submit": "Verify",
+  "verify.resend": "Resend code",
+  "verify.resendCountdown": "Resend in {{seconds}}s",
+  "verify.resentInfo": "A new code is on the way.",
+  "verify.errorInvalid": "That code is not valid. Please try again.",
+  "verify.errorInvalidRemaining": "That code is not valid. {{remaining}} attempt(s) left.",
+  "verify.errorExpired": "Your code expired. Request a new one to continue.",
+  "verify.errorLocked": "Too many wrong attempts. Request a new code to continue.",
+  "verify.errorNoPending": "No active code. Request a new one to continue.",
+  "verify.errorRateLimited": "Please wait before requesting another code.",
+  "verify.errorGeneric": "Something went wrong. Please try again.",
+  "verify.missingUser": "Missing verification context",
+  "verify.missingUserBody": "Start the signup flow again to receive a fresh code.",
+
   // Dashboard
   "dashboard.title": "AI CMO Console",
   "dashboard.newMonitor": "New Monitor",
@@ -1901,6 +1920,13 @@ export const en = {
   "reports.snapshotNoActions": "No clear next action extracted yet. Open the report below for the full readout.",
   "monitors.addAnotherTitle": "Keep monitoring coverage fresh",
   "monitors.addAnotherDesc": "Add another URL, locale, or schedule for this project without leaving the page.",
+
+  // Floating contact QR widget
+  "contactQR.pillLabel": "Add me on WeChat",
+  "contactQR.heading": "Scan to connect on WeChat",
+  "contactQR.subheading": "Scan the QR with WeChat to message us directly.",
+  "contactQR.imageAlt": "WeChat contact QR code",
+  "contactQR.close": "Close",
 } as const;
 
 export type TranslationKey = keyof typeof en;
