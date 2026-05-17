@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
 import { ArrowRight, CheckCircle2, Globe, KeyRound, Search, Sparkles, Users } from "lucide-react";
 import { getEffectiveKeyStatus } from "../../api/userKeys";
 import { useI18n } from "../../i18n";
@@ -35,6 +36,8 @@ export function WelcomeHero({
   onTaskCreated?: (taskId: string, url: string, projectId: number) => void;
 }) {
   const { t, locale } = useI18n();
+  const [searchParams] = useSearchParams();
+  const initialUrlParam = searchParams.get("url") ?? "";
   const [url, setUrl] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -44,6 +47,12 @@ export function WelcomeHero({
   const keyStatus = getEffectiveKeyStatus(settingsQuery.data);
   const keysReady = keyStatus.effective.llm;
   void keyRefresh;
+
+  useEffect(() => {
+    if (initialUrlParam) {
+      setUrl(initialUrlParam);
+    }
+  }, [initialUrlParam]);
 
   useEffect(() => {
     const refresh = () => setKeyRefresh((value) => value + 1);

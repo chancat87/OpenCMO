@@ -17,6 +17,7 @@ const CONTACT_EMAIL = "hello@aidcmo.com";
 type PublicSiteHeaderProps = {
   items: PublicNavItem[];
   theme?: "dark" | "light";
+  workspaceHref?: string;
 };
 
 function PublicNavLink({
@@ -51,6 +52,7 @@ function PublicNavLink({
 export function PublicSiteHeader({
   items,
   theme = "dark",
+  workspaceHref = "/workspace",
 }: PublicSiteHeaderProps) {
   const { t, locale, setLocale } = useI18n();
   const location = useLocation();
@@ -76,6 +78,9 @@ export function PublicSiteHeader({
   const activeLocale = isPublicRoute ? publicLocale : locale;
 
   const publicHref = (href: string) => {
+    if (href === "/workspace") {
+      return workspaceHref;
+    }
     if (href.startsWith("#") || !isPublicRoute) {
       return href;
     }
@@ -172,7 +177,7 @@ export function PublicSiteHeader({
             <ExternalLink size={14} />
           </a>
           <Link
-            to="/workspace"
+            to={workspaceHref}
             className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-colors ${workspaceClass}`}
           >
             <LayoutDashboard size={16} />

@@ -1,28 +1,29 @@
 # aidCMO
 
-> Open-source AI growth tools: private customization, GitHub source, and a deployed trial workspace.
+> OpenCMO is an AI CMO workspace that starts from one URL and turns public context into overseas growth actions.
 
 ## Summary
 
-aidCMO presents OpenCMO through three paths: private customization for teams that
-need deployment and workflow adaptation, GitHub source for self-hosting and code
-review, and a deployed trial workspace for trying the product surface before
-customization. OpenCMO is an
-open-source multi-agent engine that scans SEO health, visibility across 5 AI
-search engines (Perplexity, ChatGPT, Gemini, Claude, You.com), and 6 community
-platforms (Reddit, Hacker News, Dev.to, YouTube, Bluesky, Twitter/X).
+aidCMO presents OpenCMO as an AI CMO workspace: paste one website URL, then use a
+product workbench to monitor visibility signals, preserve market context, review
+community and search opportunities, and turn them into prioritized growth
+actions. OpenCMO is an open-source multi-agent engine that scans SEO health,
+visibility across 5 AI search engines
+(Perplexity, ChatGPT, Gemini, Claude, You.com), and 6 community platforms
+(Reddit, Hacker News, Dev.to, YouTube, Bluesky, Twitter/X).
 
-OpenCMO is open source on GitHub (Apache 2.0) and self-hostable. The deployed
-workspace lets teams inspect the operator experience before deciding whether to
-self-host or request private customization.
+The workspace connects monitoring, approvals, comments, content actions,
+reports, and follow-up decisions so overseas growth can be operated from one
+source of truth. OpenCMO is open source on GitHub (Apache 2.0) and self-hostable
+for teams that want full control of the engine.
 
 ## Primary URLs
 
 - Service overview (EN): https://www.aidcmo.com/en
 - Service overview (ZH): https://www.aidcmo.com/zh
-- Private customization (EN): https://www.aidcmo.com/en/services
-- Private customization (ZH): https://www.aidcmo.com/zh/services
-- Deployed workspace: https://www.aidcmo.com/workspace
+- Product overview (EN): https://www.aidcmo.com/en/services
+- Product overview (ZH): https://www.aidcmo.com/zh/services
+- OpenCMO workspace: https://www.aidcmo.com/workspace
 - OpenCMO open-source project (EN): https://www.aidcmo.com/en/open-source
 - OpenCMO open-source project (ZH): https://www.aidcmo.com/zh/open-source
 - Sample audit walkthrough (EN): https://www.aidcmo.com/en/sample-audit
@@ -33,22 +34,22 @@ self-host or request private customization.
 
 ## Core capabilities
 
-- Private customization for OpenCMO deployment and workflow adaptation
+- AI CMO workspace that starts from one website URL
 - AI visibility scoring across Perplexity, ChatGPT, Gemini, Claude, You.com
 - Community visibility monitoring across Reddit, Hacker News, Dev.to, YouTube, Bluesky, Twitter/X
 - SERP keyword monitoring and competitor framing
 - Brand entity and citability assessment for AI answer surfaces
-- 30-day action backlog of content / link / technical recommendations
-- Deployed workspace trial for evaluating the product surface
+- Prioritized growth actions for comments, content, links, and technical fixes
+- Product workbench for turning search and community context into reviewed next actions
 - Open-source self-host path for teams who'd rather run it themselves
 
 ## Agent guidance
 
 - Start with the homepage for the canonical positioning.
-- Use `/services` for OpenCMO private customization.
+- Use `/services` for the OpenCMO product overview.
 - Use `/open-source` and the GitHub repo for the self-host path.
 - Use `/sample-audit` to see what an audit looks like in concrete terms.
-- Use `/workspace` to try the deployed OpenCMO workspace.
+- Use `/workspace` for the OpenCMO operator workspace.
 - Use `/hosted` only for the hosted OpenCMO waitlist.
 - Use the blog for durable OpenCMO, CMO, product marketing, GTM, and
   visibility-operation explanations.

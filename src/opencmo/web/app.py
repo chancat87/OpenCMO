@@ -50,26 +50,27 @@ _HOME_STATIC_SITE_COPY_BY_LOCALE = {
 <main id="static-site-copy">
   <header>
     <p>aidCMO</p>
-    <h1>OpenCMO: private customization, GitHub source, or deployed trial.</h1>
+    <h1>OpenCMO: enter one URL to discover overseas growth opportunities.</h1>
     <p>
-      OpenCMO scans SEO, AI visibility, SERP movement, and community signals.
-      Use it through private customization, self-host it from GitHub, or open
-      the deployed workspace first.
+      Paste a website URL. OpenCMO scans SEO, AI answer visibility, SERP movement,
+      Reddit, Hacker News, X, vertical communities, and competitor context to decide
+      what to optimize, comment on, publish, or keep tracking.
     </p>
   </header>
   <section>
-    <h2>Three paths</h2>
+    <h2>Product workbench</h2>
     <ul>
-      <li>Private customization for teams that need deployment and workflow adaptation.</li>
-      <li>GitHub source for teams that want to inspect, fork, or self-host OpenCMO.</li>
-      <li>Deployed trial workspace for teams that want to experience the product first.</li>
+      <li>Start from one URL and build a project context for the product.</li>
+      <li>Monitor SEO, AI search, SERP, overseas communities, and vertical surfaces.</li>
+      <li>Prioritized growth actions for comments, content, technical fixes, and positioning work.</li>
     </ul>
   </section>
   <section>
-    <h2>OpenCMO — open-source on GitHub</h2>
+    <h2>OpenCMO — AI CMO operating surface</h2>
     <p>
-      OpenCMO is open on GitHub and self-hostable. The deployed workspace shows
-      the operator surface before you commit to private customization.
+      The workspace connects monitoring, approvals, comments, content actions,
+      reports, and follow-up decisions so teams can operate overseas growth from
+      the same source of truth.
     </p>
     <ul>
       <li>GitHub repository: https://github.com/study8677/OpenCMO</li>
@@ -79,13 +80,13 @@ _HOME_STATIC_SITE_COPY_BY_LOCALE = {
     </ul>
   </section>
   <section>
-    <h2>How to engage</h2>
+    <h2>Where to start</h2>
     <p>
-      Choose the path that matches your stage: private customization, GitHub
-      self-hosting, or the deployed workspace.
+      Start with the product overview, inspect a sample audit, or open the
+      operator workspace to see how visibility work is organized.
     </p>
     <ul>
-      <li>Private customization: https://www.aidcmo.com/en/services</li>
+      <li>Product overview: https://www.aidcmo.com/en/services</li>
       <li>Audit example: https://www.aidcmo.com/en/sample-audit</li>
       <li>Open-source project: https://www.aidcmo.com/en/open-source</li>
       <li>OpenCMO workspace: https://www.aidcmo.com/workspace</li>
@@ -98,25 +99,26 @@ _HOME_STATIC_SITE_COPY_BY_LOCALE = {
 <main id="static-site-copy">
   <header>
     <p>aidCMO</p>
-    <h1>OpenCMO：私有化定制、GitHub 源码、已部署版试用。</h1>
+    <h1>OpenCMO：输入一个 URL，发现海外增长机会。</h1>
     <p>
-      OpenCMO 扫描 SEO、AI 可见度、SERP 变化和社区信号。
-      你可以做私有化定制，从 GitHub 自部署，也可以先打开已部署版体验。
+      粘贴网站 URL 后，OpenCMO 会扫描 SEO、AI 回答可见度、SERP、Reddit、
+      Hacker News、X、垂直社区和竞品语境，帮助团队判断哪里值得优化、评论、
+      发布内容或继续跟进。
     </p>
   </header>
   <section>
-    <h2>三条路径</h2>
+    <h2>产品工作台</h2>
     <ul>
-      <li>私有化定制：适合需要部署和工作流适配的团队。</li>
-      <li>GitHub 源码：适合想检查、fork 或自部署 OpenCMO 的团队。</li>
-      <li>已部署版试用：适合想先体验真实产品界面的团队。</li>
+      <li>从一行 URL 开始，为产品建立可持续追踪的项目上下文。</li>
+      <li>跨 SEO、AI 搜索、SERP、海外社区和垂直领域的市场信号监控。</li>
+      <li>面向评论、内容、技术修复和定位工作的优先级增长动作。</li>
     </ul>
   </section>
   <section>
-    <h2>OpenCMO — 在 GitHub 上开源</h2>
+    <h2>OpenCMO — AI CMO 操作界面</h2>
     <p>
-      OpenCMO 在 GitHub 上开源，也可以自部署。已部署版用于先看真实工作台，
-      再决定是否私有化定制。
+      这个工作台把监控、审批、评论、内容动作、报告和后续判断连接起来，
+      让团队围绕同一份上下文推进海外增长。
     </p>
     <ul>
       <li>GitHub 仓库: https://github.com/study8677/OpenCMO</li>
@@ -126,12 +128,12 @@ _HOME_STATIC_SITE_COPY_BY_LOCALE = {
     </ul>
   </section>
   <section>
-    <h2>如何合作</h2>
+    <h2>从哪里开始</h2>
     <p>
-      按阶段选择：私有化定制、GitHub 自部署，或已部署版试用。
+      可以先看产品概览、阅读示例审计，或进入操作工作台了解可见度工作如何组织。
     </p>
     <ul>
-      <li>私有化定制: https://www.aidcmo.com/zh/services</li>
+      <li>产品概览: https://www.aidcmo.com/zh/services</li>
       <li>审计样例: https://www.aidcmo.com/zh/sample-audit</li>
       <li>开源项目: https://www.aidcmo.com/zh/open-source</li>
       <li>OpenCMO 工作台: https://www.aidcmo.com/workspace</li>
@@ -776,15 +778,15 @@ def _build_home_json_ld(locale: str | None = None) -> str:
             "url": _public_url("/", locale),
             "image": "https://www.aidcmo.com/logo.png",
             "description": (
-                "aidCMO supports private OpenCMO customization, GitHub self-hosting, "
-                "and a deployed trial workspace."
+                "OpenCMO starts from one URL, monitors search, AI, overseas community, "
+                "and competitor signals, then turns them into reviewed growth actions."
                 if localized == "en"
-                else "aidCMO 支持 OpenCMO 私有化定制、GitHub 自部署和已部署版试用。"
+                else "OpenCMO 从一个 URL 开始，监控搜索、AI、海外社区和竞品信号，并把它们转成经过复核的增长动作。"
             ),
             "serviceType": [
-                "OpenCMO private customization",
-                "OpenCMO self-host support",
-                "Deployed workspace trial",
+                "AI CMO workspace",
+                "Overseas growth workspace",
+                "Community growth operations",
                 "SEO audit",
                 "GEO and AI search visibility audit",
             ],
@@ -794,10 +796,10 @@ def _build_home_json_ld(locale: str | None = None) -> str:
             ],
             "hasOfferCatalog": {
                 "@type": "OfferCatalog",
-                "name": "OpenCMO adoption paths",
+                "name": "OpenCMO workspace capabilities",
                 "itemListElement": [
-                    {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "OpenCMO private customization"}},
-                    {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "OpenCMO self-host support"}},
+                    {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "AI CMO workspace"}},
+                    {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Visibility audit workbench"}},
                 ],
             },
         },
@@ -1062,15 +1064,15 @@ def _apply_public_route_metadata(html: str, full_path: str) -> str:
 
     if normalized == "":
         title = (
-            "aidCMO — OpenCMO private customization, GitHub, and deployed trial"
+            "aidCMO — OpenCMO AI CMO workspace for overseas growth"
             if locale_key == "en"
-            else "aidCMO — OpenCMO 私有化定制、GitHub 与已部署版试用"
+            else "aidCMO — OpenCMO 海外增长 AI CMO 工作台"
         )
         description = (
-            "OpenCMO is an open-source AI CMO workspace. Choose private customization, "
-            "review the GitHub repo, or try the deployed workspace."
+            "OpenCMO starts from one URL, then scans SEO, AI visibility, SERP, overseas communities, "
+            "and competitor signals to turn public context into growth actions."
             if locale_key == "en"
-            else "OpenCMO 是开源 AI CMO 工作台。你可以选择私有化定制、查看 GitHub 源码，或直接试用已部署版。"
+            else "OpenCMO 从一个 URL 开始，扫描 SEO、AI 可见度、SERP、海外社区和竞品信号，并把公开语境转成增长动作。"
         )
         canonical_url = _public_url("/", route_locale)
         replacements = [

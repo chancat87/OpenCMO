@@ -1,10 +1,18 @@
+import { useState, type FormEvent } from "react";
 import {
+  Activity,
   ArrowRight,
+  BarChart3,
+  CheckCircle2,
   ExternalLink,
   Github,
+  Globe,
+  MessageSquareText,
   MonitorPlay,
+  Search,
+  type LucideIcon,
 } from "lucide-react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { SiteFooter } from "../components/layout/SiteFooter";
 import { PublicSiteHeader } from "../components/marketing/PublicSiteHeader";
 import { SectionReveal } from "../components/marketing/SectionReveal";
@@ -17,6 +25,7 @@ import {
 import { usePublicPageMetadata } from "../hooks/usePublicPageMetadata";
 import { usePublicSeoLocale } from "../hooks/usePublicSeoLocale";
 import { useI18n } from "../i18n";
+import { normalizeWebsiteUrl } from "../utils/url";
 
 const GITHUB_REPO_URL = "https://github.com/study8677/OpenCMO";
 const CONTACT_EMAIL = "hello@aidcmo.com";
@@ -45,33 +54,177 @@ const HERO_BADGES = [
   "landing.heroBadgeByok",
 ] as const;
 
-const PATH_CARDS = [
+const PRODUCT_METRICS = [
   {
-    title: "landing.pathPrivateTitle",
-    body: "landing.pathPrivateDesc",
-    cta: "landing.heroPrimaryCta",
-    href: "/services",
-    external: false,
+    label: "landing.productMetricSeoLabel",
+    value: "84",
+    detail: "landing.productMetricSeoDetail",
   },
   {
-    title: "landing.pathGithubTitle",
-    body: "landing.pathGithubDesc",
-    cta: "landing.heroSecondaryCta",
-    href: GITHUB_REPO_URL,
-    external: true,
+    label: "landing.productMetricAiLabel",
+    value: "67",
+    detail: "landing.productMetricAiDetail",
   },
   {
-    title: "landing.pathDeployedTitle",
-    body: "landing.pathDeployedDesc",
-    cta: "landing.workspaceCta",
-    href: "/workspace",
-    external: false,
+    label: "landing.productMetricCommunityLabel",
+    value: "18",
+    detail: "landing.productMetricCommunityDetail",
   },
 ] as const;
+
+const PRODUCT_SURFACES: Array<{
+  icon: LucideIcon;
+  title: string;
+  body: string;
+}> = [
+  {
+    icon: Search,
+    title: "landing.productSurfaceSeoTitle",
+    body: "landing.productSurfaceSeoBody",
+  },
+  {
+    icon: Globe,
+    title: "landing.productSurfaceAiTitle",
+    body: "landing.productSurfaceAiBody",
+  },
+  {
+    icon: MessageSquareText,
+    title: "landing.productSurfaceCommunityTitle",
+    body: "landing.productSurfaceCommunityBody",
+  },
+] as const;
+
+const PRODUCT_ACTIONS = [
+  "landing.productAction1",
+  "landing.productAction2",
+  "landing.productAction3",
+] as const;
+
+const PRODUCT_CARDS = [
+  {
+    title: "landing.productCardProjectTitle",
+    body: "landing.productCardProjectDesc",
+  },
+  {
+    title: "landing.productCardScanTitle",
+    body: "landing.productCardScanDesc",
+  },
+  {
+    title: "landing.productCardReviewTitle",
+    body: "landing.productCardReviewDesc",
+  },
+] as const;
+
+function ProductWorkspacePreview({ workspaceHref = "/workspace" }: { workspaceHref?: string }) {
+  const { t } = useI18n();
+
+  return (
+    <div className="mx-auto mt-12 max-w-6xl overflow-hidden rounded-[2rem] border border-white/10 bg-[#f8fafc] text-slate-950 shadow-[0_34px_120px_rgba(0,0,0,0.34)]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-5 py-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#082032] text-white">
+            <Activity size={18} />
+          </div>
+          <div className="min-w-0 text-left">
+            <p className="text-sm font-semibold text-slate-950">{t("landing.productPreviewTitle")}</p>
+            <p className="truncate text-xs text-slate-500">{t("landing.productPreviewProject")}</p>
+          </div>
+        </div>
+        <Link
+          to={workspaceHref}
+          className="inline-flex items-center gap-2 rounded-full bg-[#082032] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0c2538]"
+        >
+          {t("landing.workspaceCta")}
+          <ArrowRight size={14} />
+        </Link>
+      </div>
+
+      <div className="grid gap-0 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <aside className="border-b border-slate-200 bg-slate-50/80 p-5 lg:border-b-0 lg:border-r">
+          <p className="text-xs font-semibold text-slate-500">{t("landing.productPreviewSidebarTitle")}</p>
+          <div className="mt-4 space-y-2">
+            {PRODUCT_SURFACES.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.title} className="flex items-start gap-3 rounded-xl bg-white px-3 py-3 shadow-sm">
+                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
+                    <Icon size={15} />
+                  </div>
+                  <div className="min-w-0 text-left">
+                    <p className="text-sm font-semibold text-slate-950">{t(item.title as never)}</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">{t(item.body as never)}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </aside>
+
+        <div className="p-5 sm:p-6">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {PRODUCT_METRICS.map((item) => (
+              <div key={item.label} className="rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm">
+                <p className="text-xs font-semibold text-slate-500">{t(item.label as never)}</p>
+                <p className="mt-3 text-3xl font-semibold text-slate-950">{item.value}</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">{t(item.detail as never)}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold text-slate-500">{t("landing.productPreviewPipelineLabel")}</p>
+                  <h2 className="mt-2 text-xl font-semibold text-slate-950">{t("landing.productPreviewPipelineTitle")}</h2>
+                </div>
+                <BarChart3 size={20} className="text-[#c96f45]" />
+              </div>
+              <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                {["landing.stage2", "landing.stage4", "landing.stage6"].map((key, index) => (
+                  <div key={key} className="rounded-xl bg-slate-50 px-3 py-3">
+                    <p className="text-xs font-semibold text-slate-400">0{index + 1}</p>
+                    <p className="mt-2 text-sm font-semibold text-slate-800">{t(key as never)}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 space-y-2">
+                {PRODUCT_ACTIONS.map((key) => (
+                  <div key={key} className="flex items-start gap-3 rounded-xl border border-emerald-100 bg-emerald-50/70 px-3 py-3">
+                    <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-700" />
+                    <p className="text-sm leading-6 text-slate-800">{t(key)}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-[#082032] p-5 text-left text-white shadow-sm">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10">
+                <MessageSquareText size={18} />
+              </div>
+              <h2 className="mt-5 text-xl font-semibold">{t("landing.productPreviewReportTitle")}</h2>
+              <p className="mt-3 text-sm leading-6 text-white/70">{t("landing.productPreviewReportBody")}</p>
+              <div className="mt-5 rounded-xl border border-white/10 bg-white/8 px-3 py-3">
+                <p className="text-xs font-semibold text-white/45">{t("landing.productPreviewReviewLabel")}</p>
+                <p className="mt-2 text-sm font-semibold text-white">{t("landing.productPreviewReviewValue")}</p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function LandingPage() {
   const { t } = useI18n();
   const seoLocale = usePublicSeoLocale();
+  const navigate = useNavigate();
+  const [homepageUrl, setHomepageUrl] = useState("");
+  const normalizedHomepageUrl = homepageUrl.trim() ? normalizeWebsiteUrl(homepageUrl.trim()) : "";
+  const workspaceHref = normalizedHomepageUrl
+    ? `/workspace?url=${encodeURIComponent(normalizedHomepageUrl)}`
+    : "/workspace";
 
   usePublicPageMetadata({
     title: t("landing.metaTitle"),
@@ -79,37 +232,63 @@ export function LandingPage() {
     basePath: "/",
   });
 
-  const getPathCardHref = (href: string) => {
-    if (href === "/services") {
-      return getServicesPath(seoLocale);
-    }
-    return href;
+  const handleHeroUrlSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const rawUrl = homepageUrl.trim();
+    if (!rawUrl) return;
+    navigate(workspaceHref);
   };
 
   return (
     <div className="min-h-screen bg-[#08141f] text-white">
-      <PublicSiteHeader items={PUBLIC_HOME_NAV} theme="dark" />
+      <PublicSiteHeader items={PUBLIC_HOME_NAV} theme="dark" workspaceHref={workspaceHref} />
 
       <main className="overflow-hidden">
         {/* Hero ----------------------------------------------------- */}
         <section className="relative">
-          <div className="mx-auto max-w-7xl px-4 pb-24 pt-20 text-center sm:pb-28 sm:pt-24 lg:px-8">
+          <div className="mx-auto max-w-7xl px-4 pb-14 pt-16 text-center sm:pb-16 sm:pt-20 lg:px-8">
             <p className="text-sm font-semibold uppercase tracking-wider text-white/55">
               {t("landing.heroEyebrow")}
             </p>
-            <h1 className="font-display mx-auto mt-6 max-w-5xl text-5xl font-semibold tracking-tight text-white sm:text-6xl lg:text-7xl">
+            <h1 className="font-display mx-auto mt-6 max-w-4xl text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
               {t("landing.heroTitle")}
             </h1>
             <p className="mx-auto mt-7 max-w-3xl text-lg leading-8 text-white/70 sm:text-xl sm:leading-9">
               {t("landing.heroSubtitle")}
             </p>
 
+            <form onSubmit={handleHeroUrlSubmit} className="mx-auto mt-9 max-w-3xl">
+              <div className="flex flex-col gap-3 rounded-[1.75rem] border border-white/12 bg-white/8 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur sm:flex-row sm:items-center">
+                <div className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl bg-white px-4 py-3 text-left text-slate-950">
+                  <Search size={18} className="shrink-0 text-slate-400" />
+                  <input
+                    value={homepageUrl}
+                    onChange={(event) => setHomepageUrl(event.target.value)}
+                    type="text"
+                    inputMode="url"
+                    aria-label={t("landing.heroUrlPlaceholder")}
+                    placeholder={t("landing.heroUrlPlaceholder")}
+                    className="min-w-0 flex-1 bg-transparent text-base font-medium text-slate-950 outline-none placeholder:text-slate-400"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={!homepageUrl.trim()}
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#f7ecde] px-6 text-sm font-semibold text-[#082032] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {t("landing.heroUrlCta")}
+                  <ArrowRight size={15} />
+                </button>
+              </div>
+            </form>
+
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
               <Link
-                to={getServicesPath(seoLocale)}
+                to={workspaceHref}
                 className="inline-flex items-center gap-2 rounded-full bg-[#f7ecde] px-7 py-4 text-sm font-semibold text-[#082032] transition-colors hover:bg-white"
               >
-                {t("landing.heroPrimaryCta")}
+                <MonitorPlay size={16} />
+                {t("landing.workspaceCta")}
                 <ArrowRight size={16} />
               </Link>
               <a
@@ -123,11 +302,10 @@ export function LandingPage() {
                 <ExternalLink size={14} />
               </a>
               <Link
-                to="/workspace"
+                to={getServicesPath(seoLocale)}
                 className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/6 px-7 py-4 text-sm font-semibold text-white/90 transition-colors hover:border-white/25 hover:text-white"
               >
-                <MonitorPlay size={16} />
-                {t("landing.workspaceCta")}
+                {t("landing.heroPrimaryCta")}
                 <ArrowRight size={14} />
               </Link>
             </div>
@@ -142,6 +320,8 @@ export function LandingPage() {
                 </span>
               ))}
             </div>
+
+            <ProductWorkspacePreview workspaceHref={workspaceHref} />
           </div>
         </section>
 
@@ -206,48 +386,36 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* Three paths ---------------------------------------------- */}
+        {/* Product workflow ----------------------------------------- */}
         <section className="bg-[#08141f]">
           <div className="mx-auto max-w-7xl px-4 py-20 lg:px-8 lg:py-24">
             <SectionReveal>
               <div className="max-w-3xl">
                 <p className="text-sm font-semibold uppercase tracking-wider text-white/55">
-                  {t("landing.pathEyebrow")}
+                  {t("landing.productSectionEyebrow")}
                 </p>
                 <h2 className="font-display mt-4 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                  {t("landing.pathTitle")}
+                  {t("landing.productSectionTitle")}
                 </h2>
                 <p className="mt-4 text-base leading-7 text-white/70">
-                  {t("landing.pathSubtitle")}
+                  {t("landing.productSectionSubtitle")}
                 </p>
               </div>
             </SectionReveal>
 
             <div className="mt-10 grid gap-4 lg:grid-cols-3">
-              {PATH_CARDS.map((item, idx) => (
+              {PRODUCT_CARDS.map((item, idx) => (
                 <SectionReveal key={item.title} delay={idx * 0.05}>
                   <div className="flex h-full flex-col rounded-2xl border border-white/8 bg-white/4 p-6">
                     <h3 className="text-xl font-semibold text-white">{t(item.title)}</h3>
                     <p className="mt-3 flex-1 text-sm leading-6 text-white/66">{t(item.body)}</p>
-                    {item.external ? (
-                      <a
-                        href={item.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white transition-colors hover:text-[#f7ecde]"
-                      >
-                        {t(item.cta)}
-                        <ExternalLink size={14} />
-                      </a>
-                    ) : (
-                      <Link
-                        to={getPathCardHref(item.href)}
-                        className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white transition-colors hover:text-[#f7ecde]"
-                      >
-                        {t(item.cta)}
-                        <ArrowRight size={14} />
-                      </Link>
-                    )}
+                    <Link
+                      to={workspaceHref}
+                      className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white transition-colors hover:text-[#f7ecde]"
+                    >
+                      {t("landing.workspaceCta")}
+                      <ArrowRight size={14} />
+                    </Link>
                   </div>
                 </SectionReveal>
               ))}
@@ -260,18 +428,25 @@ export function LandingPage() {
           <div className="mx-auto max-w-5xl px-4 py-20 text-center lg:px-8 lg:py-24">
             <SectionReveal>
               <h2 className="font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
-                {t("landing.heroPrimaryCta")}
+                {t("landing.finalProductTitle")}
               </h2>
               <p className="mx-auto mt-5 max-w-2xl text-base text-white/70">
-                {t("landing.emailHeroHint")}
+                {t("landing.finalProductSubtitle")}
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link
-                  to={getServicesPath(seoLocale)}
+                  to={workspaceHref}
                   className="inline-flex items-center gap-2 rounded-full bg-[#f7ecde] px-7 py-4 text-sm font-semibold text-[#082032] transition-colors hover:bg-white"
                 >
-                  {t("landing.heroPrimaryCta")}
+                  {t("landing.workspaceCta")}
                   <ArrowRight size={16} />
+                </Link>
+                <Link
+                  to={getServicesPath(seoLocale)}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/6 px-7 py-4 text-sm font-semibold text-white/90 transition-colors hover:border-white/25 hover:text-white"
+                >
+                  {t("landing.heroPrimaryCta")}
+                  <ArrowRight size={14} />
                 </Link>
                 <Link
                   to={getContactPath(seoLocale)}
@@ -288,13 +463,6 @@ export function LandingPage() {
                   {t("landing.heroSecondaryCta")}
                   <ExternalLink size={14} />
                 </a>
-                <Link
-                  to="/workspace"
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-white/65 transition-colors hover:text-white"
-                >
-                  {t("landing.workspaceCta")}
-                  <ArrowRight size={14} />
-                </Link>
               </div>
               <p className="mt-10 text-sm text-white/55">
                 {t("landing.emailLabel")} ·{" "}
