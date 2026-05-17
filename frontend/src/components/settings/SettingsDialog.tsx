@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Key, Check, ChevronDown, ChevronRight, Shield } from "lucide-react";
+import { X, Key, Check, ChevronDown, ChevronRight } from "lucide-react";
 import { getSettings, saveSettings, type SettingsSavePayload } from "../../api/settings";
 import { getEffectiveKeyStatus, getUserKeys, setUserKeys, type UserKeys } from "../../api/userKeys";
 import { useI18n } from "../../i18n";
@@ -117,9 +117,6 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
   const [status, setStatus] = useState<AISettings | null>(null);
 
   // ── User-local keys (stored in browser localStorage) ──
-  const [apiKey, setApiKey] = useState("");
-  const [baseUrl, setBaseUrl] = useState("");
-  const [model, setModel] = useState("");
   const [tavilyKey, setTavilyKey] = useState("");
   const [anthropicKey, setAnthropicKey] = useState("");
   const [googleAiKey, setGoogleAiKey] = useState("");
@@ -151,14 +148,10 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
   const [smtpPass, setSmtpPass] = useState("");
   const [reportEmail, setReportEmail] = useState("");
   const keyStatus = getEffectiveKeyStatus(status);
-  const serverModel = status?.model?.trim() || "gpt-5.4-mini";
 
   useEffect(() => {
     // Load user-local keys
     const uk = getUserKeys();
-    if (uk.OPENAI_API_KEY) setApiKey(uk.OPENAI_API_KEY);
-    if (uk.OPENAI_BASE_URL) setBaseUrl(uk.OPENAI_BASE_URL);
-    if (uk.OPENCMO_MODEL_DEFAULT) setModel(uk.OPENCMO_MODEL_DEFAULT);
     if (uk.TAVILY_API_KEY) setTavilyKey(uk.TAVILY_API_KEY);
     if (uk.ANTHROPIC_API_KEY) setAnthropicKey(uk.ANTHROPIC_API_KEY);
     if (uk.GOOGLE_AI_API_KEY) setGoogleAiKey(uk.GOOGLE_AI_API_KEY);
@@ -174,8 +167,6 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
     // Load server-side status
     getSettings().then((s) => {
       setStatus(s);
-      if (!uk.OPENAI_BASE_URL && s.base_url) setBaseUrl(s.base_url);
-      if (!uk.OPENCMO_MODEL_DEFAULT && s.model) setModel(s.model);
       if (!uk.GOOGLE_GSC_SITE_URL && s.gsc_site_url) setGscSiteUrl(s.gsc_site_url);
       setAutoPublish(s.auto_publish);
       setGeoChatgpt(s.geo_chatgpt_enabled);
@@ -193,9 +184,6 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
     try {
       // 1. Save user-local keys to localStorage
       const newKeys: UserKeys = {};
-      if (apiKey) newKeys.OPENAI_API_KEY = apiKey;
-      if (baseUrl) newKeys.OPENAI_BASE_URL = baseUrl;
-      if (model) newKeys.OPENCMO_MODEL_DEFAULT = model;
       if (tavilyKey) newKeys.TAVILY_API_KEY = tavilyKey;
       if (anthropicKey) newKeys.ANTHROPIC_API_KEY = anthropicKey;
       if (googleAiKey) newKeys.GOOGLE_AI_API_KEY = googleAiKey;
@@ -282,46 +270,6 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="space-y-4">
-          {/* ── Security badge ── */}
-          <div className="flex items-center gap-2 rounded-xl bg-indigo-50 px-3 py-2 text-xs font-medium text-indigo-700">
-            <Shield size={14} />
-            {t("settings.localKeysHint")}
-          </div>
-
-          {/* ── AI Provider (always open) ── */}
-          <StatusBadge
-            ok={keyStatus.effective.llm}
-            okText={
-              keyStatus.browserOverride.llm
-                ? t("settings.browserOverrideActive")
-                : t("settings.serverDefaultActive")
-            }
-            noText={t("settings.apiKeyNotSet")}
-          />
-          <Field
-            label={t("settings.apiKey")}
-            type="password"
-            placeholder={t("settings.apiKeyPlaceholder")}
-            hint={t("settings.apiKeyHint")}
-            value={apiKey}
-            onChange={setApiKey}
-          />
-          <Field
-            label={t("settings.baseUrl")}
-            type="url"
-            placeholder={t("settings.baseUrlPlaceholder")}
-            hint={t("settings.baseUrlHint")}
-            value={baseUrl}
-            onChange={setBaseUrl}
-          />
-          <Field
-            label={t("settings.model")}
-            placeholder={t("settings.modelPlaceholder")}
-            hint={t("settings.modelHint", { model: serverModel })}
-            value={model}
-            onChange={setModel}
-          />
-
           {/* ── Reddit ── */}
           <Section title={t("settings.redditSection")} defaultOpen={false}>
             {status && (
