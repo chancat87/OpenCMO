@@ -64,9 +64,12 @@ async def api_v1_settings_get(request: Request):
     async def get(name: str) -> str:
         return await _account_value(account_id, name)
 
-    api_key = await get("OPENAI_API_KEY")
-    base_url = await get("OPENAI_BASE_URL")
-    model = await get("OPENCMO_MODEL_DEFAULT")
+    # OPENAI_API_KEY is unified — server-provided. Fall back to env so the
+    # status badge reflects "LLM is available" even when the account hasn't
+    # (and shouldn't need to) save its own.
+    api_key = await get("OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY", "")
+    base_url = await get("OPENAI_BASE_URL") or os.environ.get("OPENAI_BASE_URL", "")
+    model = await get("OPENCMO_MODEL_DEFAULT") or os.environ.get("OPENCMO_MODEL_DEFAULT", "")
     # Reddit
     reddit_cid = await get("REDDIT_CLIENT_ID")
     reddit_secret = await get("REDDIT_CLIENT_SECRET")
