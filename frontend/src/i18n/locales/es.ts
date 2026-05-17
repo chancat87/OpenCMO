@@ -1062,4 +1062,14 @@ export const es: Partial<Record<TranslationKey, string>> = {
   "contactQR.subheading": "Escanea el QR con WeChat para escribirnos directamente.",
   "contactQR.imageAlt": "Código QR de contacto en WeChat",
   "contactQR.close": "Cerrar",
+
+  // Unlock custom plan CTA + modal
+  "unlock.cta": "Desbloquear plan personalizado",
+  "unlock.cardLabel": "¿Necesitas más?",
+  "unlock.cardHint": "Toca para escanear nuestro QR de WeChat y hablar de un plan a medida.",
+  "unlock.title": "Plan personalizado",
+  "unlock.subtitle": "Escanea para hablar sobre un plan a medida para tu equipo.",
+  "unlock.qrAlt": "Código QR de contacto WeChat",
+  "unlock.footer": "Responderemos por WeChat en menos de un día.",
+  "unlock.close": "Cerrar",
 };

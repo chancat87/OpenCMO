@@ -1905,4 +1905,14 @@ export const zh: Partial<Record<TranslationKey, string>> = {
   "contactQR.subheading": "用微信扫码即可与我们直接沟通。",
   "contactQR.imageAlt": "微信联系二维码",
   "contactQR.close": "关闭",
+
+  // Unlock custom plan CTA + modal
+  "unlock.cta": "解锁定制方案",
+  "unlock.cardLabel": "需要更多？",
+  "unlock.cardHint": "点击扫码联系我们，定制专属方案。",
+  "unlock.title": "定制方案",
+  "unlock.subtitle": "扫码联系我们，获取适合你团队的专属方案。",
+  "unlock.qrAlt": "微信联系二维码",
+  "unlock.footer": "我们会在一天内通过微信回复。",
+  "unlock.close": "关闭",
 };

@@ -1062,4 +1062,14 @@ export const ko: Partial<Record<TranslationKey, string>> = {
   "contactQR.subheading": "위챗으로 QR을 스캔하면 바로 메시지를 보낼 수 있어요.",
   "contactQR.imageAlt": "위챗 연락 QR 코드",
   "contactQR.close": "닫기",
+
+  // Unlock custom plan CTA + modal
+  "unlock.cta": "맞춤형 플랜 잠금 해제",
+  "unlock.cardLabel": "더 필요하신가요?",
+  "unlock.cardHint": "탭하여 위챗 QR을 스캔하고 맞춤형 플랜을 상담받으세요.",
+  "unlock.title": "맞춤형 플랜",
+  "unlock.subtitle": "QR을 스캔하여 팀 맞춤형 플랜을 상담받으세요.",
+  "unlock.qrAlt": "위챗 연락처 QR 코드",
+  "unlock.footer": "1일 내에 위챗으로 답변드립니다.",
+  "unlock.close": "닫기",
 };
