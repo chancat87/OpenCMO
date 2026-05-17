@@ -3,11 +3,17 @@
 Solves the BYOK (Bring Your Own Key) concurrency bug where os.environ
 was used as shared mutable state across concurrent requests.
 
-Key resolution priority:
-    1. ContextVar (per-request, set by BYOK middleware)
-    2. os.environ (from .env or system environment) for router defaults
-    3. DB settings (via storage.get_setting)
-    4. os.environ (from .env or system environment) for all other keys
+Key resolution priority (sync ``get_key`` — used by tools that can't await):
+    1. ContextVar (per-request BYOK keys, set by BYOK middleware)
+    2. os.environ (from .env or system environment)
+
+Key resolution priority (async ``get_key_async`` — used by web routes):
+    1. ContextVar (per-request BYOK keys, set by BYOK middleware)
+    2. Per-account row in ``account_settings`` for the account_id ContextVar
+       (set by ``session_context_middleware``)
+    3. os.environ (for router-default keys, applied early)
+    4. Legacy global ``settings`` table (system fallback, via ``get_system_setting``)
+    5. os.environ (final fallback)
 
 Usage:
     from opencmo import llm
@@ -18,6 +24,13 @@ Usage:
         await call_next(request)
     finally:
         llm.reset_request_keys(token)
+
+    # In the session-context middleware — bind the active account:
+    acct_token = llm.set_current_account_id(account["id"])
+    try:
+        await call_next(request)
+    finally:
+        llm.reset_current_account_id(acct_token)
 
     # Anywhere in the codebase — read a key safely:
     api_key = llm.get_key("OPENAI_API_KEY")
@@ -56,6 +69,13 @@ _ENV_PRIORITY_KEYS = frozenset({
 # ---------------------------------------------------------------------------
 
 _request_keys: ContextVar[dict[str, str]] = ContextVar("request_keys", default={})
+_current_account_id: ContextVar[int | None] = ContextVar("current_account_id", default=None)
+# Snapshot of the active account's account_settings rows, populated by the
+# session middleware so synchronous ``get_key`` callers (publishers, SMTP) can
+# see per-account values without an awaitable DB lookup.
+_current_account_settings: ContextVar[dict[str, str]] = ContextVar(
+    "current_account_settings", default={}
+)
 
 
 def set_request_keys(keys: dict[str, str]) -> Token:
@@ -78,6 +98,56 @@ def get_request_keys() -> dict[str, str]:
     return _request_keys.get({}).copy()
 
 
+def set_current_account_id(account_id: int | None) -> Token:
+    """Bind the active account id to this asyncio Task for the duration of the request.
+
+    Used by the web middleware so per-account settings lookups in
+    ``get_key_async`` resolve to the right tenant. Background workers must
+    capture the queueing account id and restore it before executing a job.
+
+    Returns a Token that MUST be passed to reset_current_account_id().
+    """
+    value = int(account_id) if account_id else None
+    return _current_account_id.set(value)
+
+
+def reset_current_account_id(token: Token) -> None:
+    """Restore the previous account_id ContextVar state."""
+    _current_account_id.reset(token)
+
+
+def get_current_account_id() -> int | None:
+    """Return the bound account id, or ``None`` when no account is in scope."""
+    return _current_account_id.get(None)
+
+
+def set_current_account_settings(settings: dict[str, str]) -> Token:
+    """Cache the active account's settings dict so sync ``get_key`` can read them.
+
+    The web middleware calls ``storage.list_account_settings`` once per request
+    and stores the result here. Sync code paths (e.g. SMTP, Reddit publisher)
+    can then call ``llm.get_key`` and transparently see per-account values
+    without needing to await the DB.
+
+    Returns a Token that MUST be passed to ``reset_current_account_settings``.
+    """
+    clean: dict[str, str] = {}
+    for key, value in (settings or {}).items():
+        if isinstance(value, str) and value.strip():
+            clean[str(key)] = value
+    return _current_account_settings.set(clean)
+
+
+def reset_current_account_settings(token: Token) -> None:
+    """Restore the previous account settings ContextVar state."""
+    _current_account_settings.reset(token)
+
+
+def get_current_account_settings() -> dict[str, str]:
+    """Return a copy of the active account's cached settings dict."""
+    return _current_account_settings.get({}).copy()
+
+
 
 # ---------------------------------------------------------------------------
 # Key resolution — ContextVar > env/.env > DB for router defaults
@@ -89,11 +159,12 @@ def get_key(name: str, default: str | None = None) -> str | None:
 
     Resolution order:
         1. ContextVar (per-request BYOK keys)
-        2. os.environ (from .env or system)
-        3. default
+        2. Per-account settings snapshot bound by middleware
+        3. os.environ (from .env or system)
+        4. ``default``
 
-    Note: DB lookup is intentionally NOT done here because this function
-    is synchronous. For async DB lookup, use get_key_async().
+    Note: the legacy global ``settings`` table is NOT consulted here because
+    this function is synchronous. ``get_key_async`` performs that DB read.
     """
     # 1. ContextVar (per-request)
     request = _request_keys.get({})
@@ -101,7 +172,13 @@ def get_key(name: str, default: str | None = None) -> str | None:
     if val:
         return val
 
-    # 2. os.environ
+    # 2. Snapshot of the active account's account_settings rows (sync-safe)
+    account_settings = _current_account_settings.get({})
+    val = account_settings.get(name)
+    if val:
+        return val
+
+    # 3. os.environ
     val = os.environ.get(name)
     if val:
         return val
@@ -110,14 +187,17 @@ def get_key(name: str, default: str | None = None) -> str | None:
 
 
 async def get_key_async(name: str, default: str | None = None) -> str | None:
-    """Get a configuration key with DB fallback (async version).
+    """Get a configuration key with multi-tenant DB fallback (async version).
 
     Resolution order:
         1. ContextVar (per-request BYOK keys)
-        2. os.environ (from .env or system) for router default keys
-        3. DB settings (storage.get_setting)
-        4. os.environ (from .env or system) for all other keys
-        4. default
+        2. Per-account settings snapshot bound by middleware
+        3. ``account_settings`` row keyed off the current account_id ContextVar
+        4. os.environ (router-default keys are checked here early via
+           ``_ENV_PRIORITY_KEYS``; all other keys hit env at step 6)
+        5. System-level fallback (admin account row → legacy ``settings`` table)
+        6. os.environ (final fallback)
+        7. ``default``
     """
     # 1. ContextVar (per-request)
     request = _request_keys.get({})
@@ -125,22 +205,39 @@ async def get_key_async(name: str, default: str | None = None) -> str | None:
     if val:
         return val
 
-    # 2. For core router defaults, prefer env/.env over persisted DB settings.
+    # 2. Snapshot of the active account's account_settings rows
+    account_settings = _current_account_settings.get({})
+    val = account_settings.get(name)
+    if val:
+        return val
+
+    # 3. Live DB lookup for the bound account, in case the snapshot is empty
+    account_id = _current_account_id.get(None)
+    if account_id:
+        try:
+            from opencmo import storage
+            val = await storage.get_account_setting(account_id, name)
+            if val:
+                return val
+        except Exception:
+            pass
+
+    # 4. For core router defaults, prefer env/.env over persisted DB settings.
     if name in _ENV_PRIORITY_KEYS:
         val = os.environ.get(name)
         if val:
             return val
 
-    # 3. DB settings
+    # 5. System fallback (admin account → legacy settings table)
     try:
         from opencmo import storage
-        val = await storage.get_setting(name)
+        val = await storage.get_system_setting(name)
         if val:
             return val
     except Exception:
         pass  # DB may not be initialized yet
 
-    # 4. os.environ
+    # 6. os.environ
     val = os.environ.get(name)
     if val:
         return val

@@ -113,8 +113,13 @@ def _build_text(code: str, copy: dict[str, str]) -> str:
 
 
 async def send_verification_code(email: str, code: str, locale: str = "en") -> dict:
-    """Email a 6-digit verification code with localized subject and body."""
+    """Email a 6-digit verification code with localized subject and body.
+
+    Verification emails always use the *system* SMTP fallback (admin account →
+    legacy settings → env) because the recipient is mid-signup and has no
+    account-level credentials of their own yet.
+    """
     copy = _COPY[_normalize_locale(locale)]
     html = _build_html(code, copy)
     text = _build_text(code, copy)
-    return await send_mail(email, copy["subject"], html, text)
+    return await send_mail(email, copy["subject"], html, text, system=True)

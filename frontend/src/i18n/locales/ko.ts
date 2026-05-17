@@ -394,6 +394,8 @@ export const ko: Partial<Record<TranslationKey, string>> = {
   "settings.save": "저장",
   "settings.saved": "저장됨!",
   "settings.serverSettingsAdminOnly": "브라우저 키는 저장되었습니다. 서버 전체 제공자, 게시, 이메일 설정은 관리자 토큰이 필요합니다.",
+  "settings.accountScopedHint": "이 설정은 회원님의 계정에만 적용됩니다. 다른 사용자에게는 표시되거나 사용되지 않습니다.",
+  "settings.systemSmtpActive": "현재 공유 시스템 SMTP를 사용 중입니다. 아래에서 직접 SMTP를 구성하면 맞춤 발신자 주소를 사용할 수 있습니다.",
   "settings.apiKeySet": "API 키 설정됨",
   "settings.apiKeyNotSet": "API 키 미설정",
   "settings.browserOverrideActive": "브라우저 오버라이드 사용 중",

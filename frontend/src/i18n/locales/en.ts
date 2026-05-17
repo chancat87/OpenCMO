@@ -442,6 +442,8 @@ export const en = {
   "settings.save": "Save",
   "settings.saved": "Saved!",
   "settings.serverSettingsAdminOnly": "Browser keys were saved. Server-wide provider, publishing, and email settings require an admin token.",
+  "settings.accountScopedHint": "These settings are private to your account. Other users cannot see or use them.",
+  "settings.systemSmtpActive": "Using the shared system SMTP. Configure your own below to use a custom From address.",
   "settings.apiKeySet": "API key is configured",
   "settings.browserOverrideActive": "Browser override active",
   "settings.serverDefaultActive": "Server default active",

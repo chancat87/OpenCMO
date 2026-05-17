@@ -113,7 +113,6 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
   const { t } = useI18n();
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [serverSaveError, setServerSaveError] = useState<string | null>(null);
   const [status, setStatus] = useState<AISettings | null>(null);
 
   // ── User-local keys (stored in browser localStorage) ──
@@ -180,7 +179,6 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
   const handleSave = async () => {
     setLoading(true);
     setSaved(false);
-    setServerSaveError(null);
     try {
       // 1. Save user-local keys to localStorage
       const newKeys: UserKeys = {};
@@ -221,19 +219,10 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
       if (smtpPass) serverSettings.OPENCMO_SMTP_PASS = smtpPass;
       if (status && reportEmail !== status.report_email) serverSettings.OPENCMO_REPORT_EMAIL = reportEmail;
 
-      let serverSettingsSaved = false;
       if (Object.keys(serverSettings).length > 0) {
-        try {
-          await saveSettings(serverSettings);
-          serverSettingsSaved = true;
-        } catch {
-          setServerSaveError(t("settings.serverSettingsAdminOnly"));
-        }
-      }
-
-      setSaved(true);
-      if (serverSettingsSaved) {
-        // Clear server-side sensitive fields after a confirmed admin save.
+        await saveSettings(serverSettings);
+        // Clear sensitive fields after a confirmed save so they aren't
+        // re-submitted accidentally on the next save.
         setRedditClientId("");
         setRedditClientSecret("");
         setRedditUsername("");
@@ -246,6 +235,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
         setDataforseoPassword("");
         setSmtpPass("");
       }
+      setSaved(true);
       // Refresh server status
       const s = await getSettings();
       setStatus(s);
@@ -268,6 +258,10 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
             <X size={18} />
           </button>
         </div>
+
+        <p className="mb-4 rounded-xl bg-indigo-50 px-3 py-2 text-[11px] font-medium text-indigo-700">
+          {t("settings.accountScopedHint")}
+        </p>
 
         <div className="space-y-4">
           {/* ── Reddit ── */}
@@ -422,6 +416,11 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
                 noText={t("settings.emailNotConfigured")}
               />
             )}
+            {status && !status.email_configured && status.system_smtp_active && (
+              <p className="rounded-xl bg-slate-50 px-3 py-2 text-[11px] font-medium text-slate-600">
+                {t("settings.systemSmtpActive")}
+              </p>
+            )}
             <Field label={t("settings.smtpHost")} placeholder="smtp.gmail.com" value={smtpHost} onChange={setSmtpHost} />
             <Field label={t("settings.smtpPort")} placeholder="587" value={smtpPort} onChange={setSmtpPort} />
             <Field label={t("settings.smtpUser")} placeholder="user@example.com" value={smtpUser} onChange={setSmtpUser} />
@@ -429,12 +428,6 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
             <Field label={t("settings.reportEmail")} placeholder="report@example.com" hint={t("settings.reportEmailHint")} value={reportEmail} onChange={setReportEmail} />
           </Section>
         </div>
-
-        {serverSaveError && (
-          <p className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
-            {serverSaveError}
-          </p>
-        )}
 
         <div className="mt-6 flex justify-end gap-2">
           <button

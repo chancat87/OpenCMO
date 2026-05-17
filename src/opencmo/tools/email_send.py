@@ -4,6 +4,11 @@ Reads SMTP credentials via ``llm.get_key()`` so per-request BYOK keys (set in
 a ContextVar by the web app) take precedence over OS env vars, which in turn
 take precedence over DB settings.
 
+When ``system=True`` is passed to ``send_mail`` the per-account ContextVars
+are bypassed and SMTP is sourced from the admin account / env / legacy
+settings table. Use this for messages that must work *before* the recipient
+has any account context (e.g. signup verification codes).
+
 Dev fallback: if ``OPENCMO_SMTP_HOST`` is missing the sender logs the message
 to stderr at WARNING level and returns ``{"ok": True, "dev_mode": True}`` so
 local development works without configuring SMTP.
@@ -13,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -21,8 +27,22 @@ from email.utils import formataddr
 logger = logging.getLogger(__name__)
 
 
+async def _read_system_key(name: str) -> str | None:
+    """Pull a setting from the system fallback chain (admin acct → legacy → env)."""
+    try:
+        from opencmo import storage
+
+        val = await storage.get_system_setting(name)
+        if val:
+            return str(val)
+    except Exception as exc:
+        logger.debug("system-key lookup for %s failed: %s", name, exc)
+    env_val = os.environ.get(name)
+    return env_val if env_val else None
+
+
 def _smtp_config() -> dict | None:
-    """Read SMTP host/port/user/pass via the BYOK-aware key resolver.
+    """Read SMTP host/port/user/pass via the BYOK-aware (per-account) key resolver.
 
     Recipient is *not* part of this config — that's per-call to ``send_mail``.
     Returns ``None`` when any of host/port/user/pass is missing, which the
@@ -45,6 +65,39 @@ def _smtp_config() -> dict | None:
 
     from_address = llm.get_key("OPENCMO_SMTP_FROM") or user
     from_name = llm.get_key("OPENCMO_SMTP_FROM_NAME") or "OpenCMO"
+
+    return {
+        "host": str(host),
+        "port": port_int,
+        "user": str(user),
+        "password": str(password),
+        "from_address": str(from_address),
+        "from_name": str(from_name),
+    }
+
+
+async def _system_smtp_config() -> dict | None:
+    """Read SMTP credentials from the admin account / env (no per-account scope).
+
+    Used for messages that need to dispatch regardless of the current request's
+    account — for example signup verification, where the recipient does not yet
+    have any account_settings to fall back to.
+    """
+    host = await _read_system_key("OPENCMO_SMTP_HOST")
+    port = (await _read_system_key("OPENCMO_SMTP_PORT")) or "587"
+    user = await _read_system_key("OPENCMO_SMTP_USER")
+    password = await _read_system_key("OPENCMO_SMTP_PASS")
+
+    if not all([host, user, password]):
+        return None
+
+    try:
+        port_int = int(port)
+    except (TypeError, ValueError):
+        port_int = 587
+
+    from_address = (await _read_system_key("OPENCMO_SMTP_FROM")) or user
+    from_name = (await _read_system_key("OPENCMO_SMTP_FROM_NAME")) or "OpenCMO"
 
     return {
         "host": str(host),
@@ -111,8 +164,20 @@ async def send_mail(
     text: str | None = None,
     *,
     headers: dict[str, str] | None = None,
+    system: bool = False,
 ) -> dict:
     """Send a multipart HTML email.
+
+    Args:
+        to: Recipient email address.
+        subject: Plain-text subject line.
+        html: HTML body.
+        text: Optional plain-text alternative.
+        headers: Extra headers to attach.
+        system: When ``True``, force the system SMTP fallback chain (admin
+            account → legacy settings → env). Use this for transactional
+            messages that must work before the recipient has an account
+            (e.g. signup verification codes).
 
     Returns:
         ``{"ok": True}`` on real send,
@@ -125,7 +190,7 @@ async def send_mail(
     if not recipient:
         return {"ok": False, "error": "recipient_required"}
 
-    config = _smtp_config()
+    config = await _system_smtp_config() if system else _smtp_config()
     if config is None:
         logger.warning(
             "SMTP not configured — would have sent email to %s with subject %r. "

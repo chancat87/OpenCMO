@@ -20,7 +20,7 @@ from opencmo.web.app import app
 _CAPTURED_VERIFICATION_CODES: list[dict] = []
 
 
-async def _stub_send_mail(to: str, subject: str, html: str, text: str | None = None) -> dict:
+async def _stub_send_mail(to: str, subject: str, html: str, text: str | None = None, **_kwargs) -> dict:
     """Capture the 6-digit code so trial tests can complete signup via verify."""
     import re
 

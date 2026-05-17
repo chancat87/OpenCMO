@@ -1,16 +1,25 @@
-"""Settings API router."""
+"""Settings API router.
+
+Per-account multi-tenant credentials. Each authenticated user reads/writes
+keys under their own account; account A never sees account B's values.
+
+For dev/test mode where no session is attached, ``get_request_account_id``
+falls back to the admin account so the API stays usable in open mode.
+"""
 
 from __future__ import annotations
 
+import logging
 import os
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from opencmo import storage
-from opencmo.web.auth import normalize_external_https_url
+from opencmo.web.auth import get_request_account_id, normalize_external_https_url
 
 router = APIRouter(prefix="/api/v1")
+logger = logging.getLogger(__name__)
 
 
 def _mask_key(key: str) -> str:
@@ -19,53 +28,93 @@ def _mask_key(key: str) -> str:
     return "***" if key else ""
 
 
-async def _get_setting(name: str) -> str:
-    from opencmo import llm
-    return (await llm.get_key_async(name)) or ""
+_ALL_SETTING_KEYS: tuple[str, ...] = (
+    "OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENCMO_MODEL_DEFAULT",
+    # Reddit
+    "REDDIT_CLIENT_ID", "REDDIT_CLIENT_SECRET", "REDDIT_USERNAME", "REDDIT_PASSWORD",
+    "OPENCMO_AUTO_PUBLISH",
+    # Twitter
+    "TWITTER_API_KEY", "TWITTER_API_SECRET", "TWITTER_ACCESS_TOKEN", "TWITTER_ACCESS_SECRET",
+    # GEO
+    "ANTHROPIC_API_KEY", "GOOGLE_AI_API_KEY", "MOONSHOT_API_KEY", "DASHSCOPE_API_KEY",
+    "DEEPSEEK_API_KEY", "ZHIPU_API_KEY", "DOUBAO_API_KEY", "OPENCMO_GEO_CHATGPT",
+    # SEO
+    "PAGESPEED_API_KEY", "GOOGLE_GSC_CREDENTIALS", "GOOGLE_GSC_SITE_URL",
+    # Search (Tavily)
+    "TAVILY_API_KEY",
+    # GitHub
+    "GITHUB_TOKEN",
+    # SERP
+    "DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD",
+    # Email
+    "OPENCMO_SMTP_HOST", "OPENCMO_SMTP_PORT", "OPENCMO_SMTP_USER", "OPENCMO_SMTP_PASS",
+    "OPENCMO_REPORT_EMAIL",
+)
+
+
+async def _account_value(account_id: int, key: str) -> str:
+    """Return the per-account value (no env / no system fallback)."""
+    return (await storage.get_account_setting(account_id, key)) or ""
 
 
 @router.get("/settings")
-async def api_v1_settings_get():
-    api_key = await _get_setting("OPENAI_API_KEY")
-    base_url = await _get_setting("OPENAI_BASE_URL")
-    model = await _get_setting("OPENCMO_MODEL_DEFAULT")
+async def api_v1_settings_get(request: Request):
+    account_id = await get_request_account_id(request)
+
+    async def get(name: str) -> str:
+        return await _account_value(account_id, name)
+
+    api_key = await get("OPENAI_API_KEY")
+    base_url = await get("OPENAI_BASE_URL")
+    model = await get("OPENCMO_MODEL_DEFAULT")
     # Reddit
-    reddit_cid = await _get_setting("REDDIT_CLIENT_ID")
-    reddit_secret = await _get_setting("REDDIT_CLIENT_SECRET")
-    reddit_user = await _get_setting("REDDIT_USERNAME")
-    reddit_pass = await _get_setting("REDDIT_PASSWORD")
-    auto_publish = await _get_setting("OPENCMO_AUTO_PUBLISH")
+    reddit_cid = await get("REDDIT_CLIENT_ID")
+    reddit_secret = await get("REDDIT_CLIENT_SECRET")
+    reddit_user = await get("REDDIT_USERNAME")
+    reddit_pass = await get("REDDIT_PASSWORD")
+    auto_publish = await get("OPENCMO_AUTO_PUBLISH")
     # Twitter
-    twitter_api_key = await _get_setting("TWITTER_API_KEY")
-    twitter_api_secret = await _get_setting("TWITTER_API_SECRET")
-    twitter_access_token = await _get_setting("TWITTER_ACCESS_TOKEN")
-    twitter_access_secret = await _get_setting("TWITTER_ACCESS_SECRET")
+    twitter_api_key = await get("TWITTER_API_KEY")
+    twitter_api_secret = await get("TWITTER_API_SECRET")
+    twitter_access_token = await get("TWITTER_ACCESS_TOKEN")
+    twitter_access_secret = await get("TWITTER_ACCESS_SECRET")
     # GEO platforms
-    anthropic_key = await _get_setting("ANTHROPIC_API_KEY")
-    google_ai_key = await _get_setting("GOOGLE_AI_API_KEY")
-    moonshot_key = await _get_setting("MOONSHOT_API_KEY")
-    dashscope_key = await _get_setting("DASHSCOPE_API_KEY")
-    deepseek_key = await _get_setting("DEEPSEEK_API_KEY")
-    zhipu_key = await _get_setting("ZHIPU_API_KEY")
-    doubao_key = await _get_setting("DOUBAO_API_KEY")
-    geo_chatgpt = await _get_setting("OPENCMO_GEO_CHATGPT")
+    anthropic_key = await get("ANTHROPIC_API_KEY")
+    google_ai_key = await get("GOOGLE_AI_API_KEY")
+    moonshot_key = await get("MOONSHOT_API_KEY")
+    dashscope_key = await get("DASHSCOPE_API_KEY")
+    deepseek_key = await get("DEEPSEEK_API_KEY")
+    zhipu_key = await get("ZHIPU_API_KEY")
+    doubao_key = await get("DOUBAO_API_KEY")
+    geo_chatgpt = await get("OPENCMO_GEO_CHATGPT")
     # SEO
-    pagespeed_key = await _get_setting("PAGESPEED_API_KEY")
-    gsc_credentials = await _get_setting("GOOGLE_GSC_CREDENTIALS")
-    gsc_site_url = await _get_setting("GOOGLE_GSC_SITE_URL")
+    pagespeed_key = await get("PAGESPEED_API_KEY")
+    gsc_credentials = await get("GOOGLE_GSC_CREDENTIALS")
+    gsc_site_url = await get("GOOGLE_GSC_SITE_URL")
     # Search (Tavily)
-    tavily_key = await _get_setting("TAVILY_API_KEY")
+    tavily_key = await get("TAVILY_API_KEY")
     # GitHub
-    github_token = await _get_setting("GITHUB_TOKEN")
+    github_token = await get("GITHUB_TOKEN")
     # SERP
-    dataforseo_login = await _get_setting("DATAFORSEO_LOGIN")
-    dataforseo_pass = await _get_setting("DATAFORSEO_PASSWORD")
-    # Email
-    smtp_host = await _get_setting("OPENCMO_SMTP_HOST")
-    smtp_port = await _get_setting("OPENCMO_SMTP_PORT")
-    smtp_user = await _get_setting("OPENCMO_SMTP_USER")
-    smtp_pass = await _get_setting("OPENCMO_SMTP_PASS")
-    report_email = await _get_setting("OPENCMO_REPORT_EMAIL")
+    dataforseo_login = await get("DATAFORSEO_LOGIN")
+    dataforseo_pass = await get("DATAFORSEO_PASSWORD")
+    # Email (per-account)
+    smtp_host = await get("OPENCMO_SMTP_HOST")
+    smtp_port = await get("OPENCMO_SMTP_PORT")
+    smtp_user = await get("OPENCMO_SMTP_USER")
+    smtp_pass = await get("OPENCMO_SMTP_PASS")
+    report_email = await get("OPENCMO_REPORT_EMAIL")
+
+    # System SMTP is considered active when the current account hasn't
+    # configured its own SMTP credentials, but the admin account / env has.
+    user_smtp_configured = bool(smtp_host and smtp_user and smtp_pass)
+    system_smtp_active = False
+    if not user_smtp_configured:
+        system_host = await storage.get_system_setting("OPENCMO_SMTP_HOST") or os.environ.get("OPENCMO_SMTP_HOST")
+        system_user = await storage.get_system_setting("OPENCMO_SMTP_USER") or os.environ.get("OPENCMO_SMTP_USER")
+        system_pass = await storage.get_system_setting("OPENCMO_SMTP_PASS") or os.environ.get("OPENCMO_SMTP_PASS")
+        system_smtp_active = bool(system_host and system_user and system_pass)
+
     return JSONResponse({
         "api_key_set": bool(api_key),
         "api_key_masked": _mask_key(api_key),
@@ -109,54 +158,54 @@ async def api_v1_settings_get():
         "dataforseo_configured": bool(dataforseo_login and dataforseo_pass),
         "dataforseo_login": dataforseo_login,
         # Email
-        "email_configured": bool(smtp_host and smtp_user and smtp_pass),
+        "email_configured": user_smtp_configured,
         "smtp_host": smtp_host,
         "smtp_port": smtp_port,
         "smtp_user": smtp_user,
         "report_email": report_email,
+        "system_smtp_active": system_smtp_active,
     })
-
-
-_ALL_SETTING_KEYS = (
-    "OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENCMO_MODEL_DEFAULT",
-    # Reddit
-    "REDDIT_CLIENT_ID", "REDDIT_CLIENT_SECRET", "REDDIT_USERNAME", "REDDIT_PASSWORD",
-    "OPENCMO_AUTO_PUBLISH",
-    # Twitter
-    "TWITTER_API_KEY", "TWITTER_API_SECRET", "TWITTER_ACCESS_TOKEN", "TWITTER_ACCESS_SECRET",
-    # GEO
-    "ANTHROPIC_API_KEY", "GOOGLE_AI_API_KEY", "MOONSHOT_API_KEY", "DASHSCOPE_API_KEY",
-    "DEEPSEEK_API_KEY", "ZHIPU_API_KEY", "DOUBAO_API_KEY", "OPENCMO_GEO_CHATGPT",
-    # SEO
-    "PAGESPEED_API_KEY", "GOOGLE_GSC_CREDENTIALS", "GOOGLE_GSC_SITE_URL",
-    # Search (Tavily)
-    "TAVILY_API_KEY",
-    # GitHub
-    "GITHUB_TOKEN",
-    # SERP
-    "DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD",
-    # Email
-    "OPENCMO_SMTP_HOST", "OPENCMO_SMTP_PORT", "OPENCMO_SMTP_USER", "OPENCMO_SMTP_PASS",
-    "OPENCMO_REPORT_EMAIL",
-)
 
 
 @router.post("/settings")
 async def api_v1_settings_save(request: Request):
+    """Save credentials onto the current user's account.
+
+    Any authenticated user (or, in dev mode, the implicit admin fallback)
+    can save their own account's settings — there's no admin gate.
+    """
     body = await request.json()
+    account_id = await get_request_account_id(request)
     for key in _ALL_SETTING_KEYS:
         val = body.get(key)
-        if val is not None:
-            val = val.strip() if isinstance(val, str) else str(val)
-            if val and key == "OPENAI_BASE_URL":
-                try:
-                    val = normalize_external_https_url(val, field_name=key)
-                except ValueError as exc:
-                    return JSONResponse({"error": str(exc), "error_code": "invalid_setting"}, status_code=422)
-            if val:
-                await storage.set_setting(key, val)
+        if val is None:
+            continue
+        val = val.strip() if isinstance(val, str) else str(val)
+        if val and key == "OPENAI_BASE_URL":
+            try:
+                val = normalize_external_https_url(val, field_name=key)
+            except ValueError as exc:
+                return JSONResponse(
+                    {"error": str(exc), "error_code": "invalid_setting"},
+                    status_code=422,
+                )
+        if val:
+            await storage.set_account_setting(account_id, key, val)
+            # Keep env var in sync for the legacy global cascade. Only the
+            # admin account's saves should leak into the process-wide env —
+            # otherwise account B writing to env would shadow account A.
+            try:
+                admin_id = await storage.get_admin_account_id()
+            except Exception:
+                admin_id = None
+            if admin_id is not None and int(admin_id) == int(account_id):
                 os.environ[key] = val
-            else:
-                await storage.delete_setting(key)
+        else:
+            await storage.delete_account_setting(account_id, key)
+            try:
+                admin_id = await storage.get_admin_account_id()
+            except Exception:
+                admin_id = None
+            if admin_id is not None and int(admin_id) == int(account_id):
                 os.environ.pop(key, None)
     return JSONResponse({"ok": True})

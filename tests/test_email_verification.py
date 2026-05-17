@@ -58,7 +58,7 @@ def verification_db(tmp_path, monkeypatch):
     web_app._AUTH_RATE_BUCKETS.clear()
     _CAPTURED_CODES.clear()
 
-    async def _async_capture(to: str, subject: str, html: str, text: str | None = None) -> dict:
+    async def _async_capture(to: str, subject: str, html: str, text: str | None = None, **_kwargs) -> dict:
         return _fake_send_mail(to, subject, html, text)
 
     with patch.object(storage, "_DB_PATH", db_path), \
@@ -303,7 +303,7 @@ def test_existing_legacy_users_remain_verified_after_backfill(tmp_path, monkeypa
 
     web_app._AUTH_RATE_BUCKETS.clear()
 
-    async def _noop_send(to: str, subject: str, html: str, text: str | None = None) -> dict:
+    async def _noop_send(to: str, subject: str, html: str, text: str | None = None, **_kwargs) -> dict:
         return {"ok": True}
 
     with patch.object(storage, "_DB_PATH", db_path), \

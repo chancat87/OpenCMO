@@ -394,6 +394,8 @@ export const es: Partial<Record<TranslationKey, string>> = {
   "settings.save": "Guardar",
   "settings.saved": "¡Guardado!",
   "settings.serverSettingsAdminOnly": "Las claves del navegador se guardaron. La configuración global de proveedores, publicación y email requiere un token de administrador.",
+  "settings.accountScopedHint": "Estos ajustes son privados de tu cuenta. Otros usuarios no pueden verlos ni utilizarlos.",
+  "settings.systemSmtpActive": "Usando el SMTP compartido del sistema. Configura el tuyo abajo para usar una dirección de remitente propia.",
   "settings.apiKeySet": "Clave API configurada",
   "settings.apiKeyNotSet": "Clave API no configurada",
   "settings.browserOverrideActive": "Override del navegador activo",

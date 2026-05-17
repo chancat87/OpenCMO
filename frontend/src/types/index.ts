@@ -620,6 +620,10 @@ export interface AISettings {
   smtp_port: string;
   smtp_user: string;
   report_email: string;
+  // True when no per-account SMTP is set but the shared system SMTP can
+  // still deliver mail (admin account / env). Used by the UI to surface a
+  // hint that branded emails will go out under the system identity.
+  system_smtp_active?: boolean;
 }
 
 // GitHub Leads

@@ -264,8 +264,13 @@ from opencmo.storage.serp import (
 
 # --- Settings ---
 from opencmo.storage.settings import (
+    delete_account_setting,
     delete_setting,
+    get_account_setting,
     get_setting,
+    get_system_setting,
+    list_account_settings,
+    set_account_setting,
     set_setting,
 )
 
@@ -377,6 +382,9 @@ __all__ = [
     "update_chat_session", "delete_chat_session", "clear_chat_sessions",
     # settings
     "get_setting", "set_setting", "delete_setting",
+    "get_account_setting", "set_account_setting",
+    "delete_account_setting", "list_account_settings",
+    "get_system_setting",
     # site stats
     "get_site_counter", "increment_site_counter",
     # waitlist

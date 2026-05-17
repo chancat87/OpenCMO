@@ -232,6 +232,19 @@ CREATE TABLE IF NOT EXISTS settings (
     value TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS account_settings (
+    account_id INTEGER NOT NULL,
+    key TEXT NOT NULL,
+    value TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (account_id, key),
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_account_settings_account
+ON account_settings(account_id);
+
 CREATE TABLE IF NOT EXISTS site_counters (
     key TEXT PRIMARY KEY,
     value INTEGER NOT NULL DEFAULT 0,
@@ -939,6 +952,18 @@ _MIGRATIONS: list[tuple[int, str, list[str]]] = [
         )""",
         "CREATE INDEX IF NOT EXISTS idx_email_verifications_user ON email_verifications(user_id)",
     ]),
+    (24, "per-account settings table for multi-tenant credential isolation", [
+        """CREATE TABLE IF NOT EXISTS account_settings (
+            account_id INTEGER NOT NULL,
+            key TEXT NOT NULL,
+            value TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            PRIMARY KEY (account_id, key),
+            FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_account_settings_account ON account_settings(account_id)",
+    ]),
 ]
 
 _LATEST_VERSION = _MIGRATIONS[-1][0]
@@ -1146,6 +1171,79 @@ async def _backfill_email_verified(db: aiosqlite.Connection) -> None:
         logger.debug("email backfill skipped (update): %s", exc)
 
 
+async def _backfill_account_settings(db: aiosqlite.Connection) -> None:
+    """Copy legacy global ``settings`` rows into ``account_settings`` under the admin account.
+
+    Runs once per process boot. Skips when ``account_settings`` already has any
+    rows (treated as "migration already done"), or when no admin account exists
+    yet (fresh install — nothing to backfill into).
+
+    The legacy ``settings`` table is intentionally preserved so ``get_system_setting``
+    can still fall back to it when an admin account is missing or empty.
+    """
+    try:
+        cursor = await db.execute("SELECT COUNT(*) FROM account_settings")
+        row = await cursor.fetchone()
+        existing = int(row[0] or 0) if row else 0
+    except Exception as exc:
+        logger.debug("account_settings backfill skipped (count): %s", exc)
+        return
+
+    if existing > 0:
+        return
+
+    try:
+        cursor = await db.execute("SELECT key, value FROM settings")
+        legacy_rows = await cursor.fetchall()
+    except Exception as exc:
+        logger.debug("account_settings backfill skipped (read legacy): %s", exc)
+        return
+
+    if not legacy_rows:
+        return
+
+    admin_email = os.environ.get("OPENCMO_ADMIN_EMAIL", "hello@aidcmo.com").strip().lower()
+    cursor = await db.execute(
+        """SELECT a.id
+           FROM accounts a
+           JOIN account_members m ON m.account_id = a.id
+           JOIN users u ON u.id = m.user_id
+           WHERE u.email = ?
+           ORDER BY a.id
+           LIMIT 1""",
+        (admin_email,),
+    )
+    row = await cursor.fetchone()
+    if not row:
+        cursor = await db.execute(
+            "SELECT a.id FROM accounts a JOIN account_members m ON m.account_id = a.id "
+            "JOIN users u ON u.id = m.user_id WHERE u.role = 'admin' ORDER BY a.id LIMIT 1"
+        )
+        row = await cursor.fetchone()
+    if not row:
+        logger.info("account_settings backfill: no admin account yet — skipping")
+        return
+
+    admin_account_id = int(row[0])
+    inserted = 0
+    for key, value in legacy_rows:
+        if not key or value is None:
+            continue
+        try:
+            await db.execute(
+                "INSERT OR IGNORE INTO account_settings (account_id, key, value) VALUES (?, ?, ?)",
+                (admin_account_id, str(key), str(value)),
+            )
+            inserted += 1
+        except Exception as exc:
+            logger.debug("account_settings backfill row %r failed: %s", key, exc)
+    logger.info(
+        "account_settings backfill: copied %d row(s) from settings to account_settings (account_id=%d)",
+        inserted,
+        admin_account_id,
+    )
+
+
 async def _ensure_admin_account(db: aiosqlite.Connection) -> None:
     """Create the admin owner/account and attach legacy projects to it."""
     admin_email = os.environ.get("OPENCMO_ADMIN_EMAIL", "hello@aidcmo.com").strip().lower()
@@ -1265,6 +1363,7 @@ async def ensure_db() -> None:
             await _ensure_platform_indexes(db)
             await _ensure_admin_account(db)
             await _backfill_email_verified(db)
+            await _backfill_account_settings(db)
             await _ensure_dedupe_indexes(db)
             await _ensure_report_locale_indexes(db)
             await db.commit()

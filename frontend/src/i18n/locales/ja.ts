@@ -434,6 +434,8 @@ export const ja: Partial<Record<TranslationKey, string>> = {
   "settings.save": "保存",
   "settings.saved": "保存しました！",
   "settings.serverSettingsAdminOnly": "ブラウザのキーは保存されました。サーバー全体のプロバイダー、公開、メール設定には管理者トークンが必要です。",
+  "settings.accountScopedHint": "これらの設定はお客様のアカウント専用です。他のユーザーには表示も使用もされません。",
+  "settings.systemSmtpActive": "共有システムの SMTP を使用中です。独自の差出人アドレスを使うには下記で SMTP を設定してください。",
   "settings.apiKeySet": "API キー設定済み",
   "settings.apiKeyNotSet": "API キー未設定",
   "settings.browserOverrideActive": "ブラウザ上書きが有効",

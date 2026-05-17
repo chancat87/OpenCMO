@@ -425,6 +425,8 @@ export const zh: Partial<Record<TranslationKey, string>> = {
   "settings.save": "保存",
   "settings.saved": "已保存！",
   "settings.serverSettingsAdminOnly": "浏览器里的密钥已保存。服务端全局服务商、发布和邮件配置需要管理员令牌。",
+  "settings.accountScopedHint": "这些配置仅属于你的账号，其他用户无法看到或使用。",
+  "settings.systemSmtpActive": "当前使用共享的系统 SMTP。在下方配置你自己的 SMTP 即可使用自定义发件地址。",
   "settings.apiKeySet": "API 密钥已配置",
   "settings.apiKeyNotSet": "未配置 API 密钥",
   "settings.browserOverrideActive": "浏览器覆盖配置生效",

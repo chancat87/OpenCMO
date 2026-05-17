@@ -1276,6 +1276,35 @@ async def session_context_middleware(request: Request, call_next):
     if project_rejection is not None:
         return project_rejection
 
+    # Bind the active account to the LLM ContextVars so per-account settings
+    # (Reddit/Twitter/SMTP credentials, etc.) flow through downstream tools.
+    # When no session is attached (dev mode, bearer-only auth) we fall back to
+    # the admin account so tools still see system credentials.
+    from opencmo import llm, storage
+
+    account = getattr(request.state, "current_account", None)
+    account_id: int | None = None
+    if account and account.get("id"):
+        account_id = int(account["id"])
+    else:
+        try:
+            account_id = await storage.get_admin_account_id()
+        except Exception:
+            account_id = None
+
+    if account_id:
+        try:
+            settings_snapshot = await storage.list_account_settings(account_id)
+        except Exception:
+            settings_snapshot = {}
+        acct_token = llm.set_current_account_id(account_id)
+        snap_token = llm.set_current_account_settings(settings_snapshot)
+        try:
+            return await call_next(request)
+        finally:
+            llm.reset_current_account_settings(snap_token)
+            llm.reset_current_account_id(acct_token)
+
     return await call_next(request)
 
 

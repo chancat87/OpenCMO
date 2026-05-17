@@ -187,11 +187,31 @@ class BackgroundWorker:
                 self._global_sem.release()
 
     async def _execute_task(self, task: dict) -> None:
-        from opencmo import llm
+        from opencmo import llm, storage
 
-        # Inject BYOK context if present in task payload
-        byok_keys = task.get("payload", {}).get("_byok_keys", {})
-        token = llm.set_request_keys(byok_keys) if byok_keys else None
+        payload = task.get("payload", {}) or {}
+
+        # Inject BYOK + account context if present in task payload so the worker
+        # resolves per-account settings (Reddit/Twitter/SMTP) the same way the
+        # original web request would have.
+        byok_keys = payload.get("_byok_keys", {})
+        byok_token = llm.set_request_keys(byok_keys) if byok_keys else None
+
+        account_id = payload.get("_account_id")
+        acct_token = None
+        snap_token = None
+        if account_id:
+            try:
+                account_id = int(account_id)
+            except (TypeError, ValueError):
+                account_id = None
+        if account_id:
+            acct_token = llm.set_current_account_id(account_id)
+            try:
+                snapshot = await storage.list_account_settings(account_id)
+            except Exception:
+                snapshot = {}
+            snap_token = llm.set_current_account_settings(snapshot)
 
         try:
             executor = self._executors[task["kind"]]
@@ -209,8 +229,12 @@ class BackgroundWorker:
         except Exception as exc:
             await bg_service.retry_or_fail_task(task["task_id"], worker_id=self.worker_id, error={"message": str(exc)})
         finally:
-            if token:
-                llm.reset_request_keys(token)
+            if snap_token is not None:
+                llm.reset_current_account_settings(snap_token)
+            if acct_token is not None:
+                llm.reset_current_account_id(acct_token)
+            if byok_token:
+                llm.reset_request_keys(byok_token)
 
     async def _cancel_watch_loop(self, task_id: str, task: asyncio.Task | None) -> None:
         if task is None:

@@ -19,11 +19,16 @@ async def enqueue_task(
 ) -> dict:
     from opencmo import llm
 
-    # Capture BYOK keys from current request context
+    # Capture BYOK keys + active account id from current request context so
+    # the worker can restore them when the task actually runs.
     keys = llm.get_request_keys()
-    if keys:
+    account_id = llm.get_current_account_id()
+    if keys or account_id:
         payload = payload.copy()
-        payload["_byok_keys"] = keys
+        if keys:
+            payload["_byok_keys"] = keys
+        if account_id:
+            payload["_account_id"] = int(account_id)
 
     if dedupe_key:
 
