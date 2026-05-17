@@ -531,7 +531,7 @@ export const zh: Partial<Record<TranslationKey, string>> = {
   "onboarding.limitedModeNeedsKeyTitle": "添加 Key 后更完整",
   "onboarding.limitedModeNeedsKey": "关键词提取、竞品上下文和更广的 AI 搜索检查需要配置供应商。",
   "landing.headerTagline": "OpenCMO 海外增长工作台，输入一个 URL 就能开始。",
-  "landing.metaTitle": "aidCMO — OpenCMO AI CMO 产品工作台",
+  "landing.metaTitle": "aidCMO — OpenCMO 海外增长 AI CMO 工作台",
   "landing.metaDescription": "OpenCMO 是开源 AI CMO 增长工作台，用一个项目界面完成 SEO 审计、AI 可见度监控、海外社区机会发现、评论草稿复核和增长动作发布。",
   "landing.navOpenSource": "OpenCMO",
   "landing.navProduct": "产品",

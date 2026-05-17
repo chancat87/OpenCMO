@@ -529,7 +529,7 @@ export const en = {
   "onboarding.limitedModeNeedsKeyTitle": "Works better with a key",
   "onboarding.limitedModeNeedsKey": "Add a provider for keyword extraction, competitor context, and broader AI Search.",
   "landing.headerTagline": "OpenCMO overseas growth workspace. Start with one URL.",
-  "landing.metaTitle": "aidCMO — OpenCMO AI CMO product workspace",
+  "landing.metaTitle": "aidCMO — OpenCMO AI CMO workspace for overseas growth",
   "landing.metaDescription": "OpenCMO is an open-source AI CMO growth workspace for SEO audits, AI visibility monitoring, overseas community opportunity discovery, comment review, and growth actions.",
   "landing.navOpenSource": "OpenCMO",
   "landing.navProduct": "Product",
