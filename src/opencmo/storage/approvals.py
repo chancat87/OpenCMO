@@ -76,17 +76,26 @@ async def create_approval(
     return await get_approval(approval_id)
 
 
-async def get_approval(approval_id: int) -> dict | None:
+async def get_approval(approval_id: int, account_id: int | None = None) -> dict | None:
     """Return one approval item."""
     db = await get_db()
     try:
+        join = ""
+        where = "a.id = ?"
+        params: tuple = (approval_id,)
+        if account_id is not None:
+            join = "JOIN projects p ON p.id = a.project_id"
+            where = "a.id = ? AND p.account_id = ?"
+            params = (approval_id, account_id)
         cursor = await db.execute(
-            """SELECT id, project_id, channel, approval_type, status, title, target_label,
-                      target_url, agent_name, content, payload_json, preview_json,
-                      publish_result_json, decision_note, created_at, decided_at,
-                      source_insight_id, pre_metrics_json, post_metrics_json
-               FROM approvals WHERE id = ?""",
-            (approval_id,),
+            f"""SELECT a.id, a.project_id, a.channel, a.approval_type, a.status, a.title, a.target_label,
+                       a.target_url, a.agent_name, a.content, a.payload_json, a.preview_json,
+                       a.publish_result_json, a.decision_note, a.created_at, a.decided_at,
+                       a.source_insight_id, a.pre_metrics_json, a.post_metrics_json
+                FROM approvals a
+                {join}
+                WHERE {where}""",
+            params,
         )
         row = await cursor.fetchone()
         return _approval_row_to_dict(row) if row else None
@@ -94,31 +103,33 @@ async def get_approval(approval_id: int) -> dict | None:
         await db.close()
 
 
-async def list_approvals(status: str | None = None, limit: int = 50) -> list[dict]:
+async def list_approvals(status: str | None = None, limit: int = 50, account_id: int | None = None) -> list[dict]:
     """List approvals, newest first."""
     db = await get_db()
     try:
+        join = ""
+        clauses: list[str] = []
+        params: list = []
+        if account_id is not None:
+            join = "JOIN projects p ON p.id = a.project_id"
+            clauses.append("p.account_id = ?")
+            params.append(account_id)
         if status:
-            cursor = await db.execute(
-                """SELECT id, project_id, channel, approval_type, status, title, target_label,
-                          target_url, agent_name, content, payload_json, preview_json,
-                          publish_result_json, decision_note, created_at, decided_at
-                   FROM approvals
-                   WHERE status = ?
-                   ORDER BY created_at DESC, id DESC
-                   LIMIT ?""",
-                (status, limit),
-            )
-        else:
-            cursor = await db.execute(
-                """SELECT id, project_id, channel, approval_type, status, title, target_label,
-                          target_url, agent_name, content, payload_json, preview_json,
-                          publish_result_json, decision_note, created_at, decided_at
-                   FROM approvals
-                   ORDER BY created_at DESC, id DESC
-                   LIMIT ?""",
-                (limit,),
-            )
+            clauses.append("a.status = ?")
+            params.append(status)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        params.append(limit)
+        cursor = await db.execute(
+            f"""SELECT a.id, a.project_id, a.channel, a.approval_type, a.status, a.title, a.target_label,
+                       a.target_url, a.agent_name, a.content, a.payload_json, a.preview_json,
+                       a.publish_result_json, a.decision_note, a.created_at, a.decided_at
+                FROM approvals a
+                {join}
+                {where}
+                ORDER BY a.created_at DESC, a.id DESC
+                LIMIT ?""",
+            tuple(params),
+        )
         rows = await cursor.fetchall()
         return [_approval_row_to_dict(row) for row in rows]
     finally:

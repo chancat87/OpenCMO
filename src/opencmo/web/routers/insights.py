@@ -10,6 +10,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from opencmo import llm, storage
+from opencmo.web.auth import get_request_account_id
 
 logger = logging.getLogger(__name__)
 
@@ -212,21 +213,27 @@ async def _translate_insights(items: list[dict], lang: str) -> list[dict]:
 
 @router.get("/insights")
 async def api_v1_insights(request: Request):
+    account_id = await get_request_account_id(request)
     project_id = request.query_params.get("project_id")
     unread = request.query_params.get("unread", "").lower() in ("true", "1")
     lang = request.query_params.get("lang", "en")
     pid = int(project_id) if project_id else None
-    insights = await storage.list_insights(project_id=pid, unread_only=unread)
+    if pid is not None and not await storage.get_project(pid, account_id=account_id):
+        return JSONResponse([], status_code=200)
+    insights = await storage.list_insights(project_id=pid, unread_only=unread, account_id=account_id)
     insights = await _translate_insights(insights, lang)
     return JSONResponse(insights)
 
 
 @router.get("/insights/summary")
 async def api_v1_insights_summary(request: Request):
+    account_id = await get_request_account_id(request)
     project_id = request.query_params.get("project_id")
     lang = request.query_params.get("lang", "en")
     pid = int(project_id) if project_id else None
-    summary = await storage.get_insights_summary(project_id=pid)
+    if pid is not None and not await storage.get_project(pid, account_id=account_id):
+        return JSONResponse({"unread_count": 0, "recent": []})
+    summary = await storage.get_insights_summary(project_id=pid, account_id=account_id)
     summary["recent"] = await _translate_insights(summary["recent"], lang)
     return JSONResponse(summary)
 
@@ -241,7 +248,10 @@ async def api_v1_insight_read(insight_id: int):
 
 @router.post("/insights/read-all")
 async def api_v1_insights_read_all(request: Request):
+    account_id = await get_request_account_id(request)
     project_id = request.query_params.get("project_id")
     pid = int(project_id) if project_id else None
-    updated = await storage.mark_all_insights_read(project_id=pid)
+    if pid is not None and not await storage.get_project(pid, account_id=account_id):
+        return JSONResponse({"ok": True, "updated": 0})
+    updated = await storage.mark_all_insights_read(project_id=pid, account_id=account_id)
     return JSONResponse({"ok": True, "updated": updated})

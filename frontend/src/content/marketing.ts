@@ -39,7 +39,7 @@ export type BlogArticle = {
 };
 
 export const PUBLIC_HOME_NAV: PublicNavItem[] = [
-  { href: "/workspace", label: "landing.navProduct" },
+  { href: "/console", label: "landing.navProduct" },
   { href: "/services", label: "landing.navServices" },
   { href: "/open-source", label: "landing.navOpenSource" },
   { href: "/blog", label: "landing.navBlog" },

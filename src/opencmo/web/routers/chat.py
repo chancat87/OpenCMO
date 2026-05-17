@@ -13,6 +13,7 @@ from starlette.responses import StreamingResponse
 
 from opencmo import storage
 from opencmo.opportunities import build_project_opportunity_snapshot
+from opencmo.web.auth import get_request_account_id, get_request_user_id
 
 router = APIRouter(prefix="/api/v1")
 logger = logging.getLogger(__name__)
@@ -23,9 +24,10 @@ _MARKETING_REVIEW_TIMEOUT_SECONDS = 30.0
 
 
 @router.get("/chat/context/{project_id}")
-async def api_v1_chat_context(project_id: int):
+async def api_v1_chat_context(project_id: int, request: Request):
     """Return structured project context for the Chat UI."""
-    project = await storage.get_project(project_id)
+    account_id = await get_request_account_id(request)
+    project = await storage.get_project(project_id, account_id=account_id)
     if not project:
         return JSONResponse({"error": "Project not found"}, status_code=404)
 
@@ -159,6 +161,7 @@ def _extract_assistant_text(items: list[dict]) -> str:
 async def api_v1_chat_session_create(request: Request):
     from opencmo.web import chat_sessions
     body_bytes = await request.body()
+    account_id = await get_request_account_id(request)
     try:
         body = json.loads(body_bytes) if body_bytes else {}
     except json.JSONDecodeError:
@@ -171,34 +174,37 @@ async def api_v1_chat_session_create(request: Request):
             project_id = int(raw_project_id)
         except (TypeError, ValueError):
             return JSONResponse({"error": "project_id must be an integer"}, status_code=400)
-        project = await storage.get_project(project_id)
+        project = await storage.get_project(project_id, account_id=account_id)
         if not project:
             return JSONResponse({"error": "Project not found"}, status_code=404)
 
-    session_id = await chat_sessions.create_session(project_id=project_id)
+    session_id = await chat_sessions.create_session(project_id=project_id, account_id=account_id)
     return JSONResponse({"session_id": session_id, "project_id": project_id}, status_code=201)
 
 
 @router.get("/chat/sessions")
-async def api_v1_chat_sessions_list():
+async def api_v1_chat_sessions_list(request: Request):
     from opencmo.web import chat_sessions
-    sessions = await chat_sessions.list_sessions()
+    account_id = await get_request_account_id(request)
+    sessions = await chat_sessions.list_sessions(account_id=account_id)
     return JSONResponse(sessions)
 
 
 @router.get("/chat/sessions/{session_id}/messages")
-async def api_v1_chat_session_messages(session_id: str):
+async def api_v1_chat_session_messages(session_id: str, request: Request):
     from opencmo.web import chat_sessions
-    messages = await chat_sessions.get_session_messages(session_id)
+    account_id = await get_request_account_id(request)
+    messages = await chat_sessions.get_session_messages(session_id, account_id=account_id)
     if messages is None:
         return JSONResponse({"error": "Session not found"}, status_code=404)
     return JSONResponse(messages)
 
 
 @router.delete("/chat/sessions/{session_id}")
-async def api_v1_chat_session_delete(session_id: str):
+async def api_v1_chat_session_delete(session_id: str, request: Request):
     from opencmo.web import chat_sessions
-    ok = await chat_sessions.delete_session(session_id)
+    account_id = await get_request_account_id(request)
+    ok = await chat_sessions.delete_session(session_id, account_id=account_id)
     if not ok:
         return JSONResponse({"error": "Not found"}, status_code=404)
     return JSONResponse({"ok": True})
@@ -441,11 +447,13 @@ async def api_v1_chat(request: Request):
     body = await request.json()
     session_id = body.get("session_id", "")
     message = body.get("message", "").strip()
+    account_id = await get_request_account_id(request)
+    user_id = get_request_user_id(request)
 
     if not message:
         return JSONResponse({"error": "message is required"}, status_code=400)
 
-    session = await storage.get_chat_session(session_id)
+    session = await storage.get_chat_session(session_id, account_id=account_id)
     if session is None:
         return JSONResponse({"error": "Invalid session_id"}, status_code=404)
     input_items = json.loads(session["input_items"])
@@ -456,8 +464,10 @@ async def api_v1_chat(request: Request):
     context_item = None
     # Inject project context from knowledge graph
     from opencmo.context import build_project_context, resolve_chat_project
-    project_id = await resolve_chat_project(body)
+    project_id = await resolve_chat_project(body, account_id=account_id)
     if project_id:
+        if not await storage.get_project(project_id, account_id=account_id):
+            return JSONResponse({"error": "Project not found"}, status_code=404)
         ctx = await build_project_context(project_id, depth="full")
         if ctx:
             input_items.insert(0, {"role": "system", "content": f"[Project Context]\n{ctx}"})
@@ -596,7 +606,14 @@ async def api_v1_chat(request: Request):
                     break
             if final_output and not assistant_updated:
                 updated_items.append({"role": "assistant", "content": final_output})
-            await chat_sessions.update_session(session_id, updated_items)
+            await chat_sessions.update_session(session_id, updated_items, account_id=account_id)
+            await storage.record_usage_event(
+                account_id,
+                "ai_chat",
+                user_id=user_id,
+                project_id=project_id,
+                metadata={"session_id": session_id, "agent_name": agent_name},
+            )
             yield f"data: {json.dumps({'type': 'done', 'agent_name': agent_name, 'final_output': final_output, 'review_applied': review_result['review_applied'], 'review_profile': review_result['profile'], 'review_weak_points': review_result['weak_points'], 'stream_timed_out': stream_timed_out})}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"

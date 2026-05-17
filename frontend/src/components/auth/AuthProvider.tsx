@@ -6,83 +6,132 @@ import {
   type ReactNode,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import * as authApi from "../../api/auth";
+import type { AccountUsage, AuthAccount, AuthUser } from "../../types";
 
 export interface AuthContextValue {
   isAuthenticated: boolean;
-  needsAuth: boolean;
-  login: (token: string) => Promise<boolean>;
-  logout: () => void;
+  isLoading: boolean;
+  isAdmin: boolean;
+  user: AuthUser | null;
+  account: AuthAccount | null;
+  usage: AccountUsage | null;
+  login: (email: string, password: string) => Promise<boolean>;
+  signup: (email: string, password: string, name?: string) => Promise<boolean>;
+  logout: () => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextValue>({
   isAuthenticated: false,
-  needsAuth: false,
+  isLoading: true,
+  isAdmin: false,
+  user: null,
+  account: null,
+  usage: null,
   login: async () => false,
-  logout: () => {},
+  signup: async () => false,
+  logout: async () => {},
+  refresh: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    () => !!localStorage.getItem("opencmo_token"),
-  );
-  const [needsAuth, setNeedsAuth] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [account, setAccount] = useState<AuthAccount | null>(null);
+  const [usage, setUsage] = useState<AccountUsage | null>(null);
+
+  const applyPayload = useCallback((payload: authApi.AuthPayload | { authenticated: false }) => {
+    if (!payload.authenticated) {
+      setUser(null);
+      setAccount(null);
+      setUsage(null);
+      return;
+    }
+    setUser(payload.user);
+    setAccount(payload.account);
+    setUsage(payload.usage);
+  }, []);
+
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      applyPayload(await authApi.getMe());
+    } finally {
+      setIsLoading(false);
+    }
+  }, [applyPayload]);
 
   // Listen for 401 events from apiFetch
   useEffect(() => {
     const handler = () => {
-      setIsAuthenticated(false);
-      setNeedsAuth(true);
+      setUser(null);
+      setAccount(null);
+      setUsage(null);
       queryClient.cancelQueries();
     };
     window.addEventListener("opencmo:unauthorized", handler);
     return () => window.removeEventListener("opencmo:unauthorized", handler);
   }, [queryClient]);
 
-  // On mount, probe to detect if auth is needed
   useEffect(() => {
-    const token = localStorage.getItem("opencmo_token");
-    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-    fetch("/api/v1/projects", { headers }).then((r) => {
-      if (r.status === 401) {
-        setNeedsAuth(true);
-        if (!localStorage.getItem("opencmo_token")) {
-          setIsAuthenticated(false);
-        }
-      } else if (r.ok) {
-        setNeedsAuth(false);
-        setIsAuthenticated(!!token);
-      }
-    });
-  }, []);
+    void refresh();
+  }, [refresh]);
 
   const login = useCallback(
-    async (token: string) => {
-      const trimmed = token.trim();
-      const resp = await fetch("/api/v1/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: trimmed }),
-      });
-      if (resp.ok) {
-        localStorage.setItem("opencmo_token", trimmed);
-        setIsAuthenticated(true);
-        queryClient.invalidateQueries();
+    async (email: string, password: string) => {
+      try {
+        applyPayload(await authApi.login({ email, password }));
+        await queryClient.invalidateQueries();
         return true;
+      } catch {
+        return false;
       }
-      return false;
     },
-    [queryClient],
+    [applyPayload, queryClient],
   );
 
-  const logout = useCallback(() => {
+  const signup = useCallback(
+    async (email: string, password: string, name?: string) => {
+      try {
+        applyPayload(await authApi.signup({ email, password, name }));
+        await queryClient.invalidateQueries();
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [applyPayload, queryClient],
+  );
+
+  const logout = useCallback(async () => {
+    await authApi.logout().catch(() => undefined);
     localStorage.removeItem("opencmo_token");
-    setIsAuthenticated(false);
-    queryClient.cancelQueries();
+    setUser(null);
+    setAccount(null);
+    setUsage(null);
+    queryClient.clear();
   }, [queryClient]);
 
+  const isAuthenticated = !!user;
+  const isAdmin = user?.role === "admin";
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, needsAuth, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        isAuthenticated,
+        isLoading,
+        isAdmin,
+        user,
+        account,
+        usage,
+        login,
+        signup,
+        logout,
+        refresh,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

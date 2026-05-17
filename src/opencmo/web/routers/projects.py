@@ -8,6 +8,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from opencmo import storage
+from opencmo.web.auth import get_request_account_id
 
 router = APIRouter(prefix="/api/v1")
 
@@ -51,33 +52,37 @@ def _latest_surface_timestamp(latest: dict) -> datetime | None:
 
 
 @router.get("/projects")
-async def api_v1_projects():
+async def api_v1_projects(request: Request):
     from opencmo import service
-    return JSONResponse(await service.get_status_summary())
+    account_id = await get_request_account_id(request)
+    return JSONResponse(await service.get_status_summary(account_id=account_id))
 
 
 @router.get("/projects/{project_id}")
-async def api_v1_project(project_id: int):
-    project = await storage.get_project(project_id)
+async def api_v1_project(project_id: int, request: Request):
+    account_id = await get_request_account_id(request)
+    project = await storage.get_project(project_id, account_id=account_id)
     if not project:
         return JSONResponse({"error": "Not found"}, status_code=404)
     return JSONResponse(project)
 
 
 @router.delete("/projects/{project_id}")
-async def api_v1_delete_project(project_id: int):
+async def api_v1_delete_project(project_id: int, request: Request):
+    account_id = await get_request_account_id(request)
     # Stop graph expansion if any
     await storage.update_expansion(project_id, desired_state="idle")
-    ok = await storage.delete_project(project_id)
+    ok = await storage.delete_project(project_id, account_id=account_id)
     if not ok:
         return JSONResponse({"error": "Not found"}, status_code=404)
     return JSONResponse({"ok": True})
 
 
 @router.post("/projects/{project_id}/pause")
-async def api_v1_pause_project(project_id: int):
+async def api_v1_pause_project(project_id: int, request: Request):
+    account_id = await get_request_account_id(request)
     # 1. Pause scheduled jobs
-    jobs = await storage.list_scheduled_jobs()
+    jobs = await storage.list_scheduled_jobs(account_id=account_id)
     from opencmo.scheduler import sync_job_record
     for job in jobs:
         if job["project_id"] == project_id and job["enabled"]:
@@ -94,9 +99,10 @@ async def api_v1_pause_project(project_id: int):
 
 
 @router.post("/projects/{project_id}/resume")
-async def api_v1_resume_project(project_id: int):
+async def api_v1_resume_project(project_id: int, request: Request):
+    account_id = await get_request_account_id(request)
     # 1. Resume scheduled jobs
-    jobs = await storage.list_scheduled_jobs()
+    jobs = await storage.list_scheduled_jobs(account_id=account_id)
     from opencmo.scheduler import sync_job_record
     for job in jobs:
         if job["project_id"] == project_id and not job["enabled"]:
@@ -112,9 +118,10 @@ async def api_v1_resume_project(project_id: int):
 
 
 @router.get("/overview")
-async def api_v1_overview():
+async def api_v1_overview(request: Request):
     """Global health overview — aggregated metrics across all projects."""
-    projects = await storage.list_projects()
+    account_id = await get_request_account_id(request)
+    projects = await storage.list_projects(account_id=account_id)
     seo_scores: list[float] = []
     geo_scores: list[int] = []
     community_hits = 0
@@ -176,8 +183,9 @@ async def api_v1_overview():
 
 
 @router.get("/projects/{project_id}/summary")
-async def api_v1_project_summary(project_id: int, locale: str | None = None):
-    project = await storage.get_project(project_id)
+async def api_v1_project_summary(project_id: int, request: Request, locale: str | None = None):
+    account_id = await get_request_account_id(request)
+    project = await storage.get_project(project_id, account_id=account_id)
     if not project:
         return JSONResponse({"error": "Not found"}, status_code=404)
 

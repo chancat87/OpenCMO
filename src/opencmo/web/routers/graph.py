@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 
 from opencmo import storage
 from opencmo.background import service as bg_service
+from opencmo.web.auth import get_request_account_id
 
 router = APIRouter(prefix="/api/v1")
 
@@ -62,7 +63,11 @@ async def api_v1_add_competitor(project_id: int, request: Request):
 
 
 @router.delete("/competitors/{competitor_id}")
-async def api_v1_delete_competitor(competitor_id: int):
+async def api_v1_delete_competitor(competitor_id: int, request: Request):
+    account_id = await get_request_account_id(request)
+    competitor = await storage.get_competitor(competitor_id)
+    if not competitor or not await storage.get_project(competitor["project_id"], account_id=account_id):
+        return JSONResponse({"error": "Not found"}, status_code=404)
     ok = await storage.remove_competitor(competitor_id)
     if not ok:
         return JSONResponse({"error": "Not found"}, status_code=404)
@@ -70,12 +75,20 @@ async def api_v1_delete_competitor(competitor_id: int):
 
 
 @router.get("/competitors/{competitor_id}/keywords")
-async def api_v1_competitor_keywords(competitor_id: int):
+async def api_v1_competitor_keywords(competitor_id: int, request: Request):
+    account_id = await get_request_account_id(request)
+    competitor = await storage.get_competitor(competitor_id)
+    if not competitor or not await storage.get_project(competitor["project_id"], account_id=account_id):
+        return JSONResponse({"error": "Not found"}, status_code=404)
     return JSONResponse(await storage.list_competitor_keywords(competitor_id))
 
 
 @router.post("/competitors/{competitor_id}/keywords")
 async def api_v1_add_competitor_keyword(competitor_id: int, request: Request):
+    account_id = await get_request_account_id(request)
+    comp = await storage.get_competitor(competitor_id)
+    if not comp or not await storage.get_project(comp["project_id"], account_id=account_id):
+        return JSONResponse({"error": "Not found"}, status_code=404)
     body = await request.json()
     keyword = body.get("keyword", "").strip()
     if not keyword:
@@ -83,9 +96,7 @@ async def api_v1_add_competitor_keyword(competitor_id: int, request: Request):
     kw_id = await storage.add_competitor_keyword(competitor_id, keyword)
     # Seed into graph expansion — need project_id from competitor
     if kw_id:
-        comp = await storage.get_competitor(competitor_id)
-        if comp:
-            await storage.seed_node_if_expansion_exists(comp["project_id"], "competitor_keyword", kw_id, priority=60)
+        await storage.seed_node_if_expansion_exists(comp["project_id"], "competitor_keyword", kw_id, priority=60)
     return JSONResponse({"id": kw_id, "keyword": keyword}, status_code=201)
 
 

@@ -131,9 +131,9 @@ async def create_approval(
     )
 
 
-async def list_approvals(status: str | None = None, limit: int = 50) -> list[dict]:
+async def list_approvals(status: str | None = None, limit: int = 50, account_id: int | None = None) -> list[dict]:
     """List approval records."""
-    return await storage.list_approvals(status=status, limit=limit)
+    return await storage.list_approvals(status=status, limit=limit, account_id=account_id)
 
 
 async def get_approval(approval_id: int) -> dict | None:

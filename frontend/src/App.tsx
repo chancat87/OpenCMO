@@ -1,11 +1,14 @@
 import { lazy, Suspense, type ReactNode } from "react";
-import { BrowserRouter, Routes, Route } from "react-router";
+import { BrowserRouter, Navigate, Routes, Route, useLocation } from "react-router";
 import { AppShell } from "./components/layout/AppShell";
 import { PublicLocaleSync } from "./components/marketing/PublicLocaleSync";
 import { LandingPage } from "./pages/LandingPage";
 import { PublicServicePage, type PublicServicePageKind } from "./pages/PublicServicePage";
 import { ServicesPage } from "./pages/ServicesPage";
 import { HostedWaitlistPage } from "./pages/HostedWaitlistPage";
+import { SignupPage } from "./pages/SignupPage";
+import { LoginPage } from "./pages/LoginPage";
+import { AdminPage } from "./pages/AdminPage";
 import { BlogPage } from "./pages/BlogPage";
 import { BlogArticlePage } from "./pages/BlogArticlePage";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -20,7 +23,6 @@ import { BrandKitPage } from "./pages/BrandKitPage";
 import { ProjectMonitorsPage } from "./pages/ProjectMonitorsPage";
 import { GitHubLeadsPage } from "./pages/GitHubLeadsPage";
 import { ContentPage } from "./pages/ContentPage";
-import { TokenPrompt } from "./components/auth/TokenPrompt";
 import { useAuth } from "./components/auth/useAuth";
 
 // Heavy pages lazy-loaded: Three.js graph, react-markdown reports/chat, recharts performance
@@ -61,8 +63,37 @@ function LocalizedPublicPage({
   );
 }
 
+function LegacyWorkspaceRedirect() {
+  const location = useLocation();
+  return <Navigate to={`/console${location.search}${location.hash}`} replace />;
+}
+
+function AuthLoading() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-white">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-950" />
+    </div>
+  );
+}
+
+function RequireAuth({ children, adminOnly = false }: { children: ReactNode; adminOnly?: boolean }) {
+  const auth = useAuth();
+  const location = useLocation();
+  if (auth.isLoading) return <AuthLoading />;
+  if (!auth.isAuthenticated) {
+    const params = new URLSearchParams();
+    const url = new URLSearchParams(location.search).get("url");
+    if (url) params.set("url", url);
+    params.set("next", `${location.pathname}${location.search}`);
+    return <Navigate to={`/signup?${params.toString()}`} replace />;
+  }
+  if (adminOnly && !auth.isAdmin) {
+    return <Navigate to="/console" replace />;
+  }
+  return children;
+}
+
 function AppRoutes() {
-  const { isAuthenticated, needsAuth } = useAuth();
   const localizedService = (locale: "en" | "zh", kind: PublicServicePageKind) => (
     <LocalizedPublicPage locale={locale}>
       <PublicServicePage kind={kind} />
@@ -80,6 +111,8 @@ function AppRoutes() {
       <Route path="/hosted" element={<HostedWaitlistPage />} />
       <Route path="/en/hosted" element={<LocalizedPublicPage locale="en"><HostedWaitlistPage /></LocalizedPublicPage>} />
       <Route path="/zh/hosted" element={<LocalizedPublicPage locale="zh"><HostedWaitlistPage /></LocalizedPublicPage>} />
+      <Route path="/signup" element={<SignupPage />} />
+      <Route path="/login" element={<LoginPage />} />
       <Route path="/open-source" element={<PublicServicePage kind="open-source" />} />
       <Route path="/en/open-source" element={localizedService("en", "open-source")} />
       <Route path="/zh/open-source" element={localizedService("zh", "open-source")} />
@@ -98,13 +131,13 @@ function AppRoutes() {
       <Route
         path="*"
         element={(
-          needsAuth && !isAuthenticated ? (
-            <TokenPrompt />
-          ) : (
+          <RequireAuth>
             <AppShell>
               <Suspense fallback={<LazyFallback />}>
                 <Routes>
-                  <Route path="/workspace" element={<DashboardPage />} />
+                  <Route path="/console" element={<DashboardPage />} />
+                  <Route path="/admin" element={<RequireAuth adminOnly><AdminPage /></RequireAuth>} />
+                  <Route path="/workspace" element={<LegacyWorkspaceRedirect />} />
                   <Route path="/approvals" element={<ApprovalsPage />} />
                   <Route path="/projects/:id" element={<ProjectPage />} />
                   <Route path="/projects/:id/reports" element={<ReportsPage />} />
@@ -125,7 +158,7 @@ function AppRoutes() {
                 </Routes>
               </Suspense>
             </AppShell>
-          )
+          </RequireAuth>
         )}
       />
     </Routes>

@@ -69,7 +69,7 @@ export function SiteFooter({ variant = "workspace" }: SiteFooterProps) {
                   {t("landing.primaryCta")}
                 </Link>
                 <Link
-                  to="/workspace"
+                  to="/console"
                   className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/6 px-4 py-3 text-sm font-semibold text-white/86 transition-colors hover:border-white/22 hover:bg-white/10 hover:text-white"
                 >
                   {t("landing.workspaceCta")}

@@ -5,6 +5,7 @@ import {
   MessageSquare,
   CheckSquare,
   FolderOpen,
+  ShieldCheck,
   Settings,
   X,
 } from "lucide-react";
@@ -15,9 +16,10 @@ import { getEffectiveKeyStatus } from "../../api/userKeys";
 import { useI18n } from "../../i18n";
 import type { TranslationKey } from "../../i18n";
 import { SettingsDialog } from "../settings/SettingsDialog";
+import { useAuth } from "../auth/useAuth";
 
 const NAV: { to: string; labelKey: TranslationKey; icon: typeof LayoutDashboard }[] = [
-  { to: "/workspace", labelKey: "nav.dashboard", icon: LayoutDashboard },
+  { to: "/console", labelKey: "nav.dashboard", icon: LayoutDashboard },
   { to: "/approvals", labelKey: "nav.approvals", icon: CheckSquare },
   { to: "/chat", labelKey: "nav.aiChat", icon: MessageSquare },
 ];
@@ -31,6 +33,7 @@ export function Sidebar({
 }) {
   const { pathname } = useLocation();
   const { t } = useI18n();
+  const { isAdmin, account } = useAuth();
   const [showSettings, setShowSettings] = useState(false);
   const settingsQuery = useSettings();
   const keyStatus = getEffectiveKeyStatus(settingsQuery.data);
@@ -48,7 +51,7 @@ export function Sidebar({
         }`}
       >
         <div className="flex h-14 items-center justify-between px-4 mt-2">
-          <Link to="/workspace" className="text-lg font-semibold text-slate-800 tracking-tight" onClick={onClose}>
+          <Link to="/console" className="text-lg font-semibold text-slate-800 tracking-tight" onClick={onClose}>
             OpenCMO
           </Link>
           <button className="text-slate-400 hover:text-slate-800 transition-colors lg:hidden" onClick={onClose}>
@@ -57,8 +60,8 @@ export function Sidebar({
         </div>
 
         <nav className="flex-1 space-y-1 p-3">
-          {NAV.map(({ to, labelKey, icon: Icon }) => {
-            const active = to === "/workspace" ? pathname === to : pathname.startsWith(to);
+          {[...NAV, ...(isAdmin ? [{ to: "/admin", labelKey: "trial.adminNav" as TranslationKey, icon: ShieldCheck }] : [])].map(({ to, labelKey, icon: Icon }) => {
+            const active = to === "/console" ? pathname === to || pathname === "/workspace" : pathname.startsWith(to);
             return (
               <Link
                 key={to}
@@ -104,6 +107,12 @@ export function Sidebar({
 
         {/* Settings button at bottom */}
         <div className="p-3 mb-2">
+          {account && (
+            <div className="mb-2 rounded-lg bg-white px-3 py-2 text-xs text-slate-500 ring-1 ring-slate-200">
+              <p className="font-semibold text-slate-700">{account.name}</p>
+              <p>{account.plan}</p>
+            </div>
+          )}
           <button
             onClick={() => setShowSettings(true)}
             className="group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[14px] font-medium text-slate-600 transition-all duration-200 hover:bg-black/[0.03] hover:text-slate-900 active:scale-[0.98]"

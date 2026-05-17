@@ -106,7 +106,7 @@ export function ServicesPage() {
                   {t("service.audit.heroCta")}
                 </a>
                 <Link
-                  to="/workspace"
+                  to="/console"
                   className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/6 px-7 py-4 text-sm font-semibold text-white/90 transition-colors hover:border-white/25 hover:text-white"
                 >
                   <LayoutDashboard size={16} />
@@ -243,7 +243,7 @@ export function ServicesPage() {
                   {t("service.audit.heroCta")}
                 </a>
                 <Link
-                  to="/workspace"
+                  to="/console"
                   className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/6 px-7 py-4 text-sm font-semibold text-white/90 transition-colors hover:border-white/25 hover:text-white"
                 >
                   {t("service.audit.workspaceCta")}

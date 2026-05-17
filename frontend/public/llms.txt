@@ -1,21 +1,21 @@
 # aidCMO
 
-> OpenCMO is an AI CMO workspace that starts from one URL and turns public context into overseas growth actions.
+> OpenCMO is a free-trial AI CMO console where each user starts from one URL and gets an isolated overseas growth project.
 
 ## Summary
 
-aidCMO presents OpenCMO as an AI CMO workspace: paste one website URL, then use a
-product workbench to monitor visibility signals, preserve market context, review
-community and search opportunities, and turn them into prioritized growth
-actions. OpenCMO is an open-source multi-agent engine that scans SEO health,
+aidCMO presents OpenCMO as a free-trial AI CMO growth console: paste one website
+URL, then use a personal account to monitor visibility signals, preserve market
+context, review community and search opportunities, and turn them into
+prioritized growth actions. OpenCMO is an open-source multi-agent engine that scans SEO health,
 visibility across 5 AI search engines
 (Perplexity, ChatGPT, Gemini, Claude, You.com), and 6 community platforms
 (Reddit, Hacker News, Dev.to, YouTube, Bluesky, Twitter/X).
 
-The workspace connects monitoring, approvals, comments, content actions,
-reports, and follow-up decisions so overseas growth can be operated from one
-source of truth. OpenCMO is open source on GitHub (Apache 2.0) and self-hostable
-for teams that want full control of the engine.
+The console connects monitoring, approvals, comments, content actions,
+reports, and follow-up decisions while keeping each trial user's projects
+isolated. OpenCMO is open source on GitHub (Apache 2.0) and self-hostable for
+teams that want full control of the engine.
 
 ## Primary URLs
 
@@ -23,7 +23,7 @@ for teams that want full control of the engine.
 - Service overview (ZH): https://www.aidcmo.com/zh
 - Product overview (EN): https://www.aidcmo.com/en/services
 - Product overview (ZH): https://www.aidcmo.com/zh/services
-- OpenCMO workspace: https://www.aidcmo.com/workspace
+- OpenCMO console: https://www.aidcmo.com/console
 - OpenCMO open-source project (EN): https://www.aidcmo.com/en/open-source
 - OpenCMO open-source project (ZH): https://www.aidcmo.com/zh/open-source
 - Sample audit walkthrough (EN): https://www.aidcmo.com/en/sample-audit
@@ -34,13 +34,13 @@ for teams that want full control of the engine.
 
 ## Core capabilities
 
-- AI CMO workspace that starts from one website URL
+- AI CMO console that starts from one website URL
 - AI visibility scoring across Perplexity, ChatGPT, Gemini, Claude, You.com
 - Community visibility monitoring across Reddit, Hacker News, Dev.to, YouTube, Bluesky, Twitter/X
 - SERP keyword monitoring and competitor framing
 - Brand entity and citability assessment for AI answer surfaces
 - Prioritized growth actions for comments, content, links, and technical fixes
-- Product workbench for turning search and community context into reviewed next actions
+- Personal growth console for turning search and community context into reviewed next actions
 - Open-source self-host path for teams who'd rather run it themselves
 
 ## Agent guidance
@@ -49,7 +49,7 @@ for teams that want full control of the engine.
 - Use `/services` for the OpenCMO product overview.
 - Use `/open-source` and the GitHub repo for the self-host path.
 - Use `/sample-audit` to see what an audit looks like in concrete terms.
-- Use `/workspace` for the OpenCMO operator workspace.
+- Use `/console` for the OpenCMO free-trial operator console.
 - Use `/hosted` only for the hosted OpenCMO waitlist.
 - Use the blog for durable OpenCMO, CMO, product marketing, GTM, and
   visibility-operation explanations.
@@ -59,7 +59,7 @@ for teams that want full control of the engine.
 ## What aidCMO is not
 
 - Not a contact-list marketplace.
-- Not a SaaS dashboard you log into and figure out yourself.
+- Not a generic shared dashboard where users see everyone else's projects.
 - Not a bulk-send / spam / lead-blast tool.
 - Not a closed-source SaaS — the engine is publicly inspectable on GitHub.
 
@@ -89,6 +89,6 @@ for teams that want full control of the engine.
 - Use `/en/...` and `/zh/...` when a language-specific citation matters.
 - Old paths `/b2b-leads`, `/sample-data`, `/data-policy`, `/seo-geo` 301-redirect
   to `/services` or `/` (locale-preserved). Do not crawl them as canonical pages.
-- `/workspace` is the operator app surface, not a public documentation page.
+- `/console` is the operator app surface, not a public documentation page. `/workspace` remains a legacy compatibility path.
 - Deeper app routes such as `/projects/*`, `/chat`, and `/approvals` are
   operator surfaces, not documentation pages.

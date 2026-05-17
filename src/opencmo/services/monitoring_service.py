@@ -17,13 +17,14 @@ async def create_monitor(
     brand: str,
     url: str,
     category: str,
+    account_id: int | None = None,
     job_type: str = "full",
     locale: str = "en",
     cron_expr: str = "0 9 * * *",
     keywords: list[str] | None = None,
 ) -> dict:
     """Create monitor + project + keywords. Returns {project_id, monitor_id, keywords_added}."""
-    project_id = await storage.ensure_project(brand, url, category)
+    project_id = await storage.ensure_project(brand, url, category, account_id=account_id)
     job_id = await storage.add_scheduled_job(project_id, job_type, locale, cron_expr)
     await _sync_runtime_job(job_id)
     kw_added: list[str] = []
@@ -66,9 +67,9 @@ async def get_monitor(job_id: int) -> dict | None:
     return await storage.get_scheduled_job(job_id)
 
 
-async def list_monitors() -> list[dict]:
+async def list_monitors(account_id: int | None = None) -> list[dict]:
     """Return all scheduled jobs with project info."""
-    return await storage.list_scheduled_jobs()
+    return await storage.list_scheduled_jobs(account_id=account_id)
 
 
 async def get_monitor_history(job_id: int) -> dict | None:
@@ -172,9 +173,9 @@ async def regenerate_project_report(
     raise ValueError(f"Unsupported report kind: {kind}")
 
 
-async def get_status_summary() -> list[dict]:
+async def get_status_summary(account_id: int | None = None) -> list[dict]:
     """Return structured status for all projects (used by Dashboard + CLI /status)."""
-    projects = await storage.list_projects()
+    projects = await storage.list_projects(account_id=account_id)
     result = []
     for p in projects:
         latest = await storage.get_latest_scans(p["id"])

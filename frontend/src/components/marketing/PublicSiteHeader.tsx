@@ -17,7 +17,7 @@ const CONTACT_EMAIL = "hello@aidcmo.com";
 type PublicSiteHeaderProps = {
   items: PublicNavItem[];
   theme?: "dark" | "light";
-  workspaceHref?: string;
+  consoleHref?: string;
 };
 
 function PublicNavLink({
@@ -52,7 +52,7 @@ function PublicNavLink({
 export function PublicSiteHeader({
   items,
   theme = "dark",
-  workspaceHref = "/workspace",
+  consoleHref = "/console",
 }: PublicSiteHeaderProps) {
   const { t, locale, setLocale } = useI18n();
   const location = useLocation();
@@ -78,8 +78,8 @@ export function PublicSiteHeader({
   const activeLocale = isPublicRoute ? publicLocale : locale;
 
   const publicHref = (href: string) => {
-    if (href === "/workspace") {
-      return workspaceHref;
+    if (href === "/workspace" || href === "/console") {
+      return consoleHref;
     }
     if (href.startsWith("#") || !isPublicRoute) {
       return href;
@@ -114,7 +114,7 @@ export function PublicSiteHeader({
     theme === "dark"
       ? "border-white/15 bg-white/6 text-white/80 hover:border-white/25 hover:text-white"
       : "border-slate-200 bg-white/80 text-slate-700 hover:border-slate-300 hover:text-slate-950";
-  const workspaceClass =
+  const consoleClass =
     theme === "dark"
       ? "bg-[#f7ecde] text-[#082032] hover:bg-white"
       : "bg-[#082032] text-white hover:bg-[#0c2538]";
@@ -163,7 +163,7 @@ export function PublicSiteHeader({
           </label>
           <a
             href={`mailto:${CONTACT_EMAIL}`}
-            className={`hidden items-center rounded-full px-4 py-2.5 text-sm font-semibold transition-colors md:inline-flex ${workspaceClass}`}
+            className={`hidden items-center rounded-full px-4 py-2.5 text-sm font-semibold transition-colors md:inline-flex ${consoleClass}`}
           >
             {CONTACT_EMAIL}
           </a>
@@ -177,8 +177,8 @@ export function PublicSiteHeader({
             <ExternalLink size={14} />
           </a>
           <Link
-            to={workspaceHref}
-            className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-colors ${workspaceClass}`}
+            to={consoleHref}
+            className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-colors ${consoleClass}`}
           >
             <LayoutDashboard size={16} />
             {t("landing.workspaceCta")}

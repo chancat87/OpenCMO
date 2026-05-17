@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 from opencmo.storage._db import get_db
+from opencmo.storage.accounts import get_admin_account_id
 
 
 def _parse_aliases(raw: str | None) -> list[str]:
@@ -19,20 +20,34 @@ def _parse_aliases(raw: str | None) -> list[str]:
     return []
 
 
-async def ensure_project(brand_name: str, url: str, category: str) -> int:
+async def _resolve_account_id(account_id: int | None) -> int:
+    return int(account_id) if account_id is not None else await get_admin_account_id()
+
+
+async def ensure_project(brand_name: str, url: str, category: str, account_id: int | None = None) -> int:
     """Upsert a project row and return its id."""
+    resolved_account_id = await _resolve_account_id(account_id)
     db = await get_db()
     try:
         await db.execute(
-            "INSERT OR IGNORE INTO projects (brand_name, url, category) VALUES (?, ?, ?)",
-            (brand_name, url, category),
+            "INSERT OR IGNORE INTO projects (account_id, brand_name, url, category) VALUES (?, ?, ?, ?)",
+            (resolved_account_id, brand_name, url, category),
         )
         await db.commit()
         cursor = await db.execute(
-            "SELECT id FROM projects WHERE brand_name = ? AND url = ?",
-            (brand_name, url),
+            "SELECT id FROM projects WHERE account_id = ? AND brand_name = ? AND url = ?",
+            (resolved_account_id, brand_name, url),
         )
         row = await cursor.fetchone()
+        if row is None:
+            # Legacy databases may still have the historical global UNIQUE(brand_name, url).
+            cursor = await db.execute(
+                "SELECT id FROM projects WHERE brand_name = ? AND url = ? AND account_id = ?",
+                (brand_name, url, resolved_account_id),
+            )
+            row = await cursor.fetchone()
+        if row is None:
+            raise RuntimeError("project insert failed")
         return row[0]
     finally:
         await db.close()
@@ -70,43 +85,57 @@ async def update_project(
         await db.close()
 
 
-async def get_project(project_id: int) -> dict | None:
+async def get_project(project_id: int, account_id: int | None = None) -> dict | None:
     """Return project dict by id, or None."""
     db = await get_db()
     try:
+        where = "id = ?"
+        params: tuple = (project_id,)
+        if account_id is not None:
+            where = "id = ? AND account_id = ?"
+            params = (project_id, account_id)
         cursor = await db.execute(
-            "SELECT id, brand_name, url, category, aliases FROM projects WHERE id = ?",
-            (project_id,),
+            f"SELECT id, account_id, brand_name, url, category, aliases FROM projects WHERE {where}",
+            params,
         )
         row = await cursor.fetchone()
         if not row:
             return None
         return {
             "id": row[0],
-            "brand_name": row[1],
-            "url": row[2],
-            "category": row[3],
-            "aliases": _parse_aliases(row[4]),
+            "account_id": row[1],
+            "brand_name": row[2],
+            "url": row[3],
+            "category": row[4],
+            "aliases": _parse_aliases(row[5]),
         }
     finally:
         await db.close()
 
 
-async def list_projects() -> list[dict]:
+async def list_projects(account_id: int | None = None) -> list[dict]:
     """Return all projects, newest first (highest id first)."""
     db = await get_db()
     try:
+        if account_id is None:
+            query = "SELECT id, account_id, brand_name, url, category, aliases FROM projects ORDER BY id DESC"
+            params: tuple = ()
+        else:
+            query = "SELECT id, account_id, brand_name, url, category, aliases FROM projects WHERE account_id = ? ORDER BY id DESC"
+            params = (account_id,)
         cursor = await db.execute(
-            "SELECT id, brand_name, url, category, aliases FROM projects ORDER BY id DESC"
+            query,
+            params,
         )
         rows = await cursor.fetchall()
         return [
             {
                 "id": r[0],
-                "brand_name": r[1],
-                "url": r[2],
-                "category": r[3],
-                "aliases": _parse_aliases(r[4]),
+                "account_id": r[1],
+                "brand_name": r[2],
+                "url": r[3],
+                "category": r[4],
+                "aliases": _parse_aliases(r[5]),
             }
             for r in rows
         ]
@@ -114,22 +143,28 @@ async def list_projects() -> list[dict]:
         await db.close()
 
 
-async def find_projects_by_brand(brand_name: str) -> list[dict]:
+async def find_projects_by_brand(brand_name: str, account_id: int | None = None) -> list[dict]:
     """Find projects whose brand_name matches (case-insensitive)."""
     db = await get_db()
     try:
+        where = "brand_name = ? COLLATE NOCASE"
+        params: tuple = (brand_name,)
+        if account_id is not None:
+            where += " AND account_id = ?"
+            params = (brand_name, account_id)
         cursor = await db.execute(
-            "SELECT id, brand_name, url, category, aliases FROM projects WHERE brand_name = ? COLLATE NOCASE",
-            (brand_name,),
+            f"SELECT id, account_id, brand_name, url, category, aliases FROM projects WHERE {where}",
+            params,
         )
         rows = await cursor.fetchall()
         return [
             {
                 "id": r[0],
-                "brand_name": r[1],
-                "url": r[2],
-                "category": r[3],
-                "aliases": _parse_aliases(r[4]),
+                "account_id": r[1],
+                "brand_name": r[2],
+                "url": r[3],
+                "category": r[4],
+                "aliases": _parse_aliases(r[5]),
             }
             for r in rows
         ]
@@ -137,30 +172,38 @@ async def find_projects_by_brand(brand_name: str) -> list[dict]:
         await db.close()
 
 
-async def find_project_by_identity(brand_name: str, url: str) -> dict | None:
+async def find_project_by_identity(brand_name: str, url: str, account_id: int | None = None) -> dict | None:
     """Find a project by the database identity key used for uniqueness."""
     db = await get_db()
     try:
+        where = "brand_name = ? AND url = ?"
+        params: tuple = (brand_name, url)
+        if account_id is not None:
+            where += " AND account_id = ?"
+            params = (brand_name, url, account_id)
         cursor = await db.execute(
-            "SELECT id, brand_name, url, category, aliases FROM projects WHERE brand_name = ? AND url = ?",
-            (brand_name, url),
+            f"SELECT id, account_id, brand_name, url, category, aliases FROM projects WHERE {where}",
+            params,
         )
         row = await cursor.fetchone()
         if not row:
             return None
         return {
             "id": row[0],
-            "brand_name": row[1],
-            "url": row[2],
-            "category": row[3],
-            "aliases": _parse_aliases(row[4]),
+            "account_id": row[1],
+            "brand_name": row[2],
+            "url": row[3],
+            "category": row[4],
+            "aliases": _parse_aliases(row[5]),
         }
     finally:
         await db.close()
 
 
-async def delete_project(project_id: int) -> bool:
+async def delete_project(project_id: int, account_id: int | None = None) -> bool:
     """Delete a project and all its related data. Returns True if deleted."""
+    if account_id is not None and await get_project(project_id, account_id) is None:
+        return False
     db = await get_db()
     try:
         await db.execute("UPDATE chat_sessions SET project_id = NULL WHERE project_id = ?", (project_id,))

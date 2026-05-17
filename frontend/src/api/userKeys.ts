@@ -1,7 +1,7 @@
 /**
- * User API Keys — stored in localStorage, injected for workspace requests.
+ * User API Keys — stored in localStorage, injected for console requests.
  *
- * Each user's keys stay in their own browser until a workspace action needs
+ * Each user's keys stay in their own browser until a console action needs
  * provider access. They are sent via `X-User-Keys` for that request and
  * injected into a request-local ContextVar on the backend.
  */

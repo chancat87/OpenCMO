@@ -6,6 +6,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from opencmo import storage
+from opencmo.web.auth import get_request_account_id
 
 router = APIRouter()
 
@@ -30,7 +31,8 @@ def _get_templates():
 
 @router.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    projects = await storage.list_projects()
+    account_id = await get_request_account_id(request)
+    projects = await storage.list_projects(account_id=account_id)
     project_data = []
     for p in projects:
         latest = await storage.get_latest_scans(p["id"])
@@ -40,7 +42,8 @@ async def dashboard(request: Request):
 
 @router.get("/project/{project_id}", response_class=HTMLResponse)
 async def project_overview(request: Request, project_id: int):
-    project = await storage.get_project(project_id)
+    account_id = await get_request_account_id(request)
+    project = await storage.get_project(project_id, account_id=account_id)
     if not project:
         return HTMLResponse("Project not found", status_code=404)
     latest = await storage.get_latest_scans(project_id)
@@ -59,7 +62,8 @@ async def project_overview(request: Request, project_id: int):
 
 @router.get("/project/{project_id}/seo", response_class=HTMLResponse)
 async def project_seo(request: Request, project_id: int):
-    project = await storage.get_project(project_id)
+    account_id = await get_request_account_id(request)
+    project = await storage.get_project(project_id, account_id=account_id)
     if not project:
         return HTMLResponse("Project not found", status_code=404)
     history = await storage.get_seo_history(project_id, limit=20)
@@ -70,7 +74,8 @@ async def project_seo(request: Request, project_id: int):
 
 @router.get("/project/{project_id}/geo", response_class=HTMLResponse)
 async def project_geo(request: Request, project_id: int):
-    project = await storage.get_project(project_id)
+    account_id = await get_request_account_id(request)
+    project = await storage.get_project(project_id, account_id=account_id)
     if not project:
         return HTMLResponse("Project not found", status_code=404)
     history = await storage.get_geo_history(project_id, limit=20)
@@ -81,7 +86,8 @@ async def project_geo(request: Request, project_id: int):
 
 @router.get("/project/{project_id}/serp", response_class=HTMLResponse)
 async def project_serp(request: Request, project_id: int):
-    project = await storage.get_project(project_id)
+    account_id = await get_request_account_id(request)
+    project = await storage.get_project(project_id, account_id=account_id)
     if not project:
         return HTMLResponse("Project not found", status_code=404)
     serp_latest = await storage.get_all_serp_latest(project_id)
@@ -109,7 +115,8 @@ async def project_serp(request: Request, project_id: int):
 
 @router.get("/project/{project_id}/community", response_class=HTMLResponse)
 async def project_community(request: Request, project_id: int):
-    project = await storage.get_project(project_id)
+    account_id = await get_request_account_id(request)
+    project = await storage.get_project(project_id, account_id=account_id)
     if not project:
         return HTMLResponse("Project not found", status_code=404)
     discussions = await storage.get_tracked_discussions(project_id)
@@ -126,7 +133,10 @@ async def project_community(request: Request, project_id: int):
 
 
 @router.get("/api/project/{project_id}/seo-data")
-async def api_seo_data(project_id: int):
+async def api_seo_data(project_id: int, request: Request):
+    account_id = await get_request_account_id(request)
+    if not await storage.get_project(project_id, account_id=account_id):
+        return JSONResponse({"error": "Not found"}, status_code=404)
     history = await storage.get_seo_history(project_id, limit=30)
     history.reverse()
     return JSONResponse({
@@ -146,7 +156,10 @@ async def api_seo_data(project_id: int):
 
 
 @router.get("/api/project/{project_id}/geo-data")
-async def api_geo_data(project_id: int):
+async def api_geo_data(project_id: int, request: Request):
+    account_id = await get_request_account_id(request)
+    if not await storage.get_project(project_id, account_id=account_id):
+        return JSONResponse({"error": "Not found"}, status_code=404)
     history = await storage.get_geo_history(project_id, limit=30)
     history.reverse()
     return JSONResponse({
@@ -159,7 +172,10 @@ async def api_geo_data(project_id: int):
 
 
 @router.get("/api/project/{project_id}/serp-data")
-async def api_serp_data(project_id: int):
+async def api_serp_data(project_id: int, request: Request):
+    account_id = await get_request_account_id(request)
+    if not await storage.get_project(project_id, account_id=account_id):
+        return JSONResponse({"error": "Not found"}, status_code=404)
     keywords = await storage.list_tracked_keywords(project_id)
     result = {"labels": [], "keywords": [], "positions": {}}
     if not keywords:
@@ -187,7 +203,10 @@ async def api_serp_data(project_id: int):
 
 
 @router.get("/api/project/{project_id}/community-data")
-async def api_community_data(project_id: int):
+async def api_community_data(project_id: int, request: Request):
+    account_id = await get_request_account_id(request)
+    if not await storage.get_project(project_id, account_id=account_id):
+        return JSONResponse({"error": "Not found"}, status_code=404)
     history = await storage.get_community_history(project_id, limit=30)
     history.reverse()
     discussions = await storage.get_tracked_discussions(project_id)

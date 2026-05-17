@@ -5,17 +5,18 @@ from __future__ import annotations
 import asyncio
 import json
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from starlette.responses import StreamingResponse
 
 from opencmo.background import service as bg_service
-from opencmo.web.routers.tasks import serialize_background_task
+from opencmo.web.auth import get_request_account_id
+from opencmo.web.routers.tasks import _task_visible, serialize_background_task
 
 router = APIRouter(prefix="/api/v1")
 
 
 @router.get("/tasks/{task_id}/events")
-async def api_v1_task_events(task_id: str):
+async def api_v1_task_events(task_id: str, request: Request):
     """Stream task progress events via Server-Sent Events (SSE).
 
     Behaviour:
@@ -27,6 +28,13 @@ async def api_v1_task_events(task_id: str):
     history + done event is sent in one batch (no long-poll).
     """
     record = await bg_service.get_task(task_id)
+    account_id = await get_request_account_id(request)
+    if record is not None and not await _task_visible(record, account_id):
+        return StreamingResponse(
+            iter([f"data: {json.dumps({'type': 'error', 'message': 'Task not found'})}\n\n"]),
+            media_type="text/event-stream",
+            status_code=404,
+        )
     if record is not None:
         async def _background_event_stream():
             cursor = 0

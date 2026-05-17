@@ -298,7 +298,7 @@ export function SampleAuditPage() {
                     <ArrowRight size={16} />
                   </a>
                   <Link
-                    to="/workspace"
+                    to="/console"
                     className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
                   >
                     {t("sampleAudit.runCta")}
@@ -481,7 +481,7 @@ export function SampleAuditPage() {
                 <p className="mt-3 text-sm leading-7 text-white/75">{t("sampleAudit.reportBody")}</p>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
                   <Link
-                    to="/workspace"
+                    to="/console"
                     className="inline-flex items-center justify-center gap-2 rounded-full bg-[#f7ecde] px-4 py-3 text-sm font-semibold text-[#082032] transition-colors hover:bg-white"
                   >
                     {t("sampleAudit.runCta")}

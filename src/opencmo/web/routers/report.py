@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from opencmo import storage
 from opencmo.background import service as bg_service
 from opencmo.background.types import ACTIVE_STATUSES
+from opencmo.web.auth import get_request_account_id, get_request_user_id
 from opencmo.web.routers.tasks import serialize_background_task
 
 router = APIRouter(prefix="/api/v1")
@@ -83,9 +84,12 @@ async def api_v1_latest_reports(project_id: int, locale: str | None = None):
 
 
 @router.get("/reports/{report_id}")
-async def api_v1_report_detail(report_id: int):
+async def api_v1_report_detail(report_id: int, request: Request):
     report = await storage.get_report(report_id)
     if not report:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    account_id = await get_request_account_id(request)
+    if not await storage.get_project(report["project_id"], account_id=account_id):
         return JSONResponse({"error": "Not found"}, status_code=404)
     return JSONResponse(report)
 
@@ -105,6 +109,10 @@ async def api_v1_regenerate_report(project_id: int, kind: str, request: Request)
     project = await storage.get_project(project_id)
     if not project:
         return JSONResponse({"error": "Not found"}, status_code=404)
+    account_id = await get_request_account_id(request)
+    ok, usage = await storage.check_monthly_report_quota(account_id)
+    if not ok:
+        return JSONResponse({"error": "monthly_report_quota_exceeded", "usage": usage}, status_code=429)
 
     body: dict = {}
     try:
@@ -123,6 +131,13 @@ async def api_v1_regenerate_report(project_id: int, kind: str, request: Request)
         payload=payload,
         dedupe_key=f"report:project:{project_id}:{kind}:{locale}",
     )
+    await storage.record_usage_event(
+        account_id,
+        "report",
+        user_id=get_request_user_id(request),
+        project_id=project_id,
+        metadata={"source": "report_regenerate", "kind": kind, "locale": locale, "task_id": task["task_id"]},
+    )
 
     return JSONResponse({
         "task_id": task["task_id"],
@@ -134,10 +149,13 @@ async def api_v1_regenerate_report(project_id: int, kind: str, request: Request)
 
 
 @router.get("/reports/tasks/{task_id}")
-async def api_v1_report_task(task_id: str):
+async def api_v1_report_task(task_id: str, request: Request):
     """Get the status and progress of a report generation task."""
     task = await bg_service.get_task(task_id)
     if task and task["kind"] == "report":
+        account_id = await get_request_account_id(request)
+        if not task.get("project_id") or not await storage.get_project(task["project_id"], account_id=account_id):
+            return JSONResponse({"error": "Task not found"}, status_code=404)
         detail = await serialize_background_task(task)
         return JSONResponse(
             {
@@ -163,6 +181,10 @@ async def api_v1_report(project_id: int, request: Request):
     project = await storage.get_project(project_id)
     if not project:
         return JSONResponse({"error": "Not found"}, status_code=404)
+    account_id = await get_request_account_id(request)
+    ok, usage = await storage.check_monthly_report_quota(account_id)
+    if not ok:
+        return JSONResponse({"error": "monthly_report_quota_exceeded", "usage": usage}, status_code=429)
     body: dict = {}
     try:
         body = await request.json()
@@ -173,5 +195,12 @@ async def api_v1_report(project_id: int, request: Request):
     )
     result = await service.send_project_report(project_id, locale=locale)
     if result["ok"]:
+        await storage.record_usage_event(
+            account_id,
+            "report",
+            user_id=get_request_user_id(request),
+            project_id=project_id,
+            metadata={"source": "report_email", "locale": locale},
+        )
         return JSONResponse(result)
     return JSONResponse(result, status_code=500)

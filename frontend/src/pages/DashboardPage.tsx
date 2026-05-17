@@ -14,6 +14,7 @@ import { MonitorForm } from "../components/monitors/MonitorForm";
 import { AnalysisDialog } from "../components/monitors/AnalysisDialog";
 import { useI18n } from "../i18n";
 import { Eye, Loader2 } from "lucide-react";
+import { useAuth } from "../components/auth/useAuth";
 
 type SelectedTask = {
   id: string;
@@ -37,6 +38,7 @@ const cardVariants = {
 
 export function DashboardPage() {
   const { data: projects, isLoading, error } = useProjects();
+  const { usage } = useAuth();
   const createMonitor = useCreateMonitor();
   const { t, locale } = useI18n();
   const [selectedTask, setSelectedTask] = useState<SelectedTask | null>(null);
@@ -71,6 +73,23 @@ export function DashboardPage() {
     setDialogOpen(true);
   };
 
+  const trialUsageCards = usage ? (
+    <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {[
+        ["trial.remainingDays", usage.remaining_days, usage.plan],
+        ["trial.projectUsage", `${usage.projects.used}/${usage.projects.limit}`, t("trial.projects")],
+        ["trial.scanUsage", `${usage.daily_scans.used}/${usage.daily_scans.limit}`, t("trial.dailyScans")],
+        ["trial.reportUsage", `${usage.monthly_reports.used}/${usage.monthly_reports.limit}`, t("trial.monthlyReports")],
+      ].map(([label, value, detail]) => (
+        <div key={label} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase text-slate-400">{t(label as never)}</p>
+          <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
+          <p className="mt-1 text-xs text-slate-500">{detail}</p>
+        </div>
+      ))}
+    </div>
+  ) : null;
+
   return (
     <AnimatedPage>
       {projects?.length ? (
@@ -98,6 +117,8 @@ export function DashboardPage() {
               ))}
             </div>
           </div>
+
+          {trialUsageCards}
 
           <GlobalOverview />
           <InsightBanner />
@@ -131,6 +152,7 @@ export function DashboardPage() {
         </>
       ) : (
         <div className="mb-8">
+          {trialUsageCards}
           <WelcomeHero onTaskCreated={handleTaskCreated} />
         </div>
       )}

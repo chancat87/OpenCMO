@@ -24,15 +24,23 @@ async def add_scheduled_job(
         await db.close()
 
 
-async def list_scheduled_jobs() -> list[dict]:
+async def list_scheduled_jobs(account_id: int | None = None) -> list[dict]:
     """Return all scheduled jobs with project info."""
     db = await get_db()
     try:
+        where = ""
+        params: tuple = ()
+        if account_id is not None:
+            where = "WHERE p.account_id = ?"
+            params = (account_id,)
         cursor = await db.execute(
             """SELECT j.id, j.project_id, p.brand_name, p.url, p.category,
                       j.job_type, j.locale, j.cron_expr, j.enabled, j.last_run_at, j.next_run_at
                FROM scheduled_jobs j JOIN projects p ON j.project_id = p.id
+               {where}
                ORDER BY j.id"""
+            .format(where=where),
+            params,
         )
         rows = await cursor.fetchall()
         return [
@@ -47,16 +55,22 @@ async def list_scheduled_jobs() -> list[dict]:
         await db.close()
 
 
-async def get_scheduled_job(job_id: int) -> dict | None:
+async def get_scheduled_job(job_id: int, account_id: int | None = None) -> dict | None:
     """Return a single scheduled job with project info."""
     db = await get_db()
     try:
+        where = "j.id = ?"
+        params: tuple = (job_id,)
+        if account_id is not None:
+            where = "j.id = ? AND p.account_id = ?"
+            params = (job_id, account_id)
         cursor = await db.execute(
             """SELECT j.id, j.project_id, p.brand_name, p.url, p.category,
                       j.job_type, j.locale, j.cron_expr, j.enabled, j.last_run_at, j.next_run_at
                FROM scheduled_jobs j JOIN projects p ON j.project_id = p.id
-               WHERE j.id = ?""",
-            (job_id,),
+               WHERE {where}"""
+            .format(where=where),
+            params,
         )
         row = await cursor.fetchone()
         if not row:

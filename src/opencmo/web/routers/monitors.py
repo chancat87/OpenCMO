@@ -9,6 +9,9 @@ from urllib.parse import urlparse, urlunparse
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
+from opencmo import storage
+from opencmo.web.auth import get_request_account_id, get_request_user_id
+
 router = APIRouter(prefix="/api/v1")
 
 _DNS_LABEL_RE = re.compile(r"^[A-Za-z0-9-]+$")
@@ -126,9 +129,10 @@ def _pending_scan_response(task: dict) -> dict:
 
 
 @router.get("/monitors")
-async def api_v1_monitors():
+async def api_v1_monitors(request: Request):
     from opencmo import service
-    return JSONResponse(await service.list_monitors())
+    account_id = await get_request_account_id(request)
+    return JSONResponse(await service.list_monitors(account_id=account_id))
 
 
 @router.post("/monitors")
@@ -155,8 +159,18 @@ async def api_v1_create_monitor(request: Request):
     category = body.get("category", "").strip() or "auto"
     job_type = body.get("job_type", "full")
     locale = _normalize_locale(body.get("locale", "en"))
+    account_id = await get_request_account_id(request)
+    existing = await storage.find_project_by_identity(brand, url, account_id=account_id)
+    if existing is None:
+        ok, usage = await storage.check_project_quota(account_id)
+        if not ok:
+            return JSONResponse({"error": "project_quota_exceeded", "usage": usage}, status_code=429)
+    ok, usage = await storage.check_daily_scan_quota(account_id)
+    if not ok:
+        return JSONResponse({"error": "daily_scan_quota_exceeded", "usage": usage}, status_code=429)
     result = await service.create_monitor(
         brand, url, category,
+        account_id=account_id,
         job_type=job_type,
         locale=locale,
         cron_expr=body.get("cron_expr", "0 9 * * *"),
@@ -173,12 +187,22 @@ async def api_v1_create_monitor(request: Request):
     )
     if task:
         result["task_id"] = task["task_id"]
+        await storage.record_usage_event(
+            account_id,
+            "scan",
+            user_id=get_request_user_id(request),
+            project_id=result["project_id"],
+            metadata={"source": "monitor_create", "task_id": task["task_id"]},
+        )
     return JSONResponse(result, status_code=201)
 
 
 @router.delete("/monitors/{monitor_id}")
-async def api_v1_delete_monitor(monitor_id: int):
+async def api_v1_delete_monitor(monitor_id: int, request: Request):
     from opencmo import service
+    account_id = await get_request_account_id(request)
+    if not await storage.get_scheduled_job(monitor_id, account_id=account_id):
+        return JSONResponse({"error": "Not found"}, status_code=404)
     ok = await service.remove_monitor(monitor_id)
     if not ok:
         return JSONResponse({"error": "Not found"}, status_code=404)
@@ -188,6 +212,9 @@ async def api_v1_delete_monitor(monitor_id: int):
 @router.patch("/monitors/{monitor_id}")
 async def api_v1_update_monitor(monitor_id: int, request: Request):
     from opencmo import service
+    account_id = await get_request_account_id(request)
+    if not await storage.get_scheduled_job(monitor_id, account_id=account_id):
+        return JSONResponse({"error": "Not found"}, status_code=404)
 
     body = await request.json()
     cron_expr = body.get("cron_expr")
@@ -205,7 +232,8 @@ async def api_v1_run_monitor(monitor_id: int, request: Request):
     from opencmo import service
     from opencmo.background import service as bg_service
 
-    job = await service.get_monitor(monitor_id)
+    account_id = await get_request_account_id(request)
+    job = await storage.get_scheduled_job(monitor_id, account_id=account_id)
     if not job:
         return JSONResponse({"error": "Monitor not found"}, status_code=404)
 
@@ -233,11 +261,22 @@ async def api_v1_run_monitor(monitor_id: int, request: Request):
         await service.update_monitor(monitor_id, locale=locale_override)
         job["locale"] = locale_override
 
+    ok, usage = await storage.check_daily_scan_quota(account_id)
+    if not ok:
+        return JSONResponse({"error": "daily_scan_quota_exceeded", "usage": usage}, status_code=429)
+
     record = await _enqueue_scan_task(
         monitor_id=monitor_id,
         project_id=job["project_id"],
         job_type=job["job_type"],
         job_id=monitor_id,
         locale=locale_override or job.get("locale", "en"),
+    )
+    await storage.record_usage_event(
+        account_id,
+        "scan",
+        user_id=get_request_user_id(request),
+        project_id=job["project_id"],
+        metadata={"source": "monitor_run", "task_id": record["task_id"]},
     )
     return JSONResponse(_pending_scan_response(record), status_code=202)

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from opencmo import storage
+from opencmo.web.auth import get_request_account_id
 
 router = APIRouter(prefix="/api/v1")
 
@@ -28,7 +29,11 @@ async def api_v1_add_keyword(project_id: int, request: Request):
 
 
 @router.delete("/keywords/{keyword_id}")
-async def api_v1_delete_keyword(keyword_id: int):
+async def api_v1_delete_keyword(keyword_id: int, request: Request):
+    account_id = await get_request_account_id(request)
+    keyword = await storage.get_tracked_keyword(keyword_id)
+    if not keyword or not await storage.get_project(keyword["project_id"], account_id=account_id):
+        return JSONResponse({"error": "Not found"}, status_code=404)
     ok = await storage.remove_tracked_keyword(keyword_id)
     if not ok:
         return JSONResponse({"error": "Not found"}, status_code=404)

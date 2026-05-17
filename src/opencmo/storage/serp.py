@@ -38,6 +38,22 @@ async def list_tracked_keywords(project_id: int) -> list[dict]:
         await db.close()
 
 
+async def get_tracked_keyword(keyword_id: int) -> dict | None:
+    """Return a tracked keyword by id."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT id, project_id, keyword, created_at FROM tracked_keywords WHERE id = ?",
+            (keyword_id,),
+        )
+        row = await cursor.fetchone()
+        if not row:
+            return None
+        return {"id": row[0], "project_id": row[1], "keyword": row[2], "created_at": row[3]}
+    finally:
+        await db.close()
+
+
 async def remove_tracked_keyword(keyword_id: int) -> bool:
     """Remove a tracked keyword by id. Returns True if deleted."""
     db = await get_db()

@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from opencmo import storage
 from opencmo.background import service as bg_service
 from opencmo.opportunities import build_project_opportunity_snapshot
+from opencmo.web.auth import get_request_account_id
 
 router = APIRouter(prefix="/api/v1")
 
@@ -19,6 +20,20 @@ _SCAN_STAGE_ORDER = [
     "strategy_synthesis",
     "persist_publish",
 ]
+
+
+async def _task_visible(task: dict, account_id: int) -> bool:
+    project_id = task.get("project_id")
+    if project_id is None:
+        return False
+    return await storage.get_project(int(project_id), account_id=account_id) is not None
+
+
+async def _scan_run_visible(task_id: str, account_id: int) -> bool:
+    run = await storage.get_scan_run_by_task_id(task_id)
+    if not run:
+        return False
+    return await storage.get_project(int(run["project_id"]), account_id=account_id) is not None
 
 
 def _compat_status(status: str) -> str:
@@ -459,23 +474,29 @@ async def serialize_background_task(task: dict) -> dict:
 
 
 @router.get("/tasks")
-async def api_v1_tasks():
+async def api_v1_tasks(request: Request):
+    account_id = await get_request_account_id(request)
     tasks = await bg_service.list_tasks(limit=200)
-    return JSONResponse([await serialize_background_task(task) for task in tasks])
+    visible = [task for task in tasks if await _task_visible(task, account_id)]
+    return JSONResponse([await serialize_background_task(task) for task in visible])
 
 
 @router.get("/tasks/{task_id}")
-async def api_v1_task(task_id: str):
+async def api_v1_task(task_id: str, request: Request):
     record = await bg_service.get_task(task_id)
     if record is None:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    if not await _task_visible(record, await get_request_account_id(request)):
         return JSONResponse({"error": "Not found"}, status_code=404)
     return JSONResponse(await serialize_background_task(record))
 
 
 @router.get("/tasks/{task_id}/artifacts")
-async def api_v1_task_artifacts(task_id: str):
+async def api_v1_task_artifacts(task_id: str, request: Request):
     record = await bg_service.get_task(task_id)
     if record is None:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    if not await _task_visible(record, await get_request_account_id(request)):
         return JSONResponse({"error": "Not found"}, status_code=404)
     if record["kind"] != "scan":
         return JSONResponse({"error": "Artifacts are only available for scan tasks"}, status_code=400)
@@ -483,23 +504,44 @@ async def api_v1_task_artifacts(task_id: str):
 
 
 @router.get("/tasks/{task_id}/findings")
-async def api_v1_task_findings(task_id: str):
+async def api_v1_task_findings(task_id: str, request: Request):
+    record = await bg_service.get_task(task_id)
+    account_id = await get_request_account_id(request)
+    if record is not None and not await _task_visible(record, account_id):
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    if record is None and not await _scan_run_visible(task_id, account_id):
+        return JSONResponse({"error": "Not found"}, status_code=404)
     return JSONResponse(await storage.get_task_findings(task_id))
 
 
 @router.get("/tasks/{task_id}/recommendations")
-async def api_v1_task_recommendations(task_id: str):
+async def api_v1_task_recommendations(task_id: str, request: Request):
+    record = await bg_service.get_task(task_id)
+    account_id = await get_request_account_id(request)
+    if record is not None and not await _task_visible(record, account_id):
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    if record is None and not await _scan_run_visible(task_id, account_id):
+        return JSONResponse({"error": "Not found"}, status_code=404)
     return JSONResponse(await storage.get_task_recommendations(task_id))
 
 
 @router.patch("/tasks/{task_id}/notes")
-async def api_v1_task_update_notes(task_id: str, body: dict):
+async def api_v1_task_update_notes(task_id: str, body: dict, request: Request):
     """Update the editable notes/summary for a completed scan run."""
+    record = await bg_service.get_task(task_id)
+    account_id = await get_request_account_id(request)
+    if record is not None and not await _task_visible(record, account_id):
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    if record is None and not await _scan_run_visible(task_id, account_id):
+        return JSONResponse({"error": "Not found"}, status_code=404)
     notes = body.get("notes", "")
     await storage.update_scan_run_notes(task_id, notes)
     return JSONResponse({"ok": True})
 
 
 @router.get("/monitors/{monitor_id}/runs")
-async def api_v1_monitor_runs(monitor_id: int):
+async def api_v1_monitor_runs(monitor_id: int, request: Request):
+    account_id = await get_request_account_id(request)
+    if not await storage.get_scheduled_job(monitor_id, account_id=account_id):
+        return JSONResponse({"error": "Not found"}, status_code=404)
     return JSONResponse(await storage.list_scan_runs_by_monitor(monitor_id))

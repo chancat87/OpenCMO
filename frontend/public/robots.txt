@@ -2,6 +2,7 @@ User-agent: *
 Allow: /
 Disallow: /api/
 Disallow: /workspace
+Disallow: /console
 Disallow: /approvals
 Disallow: /chat
 Disallow: /projects/

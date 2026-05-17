@@ -11,6 +11,7 @@ import json
 import logging
 import os
 import re
+import time
 import uuid
 from html import escape
 from pathlib import Path
@@ -26,8 +27,15 @@ from starlette.responses import StreamingResponse
 
 from opencmo import storage
 from opencmo.web.auth import (
+    attach_request_context,
+    csrf_rejection,
+    get_request_account_id,
+    is_admin_request,
+    is_session_auth_enforced,
     normalize_external_https_url,
+    reject_cross_account_project,
     request_has_valid_bearer,
+    requires_session_auth,
     requires_workspace_auth,
     validate_web_token,
 )
@@ -38,6 +46,7 @@ _SPA_DIR = _HERE.parent.parent.parent / "frontend" / "dist"  # <repo>/frontend/d
 app = FastAPI(title="OpenCMO Dashboard")
 app.mount("/static", StaticFiles(directory=str(_HERE / "static")), name="static")
 logger = logging.getLogger(__name__)
+_AUTH_RATE_BUCKETS: dict[str, list[float]] = {}
 
 _SEO_PUBLIC_LOCALES = ("en", "zh")
 _HREFLANG_BY_LOCALE = {
@@ -50,31 +59,30 @@ _HOME_STATIC_SITE_COPY_BY_LOCALE = {
 <main id="static-site-copy">
   <header>
     <p>aidCMO</p>
-    <h1>OpenCMO: enter one URL to discover overseas growth opportunities.</h1>
+    <h1>OpenCMO free trial: enter one URL and open your own overseas growth console.</h1>
     <p>
-      Paste a website URL. OpenCMO scans SEO, AI answer visibility, SERP movement,
-      Reddit, Hacker News, X, vertical communities, and competitor context to decide
-      what to optimize, comment on, publish, or keep tracking.
+      Each trial user gets an isolated OpenCMO growth console. Create a project,
+      scan SEO, AI Search, SERP, Reddit, Hacker News, X, and vertical communities,
+      then review comments, content, and page actions from one account.
     </p>
   </header>
   <section>
-    <h2>Product workbench</h2>
+    <h2>Free trial growth console</h2>
     <ul>
+      <li>Signup creates a personal account and isolated project surface.</li>
       <li>Start from one URL and build a project context for the product.</li>
-      <li>Monitor SEO, AI search, SERP, overseas communities, and vertical surfaces.</li>
-      <li>Prioritized growth actions for comments, content, technical fixes, and positioning work.</li>
+      <li>Usage limits protect scanning, reports, and AI action costs during trial.</li>
     </ul>
   </section>
   <section>
-    <h2>OpenCMO — AI CMO operating surface</h2>
+    <h2>OpenCMO — AI CMO growth console</h2>
     <p>
-      The workspace connects monitoring, approvals, comments, content actions,
-      reports, and follow-up decisions so teams can operate overseas growth from
-      the same source of truth.
+      The console connects monitoring, approvals, comments, content actions,
+      reports, and follow-up decisions while keeping each user's projects private.
     </p>
     <ul>
       <li>GitHub repository: https://github.com/study8677/OpenCMO</li>
-      <li>OpenCMO workspace: https://www.aidcmo.com/workspace</li>
+      <li>OpenCMO console: https://www.aidcmo.com/console</li>
       <li>License: Apache 2.0 — https://github.com/study8677/OpenCMO/blob/main/LICENSE</li>
       <li>Machine-readable summary: https://www.aidcmo.com/llms.txt</li>
     </ul>
@@ -82,14 +90,14 @@ _HOME_STATIC_SITE_COPY_BY_LOCALE = {
   <section>
     <h2>Where to start</h2>
     <p>
-      Start with the product overview, inspect a sample audit, or open the
-      operator workspace to see how visibility work is organized.
+      Start a free trial from one URL, inspect the open-source project, or contact
+      us for self-host and deployment support.
     </p>
     <ul>
       <li>Product overview: https://www.aidcmo.com/en/services</li>
       <li>Audit example: https://www.aidcmo.com/en/sample-audit</li>
       <li>Open-source project: https://www.aidcmo.com/en/open-source</li>
-      <li>OpenCMO workspace: https://www.aidcmo.com/workspace</li>
+      <li>OpenCMO console: https://www.aidcmo.com/console</li>
       <li>Contact: hello@aidcmo.com</li>
     </ul>
   </section>
@@ -99,30 +107,30 @@ _HOME_STATIC_SITE_COPY_BY_LOCALE = {
 <main id="static-site-copy">
   <header>
     <p>aidCMO</p>
-    <h1>OpenCMO：输入一个 URL，发现海外增长机会。</h1>
+    <h1>OpenCMO 免费试用：输入一个 URL，开启自己的海外增长控制台。</h1>
     <p>
-      粘贴网站 URL 后，OpenCMO 会扫描 SEO、AI 回答可见度、SERP、Reddit、
-      Hacker News、X、垂直社区和竞品语境，帮助团队判断哪里值得优化、评论、
-      发布内容或继续跟进。
+      每个试用用户都会获得独立的 OpenCMO 增长控制台。创建自己的产品项目，
+      扫描 SEO、AI 搜索、SERP、Reddit、Hacker News、X 和垂直社区，
+      再把发现转成评论、内容和页面优化动作。
     </p>
   </header>
   <section>
-    <h2>产品工作台</h2>
+    <h2>免费试用增长控制台</h2>
     <ul>
+      <li>注册后创建个人 account，项目和动作只属于当前用户。</li>
       <li>从一行 URL 开始，为产品建立可持续追踪的项目上下文。</li>
-      <li>跨 SEO、AI 搜索、SERP、海外社区和垂直领域的市场信号监控。</li>
-      <li>面向评论、内容、技术修复和定位工作的优先级增长动作。</li>
+      <li>试用额度限制项目、扫描和报告成本，先验证真实需求。</li>
     </ul>
   </section>
   <section>
     <h2>OpenCMO — AI CMO 操作界面</h2>
     <p>
-      这个工作台把监控、审批、评论、内容动作、报告和后续判断连接起来，
-      让团队围绕同一份上下文推进海外增长。
+      这个增长控制台把监控、审批、评论、内容动作、报告和后续判断连接起来，
+      同时让每个用户只看到自己的项目界面。
     </p>
     <ul>
       <li>GitHub 仓库: https://github.com/study8677/OpenCMO</li>
-      <li>OpenCMO 工作台: https://www.aidcmo.com/workspace</li>
+      <li>OpenCMO 增长控制台: https://www.aidcmo.com/console</li>
       <li>许可证: Apache 2.0 — https://github.com/study8677/OpenCMO/blob/main/LICENSE</li>
       <li>机器可读摘要: https://www.aidcmo.com/llms.txt</li>
     </ul>
@@ -130,13 +138,13 @@ _HOME_STATIC_SITE_COPY_BY_LOCALE = {
   <section>
     <h2>从哪里开始</h2>
     <p>
-      可以先看产品概览、阅读示例审计，或进入操作工作台了解可见度工作如何组织。
+      可以从免费试用开始，也可以查看开源项目，或联系自部署和部署支持。
     </p>
     <ul>
       <li>产品概览: https://www.aidcmo.com/zh/services</li>
       <li>审计样例: https://www.aidcmo.com/zh/sample-audit</li>
       <li>开源项目: https://www.aidcmo.com/zh/open-source</li>
-      <li>OpenCMO 工作台: https://www.aidcmo.com/workspace</li>
+      <li>OpenCMO 增长控制台: https://www.aidcmo.com/console</li>
       <li>联系: hello@aidcmo.com</li>
     </ul>
   </section>
@@ -172,7 +180,7 @@ _BLOG_STATIC_SITE_COPY_BY_LOCALE = {
     <p>
       The blog is part of the public product surface. It gives buyers, operators,
       search engines, and AI agents long-form pages about positioning, adoption,
-      and product comparisons without requiring the private workspace routes.
+      and product comparisons without requiring the private console routes.
     </p>
   </section>
 </main>
@@ -202,7 +210,7 @@ _BLOG_STATIC_SITE_COPY_BY_LOCALE = {
     <h2>为什么这个页面需要公开存在</h2>
     <p>
       Blog 是公开产品 surface 的一部分。它帮助买家、操盘手、搜索引擎和 AI agent
-      在不进入私有 workspace 的情况下，直接理解 OpenCMO 的定位、适用场景、
+      在不进入私有增长控制台的情况下，直接理解 OpenCMO 的定位、适用场景、
       对比对象和工作方式。
     </p>
   </section>
@@ -571,7 +579,7 @@ _SAMPLE_AUDIT_STATIC_SITE_COPY_BY_LOCALE = {
     <h2>Why this page is public</h2>
     <p>
       It gives search engines, buyers, and AI agents a concrete example of the
-      product output without exposing the private workspace routes.
+      product output without exposing the private console routes.
     </p>
   </section>
 </main>
@@ -598,7 +606,7 @@ _SAMPLE_AUDIT_STATIC_SITE_COPY_BY_LOCALE = {
   <section>
     <h2>为什么它需要公开</h2>
     <p>
-      它给搜索引擎、买家和回答引擎一个具体样本，让外部系统无需进入私有工作台，
+      它给搜索引擎、买家和回答引擎一个具体样本，让外部系统无需进入私有增长控制台，
       也能理解 OpenCMO 的输出结构。
     </p>
   </section>
@@ -778,14 +786,14 @@ def _build_home_json_ld(locale: str | None = None) -> str:
             "url": _public_url("/", locale),
             "image": "https://www.aidcmo.com/logo.png",
             "description": (
-                "OpenCMO starts from one URL, monitors search, AI, overseas community, "
-                "and competitor signals, then turns them into reviewed growth actions."
+                "OpenCMO gives each trial user an isolated growth console for search, "
+                "AI, overseas community, and reviewed growth actions."
                 if localized == "en"
-                else "OpenCMO 从一个 URL 开始，监控搜索、AI、海外社区和竞品信号，并把它们转成经过复核的增长动作。"
+                else "OpenCMO 为每个试用用户提供独立增长控制台，用于搜索、AI、海外社区和可复核增长动作。"
             ),
             "serviceType": [
-                "AI CMO workspace",
-                "Overseas growth workspace",
+                "Free trial AI CMO console",
+                "Overseas growth console",
                 "Community growth operations",
                 "SEO audit",
                 "GEO and AI search visibility audit",
@@ -796,10 +804,10 @@ def _build_home_json_ld(locale: str | None = None) -> str:
             ],
             "hasOfferCatalog": {
                 "@type": "OfferCatalog",
-                "name": "OpenCMO workspace capabilities",
+                "name": "OpenCMO console capabilities",
                 "itemListElement": [
-                    {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "AI CMO workspace"}},
-                    {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Visibility audit workbench"}},
+                    {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "AI CMO console"}},
+                    {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Visibility audit console"}},
                 ],
             },
         },
@@ -840,10 +848,10 @@ def _build_sample_audit_json_ld(locale: str | None = None) -> str:
 _APP_STATIC_SITE_COPY = """
 <main id="static-site-copy">
   <header>
-    <p>OpenCMO Workspace</p>
-    <h1>Private application surface</h1>
+    <p>OpenCMO Console</p>
+    <h1>Private growth console</h1>
     <p>
-      This route belongs to the operator workspace for projects, approvals,
+      This route belongs to the operator console for projects, approvals,
       reports, and AI-assisted review. Use the public homepage and blog for
       product overview and machine-readable discovery.
     </p>
@@ -929,7 +937,7 @@ def _is_app_surface(full_path: str) -> bool:
     if not normalized:
         return False
     return (
-        normalized in {"workspace", "approvals", "chat"}
+        normalized in {"console", "workspace", "approvals", "chat"}
         or normalized.startswith("projects/")
         or normalized == "projects"
     )
@@ -941,15 +949,16 @@ def _apply_public_route_metadata(html: str, full_path: str) -> str:
     rendered = _replace_html_lang(html, route_locale)
 
     if _is_app_surface(normalized):
-        canonical_url = f"https://www.aidcmo.com/{normalized}" if normalized else "https://www.aidcmo.com/"
+        canonical_path = "console" if normalized == "workspace" else normalized
+        canonical_url = f"https://www.aidcmo.com/{canonical_path}" if canonical_path else "https://www.aidcmo.com/"
         replacements = [
             (
                 r"<title>.*?</title>",
-                "<title>OpenCMO Workspace | Private application surface</title>",
+                "<title>OpenCMO Console | Private growth console</title>",
             ),
             (
                 r'<meta\s+name="description"\s+content="[^"]*"\s*/?>',
-                '<meta name="description" content="Private OpenCMO workspace route for operators. Use the homepage and blog for the public product overview." />',
+                '<meta name="description" content="Private OpenCMO console route for operators. Use the homepage and blog for the public product overview." />',
             ),
             (
                 r'<meta\s+name="robots"\s+content="[^"]*"\s*/?>',
@@ -957,11 +966,11 @@ def _apply_public_route_metadata(html: str, full_path: str) -> str:
             ),
             (
                 r'<meta\s+property="og:title"\s+content="[^"]*"\s*/?>',
-                '<meta property="og:title" content="OpenCMO Workspace | Private application surface" />',
+                '<meta property="og:title" content="OpenCMO Console | Private growth console" />',
             ),
             (
                 r'<meta\s+property="og:description"\s+content="[^"]*"\s*/?>',
-                '<meta property="og:description" content="Private OpenCMO workspace route for projects, approvals, reports, and operator workflows." />',
+                '<meta property="og:description" content="Private OpenCMO console route for projects, approvals, reports, and operator workflows." />',
             ),
             (
                 r'<meta\s+property="og:url"\s+content="[^"]*"\s*/?>',
@@ -969,11 +978,11 @@ def _apply_public_route_metadata(html: str, full_path: str) -> str:
             ),
             (
                 r'<meta\s+name="twitter:title"\s+content="[^"]*"\s*/?>',
-                '<meta name="twitter:title" content="OpenCMO Workspace | Private application surface" />',
+                '<meta name="twitter:title" content="OpenCMO Console | Private growth console" />',
             ),
             (
                 r'<meta\s+name="twitter:description"\s+content="[^"]*"\s*/?>',
-                '<meta name="twitter:description" content="Private OpenCMO workspace route for projects, approvals, reports, and operator workflows." />',
+                '<meta name="twitter:description" content="Private OpenCMO console route for projects, approvals, reports, and operator workflows." />',
             ),
         ]
 
@@ -1064,15 +1073,15 @@ def _apply_public_route_metadata(html: str, full_path: str) -> str:
 
     if normalized == "":
         title = (
-            "aidCMO — OpenCMO AI CMO workspace for overseas growth"
+            "aidCMO — OpenCMO free trial overseas growth console"
             if locale_key == "en"
-            else "aidCMO — OpenCMO 海外增长 AI CMO 工作台"
+            else "aidCMO — OpenCMO 免费试用海外增长控制台"
         )
         description = (
-            "OpenCMO starts from one URL, then scans SEO, AI visibility, SERP, overseas communities, "
-            "and competitor signals to turn public context into growth actions."
+            "OpenCMO gives each trial user an isolated AI CMO growth console for SEO, AI Search, SERP, "
+            "overseas community opportunities, and reviewed growth actions."
             if locale_key == "en"
-            else "OpenCMO 从一个 URL 开始，扫描 SEO、AI 可见度、SERP、海外社区和竞品信号，并把公开语境转成增长动作。"
+            else "OpenCMO 是可免费试用的 AI CMO 海外增长控制台，每位用户都可以拥有自己的项目界面，扫描 SEO、AI 搜索、SERP 和海外社区机会。"
         )
         canonical_url = _public_url("/", route_locale)
         replacements = [
@@ -1248,6 +1257,29 @@ async def canonical_host_middleware(request: Request, call_next):
 
 
 @app.middleware("http")
+async def session_context_middleware(request: Request, call_next):
+    """Attach cookie session context and enforce account ownership for project APIs."""
+    await attach_request_context(request)
+
+    csrf = csrf_rejection(request)
+    if csrf is not None:
+        return csrf
+
+    path = request.url.path
+    has_session = bool(getattr(request.state, "current_user", None))
+    has_legacy_bearer = request_has_valid_bearer(request)
+
+    if is_session_auth_enforced() and requires_session_auth(path) and not has_session and not has_legacy_bearer:
+        return JSONResponse({"error": "Unauthorized", "error_code": "auth_required"}, status_code=401)
+
+    project_rejection = await reject_cross_account_project(request)
+    if project_rejection is not None:
+        return project_rejection
+
+    return await call_next(request)
+
+
+@app.middleware("http")
 async def workspace_auth_middleware(request: Request, call_next):
     """Protect workspace APIs when OPENCMO_WEB_TOKEN is configured."""
     if request.method == "OPTIONS" or not requires_workspace_auth(request.url.path, request.method):
@@ -1318,13 +1350,217 @@ async def api_v1_health():
     })
 
 
+class _AuthSignupRequest(BaseModel):
+    email: str = Field(..., min_length=5, max_length=254)
+    password: str = Field(..., min_length=8, max_length=4096)
+    name: str = Field("", max_length=120)
+
+
 class _AuthLoginRequest(BaseModel):
-    token: str = Field(..., min_length=1, max_length=4096)
+    email: str | None = Field(None, min_length=5, max_length=254)
+    password: str | None = Field(None, min_length=1, max_length=4096)
+    token: str | None = Field(None, min_length=1, max_length=4096)
+
+
+def _env_positive_int(name: str, default: int) -> int:
+    try:
+        return max(0, int(os.environ.get(name, str(default))))
+    except ValueError:
+        return default
+
+
+def _request_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for", "")
+    if forwarded_for:
+        return forwarded_for.split(",", 1)[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _auth_rate_limit_rejection(request: Request, scope: Literal["signup", "login"], identity: str = "") -> JSONResponse | None:
+    window = _env_positive_int("OPENCMO_AUTH_RATE_WINDOW_SECONDS", 300)
+    limit = _env_positive_int(
+        "OPENCMO_SIGNUP_RATE_LIMIT" if scope == "signup" else "OPENCMO_LOGIN_RATE_LIMIT",
+        5 if scope == "signup" else 10,
+    )
+    if window <= 0 or limit <= 0:
+        return None
+
+    now = time.monotonic()
+    cutoff = now - window
+    keys = [f"{scope}:ip:{_request_ip(request)}"]
+    normalized_identity = identity.strip().lower()
+    if normalized_identity:
+        keys.append(f"{scope}:identity:{normalized_identity}")
+
+    for key in keys:
+        _AUTH_RATE_BUCKETS[key] = [ts for ts in _AUTH_RATE_BUCKETS.get(key, []) if ts >= cutoff]
+        if len(_AUTH_RATE_BUCKETS[key]) >= limit:
+            return JSONResponse(
+                {"ok": False, "error": "rate_limited"},
+                status_code=429,
+                headers={"Retry-After": str(window)},
+            )
+
+    for key in keys:
+        _AUTH_RATE_BUCKETS.setdefault(key, []).append(now)
+    return None
+
+
+def _cookie_secure(request: Request) -> bool:
+    forwarded_proto = request.headers.get("x-forwarded-proto", "")
+    scheme = forwarded_proto.split(",", 1)[0].strip() or request.url.scheme
+    return scheme == "https"
+
+
+def _auth_response_payload(user: dict, account: dict, usage: dict) -> dict:
+    return {
+        "ok": True,
+        "authenticated": True,
+        "user": user,
+        "account": account,
+        "is_admin": user.get("role") == "admin",
+        "usage": usage,
+    }
+
+
+async def _json_with_session(request: Request, user: dict, account: dict, status_code: int = 200) -> JSONResponse:
+    token, expires_at = await storage.create_session(user["id"])
+    usage = await storage.get_usage_status(account["id"])
+    response = JSONResponse(_auth_response_payload(user, account, usage), status_code=status_code)
+    response.set_cookie(
+        storage.SESSION_COOKIE_NAME,
+        token,
+        max_age=60 * 60 * 24 * 30,
+        expires=expires_at,
+        httponly=True,
+        secure=_cookie_secure(request),
+        samesite="lax",
+    )
+    return response
+
+
+@app.post("/api/v1/auth/signup")
+async def api_v1_auth_signup(payload: _AuthSignupRequest, request: Request):
+    limited = _auth_rate_limit_rejection(request, "signup", payload.email)
+    if limited is not None:
+        return limited
+    mode = storage.get_signup_mode()
+    if mode == "closed":
+        return JSONResponse({"ok": False, "error": "signup_closed"}, status_code=403)
+    if mode == "invite":
+        return JSONResponse({"ok": False, "error": "invite_required"}, status_code=403)
+    try:
+        user, account = await storage.create_user_with_account(payload.email, payload.password, payload.name)
+    except ValueError as exc:
+        status_code = 409 if str(exc) == "email_exists" else 400
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=status_code)
+    return await _json_with_session(request, user, account, status_code=201)
 
 
 @app.post("/api/v1/auth/login")
-async def api_v1_auth_login(payload: _AuthLoginRequest):
-    if validate_web_token(payload.token):
+async def api_v1_auth_login(payload: _AuthLoginRequest, request: Request):
+    if payload.token and not payload.email:
+        if validate_web_token(payload.token):
+            return JSONResponse({"ok": True})
+        return JSONResponse({"ok": False, "error": "invalid_token"}, status_code=401)
+
+    if not payload.email or not payload.password:
+        return JSONResponse({"ok": False, "error": "email_password_required"}, status_code=400)
+    limited = _auth_rate_limit_rejection(request, "login", payload.email)
+    if limited is not None:
+        return limited
+    authenticated = await storage.authenticate_user(payload.email, payload.password)
+    if authenticated is None:
+        return JSONResponse({"ok": False, "error": "invalid_credentials"}, status_code=401)
+    user, account = authenticated
+    return await _json_with_session(request, user, account)
+
+
+@app.post("/api/v1/auth/logout")
+async def api_v1_auth_logout(request: Request):
+    await storage.delete_session(request.cookies.get(storage.SESSION_COOKIE_NAME, ""))
+    response = JSONResponse({"ok": True})
+    response.delete_cookie(storage.SESSION_COOKIE_NAME)
+    return response
+
+
+@app.get("/api/v1/auth/me")
+async def api_v1_auth_me(request: Request):
+    user = getattr(request.state, "current_user", None)
+    account = getattr(request.state, "current_account", None)
+    if not user or not account:
+        return JSONResponse({"authenticated": False}, status_code=200)
+    usage = await storage.get_usage_status(account["id"])
+    return JSONResponse(_auth_response_payload(user, account, usage))
+
+
+@app.get("/api/v1/account/usage")
+async def api_v1_account_usage(request: Request):
+    account_id = await get_request_account_id(request)
+    return JSONResponse(await storage.get_usage_status(account_id))
+
+
+def _admin_allowed(request: Request) -> bool:
+    return is_admin_request(request) or request_has_valid_bearer(request)
+
+
+@app.get("/api/v1/admin/summary")
+async def api_v1_admin_summary(request: Request):
+    if not _admin_allowed(request):
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+    return JSONResponse(await storage.get_admin_summary())
+
+
+@app.post("/api/v1/admin/accounts/{account_id}/disable")
+async def api_v1_admin_disable_account(account_id: int, request: Request):
+    if not _admin_allowed(request):
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+    ok = await storage.set_account_status(account_id, "disabled")
+    return JSONResponse({"ok": ok}, status_code=200 if ok else 404)
+
+
+@app.post("/api/v1/admin/accounts/{account_id}/enable")
+async def api_v1_admin_enable_account(account_id: int, request: Request):
+    if not _admin_allowed(request):
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+    ok = await storage.set_account_status(account_id, "active")
+    return JSONResponse({"ok": ok}, status_code=200 if ok else 404)
+
+
+class _ExtendTrialRequest(BaseModel):
+    days: int = Field(..., ge=1, le=365)
+
+
+@app.post("/api/v1/admin/accounts/{account_id}/extend-trial")
+async def api_v1_admin_extend_trial(account_id: int, payload: _ExtendTrialRequest, request: Request):
+    if not _admin_allowed(request):
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+    ok = await storage.extend_account_trial(account_id, payload.days)
+    return JSONResponse({"ok": ok}, status_code=200 if ok else 404)
+
+
+class _QuotaRequest(BaseModel):
+    max_projects: int | None = Field(None, ge=0)
+    daily_scan_limit: int | None = Field(None, ge=0)
+    monthly_report_limit: int | None = Field(None, ge=0)
+
+
+@app.post("/api/v1/admin/accounts/{account_id}/quota")
+async def api_v1_admin_update_quota(account_id: int, payload: _QuotaRequest, request: Request):
+    if not _admin_allowed(request):
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+    ok = await storage.update_account_quota(
+        account_id,
+        max_projects=payload.max_projects,
+        daily_scan_limit=payload.daily_scan_limit,
+        monthly_report_limit=payload.monthly_report_limit,
+    )
+    return JSONResponse({"ok": ok}, status_code=200 if ok else 404)
+
+
+@app.get("/api/v1/auth/legacy-token-check")
+async def api_v1_auth_legacy_token_check(request: Request):
+    if request_has_valid_bearer(request):
         return JSONResponse({"ok": True})
     return JSONResponse({"ok": False, "error": "invalid_token"}, status_code=401)
 
@@ -1449,6 +1685,14 @@ for _old, _new in _REDIRECTS_301.items():
             _make_redirect(_target),
             methods=["GET", "HEAD"],
         )
+
+
+async def _redirect_workspace_to_console(request: Request) -> RedirectResponse:
+    query = f"?{request.url.query}" if request.url.query else ""
+    return RedirectResponse(url=f"/console{query}", status_code=301)
+
+
+app.add_api_route("/workspace", _redirect_workspace_to_console, methods=["GET", "HEAD"])
 
 
 # ---------------------------------------------------------------------------

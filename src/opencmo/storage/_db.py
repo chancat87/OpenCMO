@@ -28,15 +28,74 @@ CREATE TABLE IF NOT EXISTS schema_version (
     version INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    name TEXT NOT NULL DEFAULT '',
+    role TEXT NOT NULL DEFAULT 'user',
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_login_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    plan TEXT NOT NULL DEFAULT 'free_trial',
+    status TEXT NOT NULL DEFAULT 'active',
+    trial_started_at TEXT NOT NULL DEFAULT (datetime('now')),
+    trial_ends_at TEXT NOT NULL,
+    max_projects INTEGER NOT NULL DEFAULT 3,
+    daily_scan_limit INTEGER NOT NULL DEFAULT 3,
+    monthly_report_limit INTEGER NOT NULL DEFAULT 10,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS account_members (
+    account_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    role TEXT NOT NULL DEFAULT 'owner',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (account_id, user_id),
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token_hash TEXT NOT NULL UNIQUE,
+    expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS usage_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL,
+    user_id INTEGER,
+    project_id INTEGER,
+    event_type TEXT NOT NULL,
+    metadata TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+);
+
 CREATE TABLE IF NOT EXISTS projects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER REFERENCES accounts(id),
     brand_name TEXT NOT NULL,
     url TEXT NOT NULL,
     category TEXT NOT NULL,
     aliases TEXT NOT NULL DEFAULT '[]',  -- JSON array of brand aliases (v15+)
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    UNIQUE(brand_name, url)
+    UNIQUE(account_id, brand_name, url)
 );
+-- idx_projects_account_id is created in _ensure_platform_indexes() after
+-- migrations/reconciliation add account_id on legacy databases.
 
 CREATE TABLE IF NOT EXISTS seo_scans (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -144,6 +203,7 @@ CREATE TABLE IF NOT EXISTS serp_snapshots (
 
 CREATE TABLE IF NOT EXISTS chat_sessions (
     id TEXT PRIMARY KEY,
+    account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
     title TEXT NOT NULL DEFAULT '',
     input_items TEXT NOT NULL DEFAULT '[]',
     project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
@@ -789,6 +849,65 @@ _MIGRATIONS: list[tuple[int, str, list[str]]] = [
         )""",
         "CREATE INDEX IF NOT EXISTS idx_ai_models_role_priority ON ai_models(role, enabled, failover_priority)",
     ]),
+    (21, "free trial accounts, sessions, usage, and project ownership", [
+        """CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            name TEXT NOT NULL DEFAULT '',
+            role TEXT NOT NULL DEFAULT 'user',
+            status TEXT NOT NULL DEFAULT 'active',
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            last_login_at TEXT
+        )""",
+        """CREATE TABLE IF NOT EXISTS accounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            plan TEXT NOT NULL DEFAULT 'free_trial',
+            status TEXT NOT NULL DEFAULT 'active',
+            trial_started_at TEXT NOT NULL DEFAULT (datetime('now')),
+            trial_ends_at TEXT NOT NULL,
+            max_projects INTEGER NOT NULL DEFAULT 3,
+            daily_scan_limit INTEGER NOT NULL DEFAULT 3,
+            monthly_report_limit INTEGER NOT NULL DEFAULT 10,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )""",
+        """CREATE TABLE IF NOT EXISTS account_members (
+            account_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            role TEXT NOT NULL DEFAULT 'owner',
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            PRIMARY KEY (account_id, user_id),
+            FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )""",
+        """CREATE TABLE IF NOT EXISTS sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            token_hash TEXT NOT NULL UNIQUE,
+            expires_at TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )""",
+        """CREATE TABLE IF NOT EXISTS usage_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_id INTEGER NOT NULL,
+            user_id INTEGER,
+            project_id INTEGER,
+            event_type TEXT NOT NULL,
+            metadata TEXT NOT NULL DEFAULT '{}',
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+        )""",
+        "ALTER TABLE projects ADD COLUMN account_id INTEGER REFERENCES accounts(id)",
+        "CREATE INDEX IF NOT EXISTS idx_projects_account_id ON projects(account_id)",
+    ]),
+    (22, "account-scoped chat sessions", [
+        "ALTER TABLE chat_sessions ADD COLUMN account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE",
+        "CREATE INDEX IF NOT EXISTS idx_chat_sessions_account_updated ON chat_sessions(account_id, updated_at DESC)",
+    ]),
 ]
 
 _LATEST_VERSION = _MIGRATIONS[-1][0]
@@ -879,7 +998,13 @@ async def _reconcile_required_columns(db: aiosqlite.Connection) -> None:
         },
         "scheduled_jobs": {"locale": "ALTER TABLE scheduled_jobs ADD COLUMN locale TEXT NOT NULL DEFAULT 'en'"},
         "reports": {"locale": "ALTER TABLE reports ADD COLUMN locale TEXT NOT NULL DEFAULT 'zh'"},
-        "projects": {"aliases": "ALTER TABLE projects ADD COLUMN aliases TEXT NOT NULL DEFAULT '[]'"},
+        "projects": {
+            "aliases": "ALTER TABLE projects ADD COLUMN aliases TEXT NOT NULL DEFAULT '[]'",
+            "account_id": "ALTER TABLE projects ADD COLUMN account_id INTEGER REFERENCES accounts(id)",
+        },
+        "chat_sessions": {
+            "account_id": "ALTER TABLE chat_sessions ADD COLUMN account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE",
+        },
         "competitors": {"aliases": "ALTER TABLE competitors ADD COLUMN aliases TEXT NOT NULL DEFAULT '[]'"},
     }
 
@@ -888,6 +1013,131 @@ async def _reconcile_required_columns(db: aiosqlite.Connection) -> None:
         for column_name, statement in columns.items():
             if column_name not in existing_columns:
                 await db.execute(statement)
+
+
+def _env_int(name: str, default: int) -> int:
+    try:
+        return int(os.environ.get(name, str(default)))
+    except ValueError:
+        return default
+
+
+async def _ensure_platform_indexes(db: aiosqlite.Connection) -> None:
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_projects_account_id ON projects(account_id)")
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_chat_sessions_account_updated ON chat_sessions(account_id, updated_at DESC)")
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_sessions_token_hash ON sessions(token_hash)")
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_usage_events_account_type_created ON usage_events(account_id, event_type, created_at)")
+
+
+async def _project_unique_index_columns(db: aiosqlite.Connection) -> list[list[str]]:
+    cursor = await db.execute("PRAGMA index_list(projects)")
+    indexes = await cursor.fetchall()
+    unique_columns: list[list[str]] = []
+    for row in indexes:
+        if not row[2]:
+            continue
+        index_name = row[1]
+        cursor = await db.execute(f"PRAGMA index_info({index_name})")
+        unique_columns.append([info[2] for info in await cursor.fetchall()])
+    return unique_columns
+
+
+async def _ensure_project_account_uniqueness(db: aiosqlite.Connection) -> None:
+    """Replace the legacy global project uniqueness with account-scoped uniqueness."""
+    unique_columns = await _project_unique_index_columns(db)
+    if ["brand_name", "url"] not in unique_columns:
+        return
+
+    # SQLite autoindexes created by table-level UNIQUE constraints cannot be
+    # dropped directly, so legacy databases need a small table rebuild.
+    await db.commit()
+    await db.execute("PRAGMA foreign_keys=OFF")
+    try:
+        await db.execute("BEGIN")
+        await db.execute("DROP TABLE IF EXISTS projects_rebuild")
+        await db.execute(
+            """CREATE TABLE projects_rebuild (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id INTEGER REFERENCES accounts(id),
+                brand_name TEXT NOT NULL,
+                url TEXT NOT NULL,
+                category TEXT NOT NULL,
+                aliases TEXT NOT NULL DEFAULT '[]',
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                UNIQUE(account_id, brand_name, url)
+            )"""
+        )
+        await db.execute(
+            """INSERT INTO projects_rebuild (id, account_id, brand_name, url, category, aliases, created_at)
+               SELECT id, account_id, brand_name, url, category, aliases, created_at
+               FROM projects"""
+        )
+        await db.execute("DROP TABLE projects")
+        await db.execute("ALTER TABLE projects_rebuild RENAME TO projects")
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    finally:
+        await db.execute("PRAGMA foreign_keys=ON")
+
+
+async def _ensure_admin_account(db: aiosqlite.Connection) -> None:
+    """Create the admin owner/account and attach legacy projects to it."""
+    admin_email = os.environ.get("OPENCMO_ADMIN_EMAIL", "hello@aidcmo.com").strip().lower()
+    if not admin_email:
+        return
+
+    cursor = await db.execute("SELECT id FROM users WHERE email = ?", (admin_email,))
+    row = await cursor.fetchone()
+    if row:
+        user_id = int(row[0])
+        await db.execute("UPDATE users SET role = 'admin', status = 'active' WHERE id = ?", (user_id,))
+    else:
+        cursor = await db.execute(
+            """INSERT INTO users (email, password_hash, name, role, status)
+               VALUES (?, ?, ?, 'admin', 'active')""",
+            (admin_email, "!unusable", "OpenCMO Admin"),
+        )
+        user_id = int(cursor.lastrowid)
+
+    cursor = await db.execute(
+        """SELECT a.id
+           FROM accounts a
+           JOIN account_members m ON m.account_id = a.id
+           WHERE m.user_id = ? AND m.role = 'owner'
+           ORDER BY a.id
+           LIMIT 1""",
+        (user_id,),
+    )
+    row = await cursor.fetchone()
+    if row:
+        account_id = int(row[0])
+        await db.execute(
+            """UPDATE accounts
+               SET plan = 'admin', status = 'active',
+                   max_projects = MAX(max_projects, 999999),
+                   daily_scan_limit = MAX(daily_scan_limit, 999999),
+                   monthly_report_limit = MAX(monthly_report_limit, 999999)
+               WHERE id = ?""",
+            (account_id,),
+        )
+    else:
+        cursor = await db.execute(
+            """INSERT INTO accounts (
+                   name, plan, status, trial_ends_at, max_projects, daily_scan_limit, monthly_report_limit
+               )
+               VALUES (?, 'admin', 'active', datetime('now', '+3650 days'), 999999, 999999, 999999)""",
+            ("OpenCMO Admin",),
+        )
+        account_id = int(cursor.lastrowid)
+        await db.execute(
+            "INSERT OR IGNORE INTO account_members (account_id, user_id, role) VALUES (?, ?, 'owner')",
+            (account_id, user_id),
+        )
+
+    await db.execute("UPDATE projects SET account_id = ? WHERE account_id IS NULL", (account_id,))
+    await db.execute("UPDATE chat_sessions SET account_id = ? WHERE account_id IS NULL", (account_id,))
 
 
 async def _run_migrations(db: aiosqlite.Connection) -> None:
@@ -947,6 +1197,9 @@ async def ensure_db() -> None:
                 await _run_migrations(db)
 
             await _reconcile_required_columns(db)
+            await _ensure_project_account_uniqueness(db)
+            await _ensure_platform_indexes(db)
+            await _ensure_admin_account(db)
             await _ensure_dedupe_indexes(db)
             await _ensure_report_locale_indexes(db)
             await db.commit()

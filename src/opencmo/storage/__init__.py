@@ -23,6 +23,33 @@ from opencmo.storage._db import (
     get_db,
 )
 
+# --- Accounts / sessions / trial usage ---
+from opencmo.storage.accounts import (
+    SESSION_COOKIE_NAME,
+    authenticate_user,
+    check_daily_scan_quota,
+    check_monthly_report_quota,
+    check_project_quota,
+    create_session,
+    create_user_with_account,
+    delete_session,
+    extend_account_trial,
+    get_account,
+    get_admin_account_id,
+    get_admin_summary,
+    get_session_context,
+    get_signup_mode,
+    get_trial_config,
+    get_usage_status,
+    get_user_account,
+    get_user_by_id,
+    hash_password,
+    record_usage_event,
+    set_account_status,
+    update_account_quota,
+    verify_password,
+)
+
 # --- AI Models (Provider config + smart failover) ---
 from opencmo.storage.ai_models import (
     add_ai_model,
@@ -200,6 +227,7 @@ from opencmo.storage.scan_runs import (
     create_scan_run,
     fail_scan_run_by_task_id,
     get_latest_monitoring_summary,
+    get_scan_run_by_task_id,
     get_task_findings,
     get_task_findings_by_project,
     get_task_recommendations,
@@ -228,6 +256,7 @@ from opencmo.storage.serp import (
     add_tracked_keyword,
     get_all_serp_latest,
     get_serp_history,
+    get_tracked_keyword,
     list_tracked_keywords,
     remove_tracked_keyword,
     save_serp_snapshot,
@@ -291,6 +320,15 @@ __all__ = [
     # ai_models
     "add_ai_model", "claim_quota", "delete_ai_model",
     "get_ai_model", "list_ai_models", "update_ai_model",
+    # accounts
+    "SESSION_COOKIE_NAME", "authenticate_user", "check_daily_scan_quota",
+    "check_monthly_report_quota", "check_project_quota", "create_session",
+    "create_user_with_account", "delete_session", "extend_account_trial",
+    "get_account", "get_admin_account_id", "get_admin_summary",
+    "get_session_context", "get_signup_mode", "get_trial_config",
+    "get_usage_status", "get_user_account", "get_user_by_id",
+    "hash_password", "record_usage_event", "set_account_status",
+    "update_account_quota", "verify_password",
     # projects
     "ensure_project", "update_project", "get_project", "list_projects",
     "find_projects_by_brand", "find_project_by_identity", "delete_project",
@@ -306,11 +344,11 @@ __all__ = [
     "add_scheduled_job", "list_scheduled_jobs", "get_scheduled_job",
     "remove_scheduled_job", "update_scheduled_job", "update_job_last_run",
     # serp
-    "add_tracked_keyword", "list_tracked_keywords", "remove_tracked_keyword",
-    "save_serp_snapshot", "get_serp_history", "get_all_serp_latest",
+    "add_tracked_keyword", "get_tracked_keyword", "list_tracked_keywords",
+    "remove_tracked_keyword", "save_serp_snapshot", "get_serp_history", "get_all_serp_latest",
     # scan_runs
     "create_scan_run", "list_scan_runs_by_monitor", "update_scan_run",
-    "fail_scan_run_by_task_id",
+    "fail_scan_run_by_task_id", "get_scan_run_by_task_id",
     "add_scan_run_step", "replace_scan_artifacts",
     "get_task_findings", "get_task_findings_by_project",
     "get_task_recommendations", "get_latest_monitoring_summary",

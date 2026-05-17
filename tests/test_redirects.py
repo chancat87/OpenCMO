@@ -74,3 +74,15 @@ def test_locales_distinct(client):
     assert seo_target == "/services"
     assert data_target == "/"
     assert seo_target != data_target
+
+
+def test_workspace_redirects_to_console_with_query(client):
+    r = client.get("/workspace?url=https%3A%2F%2Fexample.com")
+    assert r.status_code == 301
+    assert r.headers.get("location") == "/console?url=https%3A%2F%2Fexample.com"
+
+
+def test_workspace_head_redirects_to_console(client):
+    r = client.head("/workspace")
+    assert r.status_code == 301
+    assert r.headers.get("location") == "/console"

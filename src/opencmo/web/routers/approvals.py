@@ -6,22 +6,22 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from opencmo import storage
+from opencmo.web.auth import get_request_account_id
 
 router = APIRouter(prefix="/api/v1")
 
 
 @router.get("/approvals")
-async def api_v1_approvals(status: str | None = None, limit: int = 50):
+async def api_v1_approvals(request: Request, status: str | None = None, limit: int = 50):
     from opencmo import service
-
-    return JSONResponse(await service.list_approvals(status=status, limit=limit))
+    account_id = await get_request_account_id(request)
+    return JSONResponse(await service.list_approvals(status=status, limit=limit, account_id=account_id))
 
 
 @router.get("/approvals/{approval_id}")
-async def api_v1_approval(approval_id: int):
-    from opencmo import service
-
-    approval = await service.get_approval(approval_id)
+async def api_v1_approval(approval_id: int, request: Request):
+    account_id = await get_request_account_id(request)
+    approval = await storage.get_approval(approval_id, account_id=account_id)
     if not approval:
         return JSONResponse({"error": "Not found"}, status_code=404)
     return JSONResponse(approval)
@@ -36,7 +36,8 @@ async def api_v1_create_approval(request: Request):
     if not isinstance(project_id, int):
         return JSONResponse({"error": "project_id is required"}, status_code=400)
 
-    project = await storage.get_project(project_id)
+    account_id = await get_request_account_id(request)
+    project = await storage.get_project(project_id, account_id=account_id)
     if not project:
         return JSONResponse({"error": "Project not found"}, status_code=404)
 
@@ -68,6 +69,9 @@ async def api_v1_create_approval(request: Request):
 @router.post("/approvals/{approval_id}/approve")
 async def api_v1_approve_approval(approval_id: int, request: Request):
     from opencmo import service
+    account_id = await get_request_account_id(request)
+    if not await storage.get_approval(approval_id, account_id=account_id):
+        return JSONResponse({"error": "Not found"}, status_code=404)
 
     try:
         body = await request.json()
@@ -91,6 +95,9 @@ async def api_v1_approve_approval(approval_id: int, request: Request):
 @router.post("/approvals/{approval_id}/reject")
 async def api_v1_reject_approval(approval_id: int, request: Request):
     from opencmo import service
+    account_id = await get_request_account_id(request)
+    if not await storage.get_approval(approval_id, account_id=account_id):
+        return JSONResponse({"error": "Not found"}, status_code=404)
 
     try:
         body = await request.json()

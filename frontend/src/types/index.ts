@@ -1,5 +1,6 @@
 export interface Project {
   id: number;
+  account_id?: number;
   brand_name: string;
   url: string;
   category: string;
@@ -7,6 +8,75 @@ export interface Project {
   latest_monitoring?: MonitoringSummary | null;
   latest_reports?: LatestReports;
   pending_approvals?: number;
+}
+
+export interface AuthUser {
+  id: number;
+  email: string;
+  name: string;
+  role: "user" | "admin";
+  status: "active" | "disabled";
+  created_at: string;
+  last_login_at: string | null;
+}
+
+export interface AuthAccount {
+  id: number;
+  name: string;
+  plan: string;
+  status: "active" | "disabled";
+  trial_started_at: string;
+  trial_ends_at: string;
+  max_projects: number;
+  daily_scan_limit: number;
+  monthly_report_limit: number;
+  created_at: string;
+}
+
+export interface UsageBucket {
+  used: number;
+  limit: number;
+}
+
+export interface AccountUsage {
+  plan: string;
+  status: string;
+  trial_started_at: string;
+  trial_ends_at: string;
+  remaining_days: number;
+  projects: UsageBucket;
+  daily_scans: UsageBucket;
+  monthly_reports: UsageBucket;
+}
+
+export interface AdminSummary {
+  total_users: number;
+  new_users_today: number;
+  active_trial_accounts: number;
+  expired_trial_accounts: number;
+  total_projects: number;
+  projects_created_today: number;
+  scans_today: number;
+  reports_this_month: number;
+  failed_tasks_24h: number;
+  high_usage_accounts: Array<{
+    id: number;
+    name: string;
+    status: string;
+    plan: string;
+    usage_count: number;
+  }>;
+  recent_users: AuthUser[];
+  recent_accounts: AuthAccount[];
+  recent_failed_tasks: Array<{
+    task_id: string;
+    kind: string;
+    project_id: number | null;
+    status: string;
+    error: { message?: string };
+    created_at: string;
+    updated_at: string;
+  }>;
 }
 
 export interface SiteStats {

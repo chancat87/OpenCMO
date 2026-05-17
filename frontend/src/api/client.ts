@@ -3,6 +3,9 @@ import { buildUserKeysHeader } from "./userKeys";
 const API_PREFIX = "/api/v1";
 const PUBLIC_BYOK_PATHS = new Set([
   "/auth/login",
+  "/auth/logout",
+  "/auth/me",
+  "/auth/signup",
   "/github-stats",
   "/health",
   "/site/stats",

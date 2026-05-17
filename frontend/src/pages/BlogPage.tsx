@@ -71,7 +71,7 @@ export function BlogPage() {
                   <ArrowRight size={16} />
                 </Link>
                 <Link
-                  to="/workspace"
+                  to="/console"
                   className="inline-flex items-center gap-2 rounded-full border border-black/8 bg-white/72 px-5 py-3 text-sm font-semibold text-slate-900 transition-colors hover:bg-white"
                 >
                   {t("blog.workspaceCta")}

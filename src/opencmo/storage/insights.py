@@ -40,23 +40,31 @@ async def is_insight_duplicate(project_id: int, insight_type: str, title: str) -
 
 
 async def list_insights(
-    project_id: int | None = None, unread_only: bool = False, limit: int = 20,
+    project_id: int | None = None,
+    unread_only: bool = False,
+    limit: int = 20,
+    account_id: int | None = None,
 ) -> list[dict]:
     """List insights, optionally filtered by project and read status."""
     db = await get_db()
     try:
+        join = ""
         clauses = []
         params: list = []
+        if account_id is not None:
+            join = "JOIN projects p ON p.id = i.project_id"
+            clauses.append("p.account_id = ?")
+            params.append(account_id)
         if project_id is not None:
-            clauses.append("project_id = ?")
+            clauses.append("i.project_id = ?")
             params.append(project_id)
         if unread_only:
-            clauses.append("read = 0")
+            clauses.append("i.read = 0")
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
         cursor = await db.execute(
-            f"SELECT id, project_id, insight_type, severity, title, summary, "
-            f"action_type, action_params, read, created_at "
-            f"FROM insights {where} ORDER BY created_at DESC LIMIT ?",
+            f"SELECT i.id, i.project_id, i.insight_type, i.severity, i.title, i.summary, "
+            f"i.action_type, i.action_params, i.read, i.created_at "
+            f"FROM insights i {join} {where} ORDER BY i.created_at DESC LIMIT ?",
             (*params, limit),
         )
         rows = await cursor.fetchall()
@@ -87,11 +95,19 @@ async def mark_insight_read(insight_id: int) -> bool:
         await db.close()
 
 
-async def mark_all_insights_read(project_id: int | None = None) -> int:
+async def mark_all_insights_read(project_id: int | None = None, account_id: int | None = None) -> int:
     """Mark unread insights as read. Returns the number of updated rows."""
     db = await get_db()
     try:
-        if project_id is None:
+        if account_id is not None and project_id is None:
+            cursor = await db.execute(
+                """UPDATE insights
+                   SET read = 1
+                   WHERE read = 0
+                     AND project_id IN (SELECT id FROM projects WHERE account_id = ?)""",
+                (account_id,),
+            )
+        elif project_id is None:
             cursor = await db.execute("UPDATE insights SET read = 1 WHERE read = 0")
         else:
             cursor = await db.execute(
@@ -104,21 +120,30 @@ async def mark_all_insights_read(project_id: int | None = None) -> int:
         await db.close()
 
 
-async def get_insights_summary(project_id: int | None = None) -> dict:
+async def get_insights_summary(project_id: int | None = None, account_id: int | None = None) -> dict:
     """Get unread insight count and latest 3 for the notification bell."""
     db = await get_db()
     try:
-        where = "WHERE project_id = ? AND read = 0" if project_id else "WHERE read = 0"
-        params = (project_id,) if project_id else ()
+        join = ""
+        clauses = ["i.read = 0"]
+        params: list = []
+        if account_id is not None:
+            join = "JOIN projects p ON p.id = i.project_id"
+            clauses.append("p.account_id = ?")
+            params.append(account_id)
+        if project_id:
+            clauses.append("i.project_id = ?")
+            params.append(project_id)
+        where = f"WHERE {' AND '.join(clauses)}"
 
-        cursor = await db.execute(f"SELECT COUNT(*) FROM insights {where}", params)
+        cursor = await db.execute(f"SELECT COUNT(*) FROM insights i {join} {where}", tuple(params))
         count = (await cursor.fetchone())[0]
 
         cursor2 = await db.execute(
-            f"SELECT id, project_id, insight_type, severity, title, summary, "
-            f"action_type, action_params, created_at "
-            f"FROM insights {where} ORDER BY created_at DESC LIMIT 3",
-            params,
+            f"SELECT i.id, i.project_id, i.insight_type, i.severity, i.title, i.summary, "
+            f"i.action_type, i.action_params, i.created_at "
+            f"FROM insights i {join} {where} ORDER BY i.created_at DESC LIMIT 3",
+            tuple(params),
         )
         rows = await cursor2.fetchall()
         recent = [

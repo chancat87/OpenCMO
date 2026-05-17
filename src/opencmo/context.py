@@ -173,7 +173,7 @@ async def build_project_context(project_id: int, depth: str = "brief") -> str:
     return "\n".join(parts)
 
 
-async def resolve_chat_project(body: dict) -> int | None:
+async def resolve_chat_project(body: dict, account_id: int | None = None) -> int | None:
     """Infer project_id from a chat request body.
 
     Priority:
@@ -186,7 +186,7 @@ async def resolve_chat_project(body: dict) -> int | None:
             return int(pid)
         except (ValueError, TypeError):
             pass
-    projects = await storage.list_projects()
+    projects = await storage.list_projects(account_id=account_id)
     if len(projects) == 1:
         return projects[0]["id"]
     return None

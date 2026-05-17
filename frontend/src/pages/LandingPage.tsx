@@ -17,10 +17,10 @@ import { SiteFooter } from "../components/layout/SiteFooter";
 import { PublicSiteHeader } from "../components/marketing/PublicSiteHeader";
 import { SectionReveal } from "../components/marketing/SectionReveal";
 import { BuiltInOpen } from "../components/marketing/BuiltInOpen";
+import { useAuth } from "../components/auth/useAuth";
 import {
   PUBLIC_HOME_NAV,
   getContactPath,
-  getServicesPath,
 } from "../content/marketing";
 import { usePublicPageMetadata } from "../hooks/usePublicPageMetadata";
 import { usePublicSeoLocale } from "../hooks/usePublicSeoLocale";
@@ -57,17 +57,17 @@ const HERO_BADGES = [
 const PRODUCT_METRICS = [
   {
     label: "landing.productMetricSeoLabel",
-    value: "84",
+    value: "14",
     detail: "landing.productMetricSeoDetail",
   },
   {
     label: "landing.productMetricAiLabel",
-    value: "67",
+    value: "3",
     detail: "landing.productMetricAiDetail",
   },
   {
     label: "landing.productMetricCommunityLabel",
-    value: "18",
+    value: "3",
     detail: "landing.productMetricCommunityDetail",
   },
 ] as const;
@@ -115,7 +115,7 @@ const PRODUCT_CARDS = [
   },
 ] as const;
 
-function ProductWorkspacePreview({ workspaceHref = "/workspace" }: { workspaceHref?: string }) {
+function ProductConsolePreview({ consoleHref = "/console" }: { consoleHref?: string }) {
   const { t } = useI18n();
 
   return (
@@ -131,7 +131,7 @@ function ProductWorkspacePreview({ workspaceHref = "/workspace" }: { workspaceHr
           </div>
         </div>
         <Link
-          to={workspaceHref}
+          to={consoleHref}
           className="inline-flex items-center gap-2 rounded-full bg-[#082032] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0c2538]"
         >
           {t("landing.workspaceCta")}
@@ -218,13 +218,19 @@ function ProductWorkspacePreview({ workspaceHref = "/workspace" }: { workspaceHr
 
 export function LandingPage() {
   const { t } = useI18n();
+  const auth = useAuth();
   const seoLocale = usePublicSeoLocale();
   const navigate = useNavigate();
   const [homepageUrl, setHomepageUrl] = useState("");
   const normalizedHomepageUrl = homepageUrl.trim() ? normalizeWebsiteUrl(homepageUrl.trim()) : "";
-  const workspaceHref = normalizedHomepageUrl
-    ? `/workspace?url=${encodeURIComponent(normalizedHomepageUrl)}`
-    : "/workspace";
+  const consoleTarget = normalizedHomepageUrl
+    ? `/console?url=${encodeURIComponent(normalizedHomepageUrl)}`
+    : "/console";
+  const consoleHref = auth.isAuthenticated
+    ? consoleTarget
+    : normalizedHomepageUrl
+      ? `/signup?url=${encodeURIComponent(normalizedHomepageUrl)}`
+      : "/signup";
 
   usePublicPageMetadata({
     title: t("landing.metaTitle"),
@@ -236,12 +242,12 @@ export function LandingPage() {
     event.preventDefault();
     const rawUrl = homepageUrl.trim();
     if (!rawUrl) return;
-    navigate(workspaceHref);
+    navigate(consoleHref);
   };
 
   return (
     <div className="min-h-screen bg-[#08141f] text-white">
-      <PublicSiteHeader items={PUBLIC_HOME_NAV} theme="dark" workspaceHref={workspaceHref} />
+      <PublicSiteHeader items={PUBLIC_HOME_NAV} theme="dark" consoleHref={consoleHref} />
 
       <main className="overflow-hidden">
         {/* Hero ----------------------------------------------------- */}
@@ -281,10 +287,13 @@ export function LandingPage() {
                 </button>
               </div>
             </form>
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-white/55">
+              {t("landing.heroTrialNote")}
+            </p>
 
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
               <Link
-                to={workspaceHref}
+                to={consoleHref}
                 className="inline-flex items-center gap-2 rounded-full bg-[#f7ecde] px-7 py-4 text-sm font-semibold text-[#082032] transition-colors hover:bg-white"
               >
                 <MonitorPlay size={16} />
@@ -301,13 +310,6 @@ export function LandingPage() {
                 {t("landing.heroSecondaryCta")}
                 <ExternalLink size={14} />
               </a>
-              <Link
-                to={getServicesPath(seoLocale)}
-                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/6 px-7 py-4 text-sm font-semibold text-white/90 transition-colors hover:border-white/25 hover:text-white"
-              >
-                {t("landing.heroPrimaryCta")}
-                <ArrowRight size={14} />
-              </Link>
             </div>
 
             <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
@@ -321,7 +323,7 @@ export function LandingPage() {
               ))}
             </div>
 
-            <ProductWorkspacePreview workspaceHref={workspaceHref} />
+            <ProductConsolePreview consoleHref={consoleHref} />
           </div>
         </section>
 
@@ -410,7 +412,7 @@ export function LandingPage() {
                     <h3 className="text-xl font-semibold text-white">{t(item.title)}</h3>
                     <p className="mt-3 flex-1 text-sm leading-6 text-white/66">{t(item.body)}</p>
                     <Link
-                      to={workspaceHref}
+                      to={consoleHref}
                       className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white transition-colors hover:text-[#f7ecde]"
                     >
                       {t("landing.workspaceCta")}
@@ -435,18 +437,11 @@ export function LandingPage() {
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link
-                  to={workspaceHref}
+                  to={consoleHref}
                   className="inline-flex items-center gap-2 rounded-full bg-[#f7ecde] px-7 py-4 text-sm font-semibold text-[#082032] transition-colors hover:bg-white"
                 >
                   {t("landing.workspaceCta")}
                   <ArrowRight size={16} />
-                </Link>
-                <Link
-                  to={getServicesPath(seoLocale)}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/6 px-7 py-4 text-sm font-semibold text-white/90 transition-colors hover:border-white/25 hover:text-white"
-                >
-                  {t("landing.heroPrimaryCta")}
-                  <ArrowRight size={14} />
                 </Link>
                 <Link
                   to={getContactPath(seoLocale)}

@@ -10,22 +10,22 @@ from opencmo import storage
 MAX_HISTORY = 20
 
 
-async def create_session(project_id: int | None = None) -> str:
+async def create_session(project_id: int | None = None, account_id: int | None = None) -> str:
     """Create a new chat session. Returns session_id."""
     session_id = uuid.uuid4().hex[:12]
-    await storage.create_chat_session(session_id, project_id=project_id)
+    await storage.create_chat_session(session_id, project_id=project_id, account_id=account_id)
     return session_id
 
 
-async def get_session(session_id: str) -> list | None:
+async def get_session(session_id: str, account_id: int | None = None) -> list | None:
     """Return input_items for a session, or None if not found."""
-    row = await storage.get_chat_session(session_id)
+    row = await storage.get_chat_session(session_id, account_id=account_id)
     if row is None:
         return None
     return json.loads(row["input_items"])
 
 
-async def update_session(session_id: str, input_items: list) -> None:
+async def update_session(session_id: str, input_items: list, account_id: int | None = None) -> bool:
     """Replace session state with new input_items, applying truncation.
 
     Also auto-generates a title from the first user message if title is empty.
@@ -34,7 +34,7 @@ async def update_session(session_id: str, input_items: list) -> None:
         input_items = input_items[:1] + input_items[-(MAX_HISTORY - 1) :]
 
     # Auto-title: use first user message (truncated to 40 chars)
-    row = await storage.get_chat_session(session_id)
+    row = await storage.get_chat_session(session_id, account_id=account_id)
     title = None
     if row and not row["title"]:
         for item in input_items:
@@ -44,22 +44,22 @@ async def update_session(session_id: str, input_items: list) -> None:
                     title = content.strip()[:40]
                     break
 
-    await storage.update_chat_session(session_id, json.dumps(input_items), title)
+    return await storage.update_chat_session(session_id, json.dumps(input_items), title, account_id=account_id)
 
 
-async def list_sessions() -> list[dict]:
+async def list_sessions(account_id: int | None = None) -> list[dict]:
     """Return all sessions with lightweight project metadata."""
-    return await storage.list_chat_sessions()
+    return await storage.list_chat_sessions(account_id=account_id)
 
 
-async def delete_session(session_id: str) -> bool:
+async def delete_session(session_id: str, account_id: int | None = None) -> bool:
     """Delete a session. Returns True if it existed."""
-    return await storage.delete_chat_session(session_id)
+    return await storage.delete_chat_session(session_id, account_id=account_id)
 
 
-async def get_session_messages(session_id: str) -> list[dict] | None:
+async def get_session_messages(session_id: str, account_id: int | None = None) -> list[dict] | None:
     """Return display-ready messages for a session, or None if not found."""
-    row = await storage.get_chat_session(session_id)
+    row = await storage.get_chat_session(session_id, account_id=account_id)
     if row is None:
         return None
     input_items = json.loads(row["input_items"])

@@ -10,9 +10,11 @@ from opencmo.tools.performance_tracker import (
     add_manual_tracking,
     collect_approval_metrics,
     delete_manual_tracking,
+    get_manual_tracking,
     get_project_performance,
     list_manual_tracking,
 )
+from opencmo.web.auth import get_request_account_id
 
 router = APIRouter(prefix="/api/v1")
 
@@ -50,8 +52,11 @@ async def api_v1_performance(project_id: int):
 
 
 @router.post("/approvals/{approval_id}/refresh-metrics")
-async def api_v1_refresh_metrics(approval_id: int):
+async def api_v1_refresh_metrics(approval_id: int, request: Request):
     """Manually trigger metrics refresh for a published approval."""
+    account_id = await get_request_account_id(request)
+    if not await storage.get_approval(approval_id, account_id=account_id):
+        return JSONResponse({"error": "Not found"}, status_code=404)
     metrics = await collect_approval_metrics(approval_id)
     if metrics is None:
         return JSONResponse({"error": "Could not fetch metrics"}, status_code=400)
@@ -79,8 +84,12 @@ async def api_v1_add_manual_tracking(project_id: int, request: Request):
 
 
 @router.delete("/manual-tracking/{tracking_id}")
-async def api_v1_delete_manual_tracking(tracking_id: int):
+async def api_v1_delete_manual_tracking(tracking_id: int, request: Request):
     """Delete a manually tracked item."""
+    account_id = await get_request_account_id(request)
+    tracking = await get_manual_tracking(tracking_id)
+    if not tracking or not await storage.get_project(tracking["project_id"], account_id=account_id):
+        return JSONResponse({"error": "Not found"}, status_code=404)
     ok = await delete_manual_tracking(tracking_id)
     if not ok:
         return JSONResponse({"error": "Not found"}, status_code=404)

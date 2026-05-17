@@ -14,7 +14,7 @@ export function TokenPrompt() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const ok = await login(token);
+    const ok = await login(token, token);
     setLoading(false);
     if (!ok) setError(t("auth.invalidToken"));
   };

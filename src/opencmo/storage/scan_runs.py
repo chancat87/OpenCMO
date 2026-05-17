@@ -24,6 +24,34 @@ async def create_scan_run(task_id: str, monitor_id: int | None, project_id: int,
         await db.close()
 
 
+async def get_scan_run_by_task_id(task_id: str) -> dict | None:
+    """Return a persisted scan run by task id."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            """SELECT id, task_id, monitor_id, project_id, job_type, status, summary, created_at, completed_at
+               FROM scan_runs
+               WHERE task_id = ?""",
+            (task_id,),
+        )
+        row = await cursor.fetchone()
+        if not row:
+            return None
+        return {
+            "id": row[0],
+            "task_id": row[1],
+            "monitor_id": row[2],
+            "project_id": row[3],
+            "job_type": row[4],
+            "status": row[5],
+            "summary": row[6],
+            "created_at": row[7],
+            "completed_at": row[8],
+        }
+    finally:
+        await db.close()
+
+
 async def list_scan_runs_by_monitor(monitor_id: int, limit: int = 10) -> list[dict]:
     """List past scan runs for a monitor, newest first."""
     db = await get_db()

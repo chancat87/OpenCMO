@@ -228,6 +228,33 @@ async def list_manual_tracking(project_id: int) -> list[dict]:
         await db.close()
 
 
+async def get_manual_tracking(tracking_id: int) -> dict | None:
+    """Return a manually tracked item by id."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            """SELECT id, project_id, platform, url, title, notes, metrics_json, created_at
+               FROM manual_tracking
+               WHERE id = ?""",
+            (tracking_id,),
+        )
+        row = await cursor.fetchone()
+        if not row:
+            return None
+        return {
+            "id": row[0],
+            "project_id": row[1],
+            "platform": row[2],
+            "url": row[3],
+            "title": row[4],
+            "notes": row[5],
+            "metrics": json.loads(row[6] or "{}"),
+            "created_at": row[7],
+        }
+    finally:
+        await db.close()
+
+
 async def delete_manual_tracking(tracking_id: int) -> bool:
     """Delete a manually tracked item."""
     db = await get_db()

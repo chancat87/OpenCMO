@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from opencmo import storage
 from opencmo.background import service as bg_service
 from opencmo.marketing_skills import get_marketing_skill, list_marketing_skills
+from opencmo.web.auth import get_request_account_id
 
 router = APIRouter(prefix="/api/v1")
 
@@ -108,9 +109,12 @@ async def api_v1_blog_drafts(project_id: int, language: str | None = None, local
 
 
 @router.get("/blog/drafts/{draft_id}")
-async def api_v1_blog_draft_detail(draft_id: int):
+async def api_v1_blog_draft_detail(draft_id: int, request: Request):
     """Get a single blog draft with full content and quality scores."""
     draft = await storage.get_blog_draft(draft_id)
     if not draft:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    account_id = await get_request_account_id(request)
+    if not await storage.get_project(draft["project_id"], account_id=account_id):
         return JSONResponse({"error": "Not found"}, status_code=404)
     return JSONResponse(draft)
