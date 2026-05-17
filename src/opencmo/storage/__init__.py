@@ -277,13 +277,21 @@ from opencmo.storage.site_stats import (
 
 # --- Email verification codes ---
 from opencmo.storage.verifications import (
-    DEFAULT_RESEND_COOLDOWN_SECONDS,
     DEFAULT_HOURLY_SEND_LIMIT,
-    consume_code as consume_verification_code,
-    create_code as create_verification_code,
+    DEFAULT_RESEND_COOLDOWN_SECONDS,
     is_user_verified,
-    last_send_at as last_verification_send_at,
     mark_user_verified,
+)
+from opencmo.storage.verifications import (
+    consume_code as consume_verification_code,
+)
+from opencmo.storage.verifications import (
+    create_code as create_verification_code,
+)
+from opencmo.storage.verifications import (
+    last_send_at as last_verification_send_at,
+)
+from opencmo.storage.verifications import (
     recent_send_count as recent_verification_send_count,
 )
 

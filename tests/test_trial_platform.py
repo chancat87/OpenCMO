@@ -17,7 +17,6 @@ from fastapi.testclient import TestClient
 import opencmo.web.app as web_app
 from opencmo.web.app import app
 
-
 _CAPTURED_VERIFICATION_CODES: list[dict] = []
 
 

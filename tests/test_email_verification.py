@@ -28,7 +28,6 @@ from fastapi.testclient import TestClient
 import opencmo.web.app as web_app
 from opencmo.web.app import app
 
-
 _CAPTURED_CODES: list[dict] = []
 
 
